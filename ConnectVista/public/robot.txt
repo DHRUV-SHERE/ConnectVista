@@ -1,0 +1,11 @@
+User-agent: *
+Disallow: /login/
+Disallow: /signup/
+Disallow: /provider-signup/
+Disallow: /service-provider/*
+Disallow: /user-dashboard/*
+Disallow: /admin/*
+Disallow: /backend/
+
+# Optional: sitemap (update after deployment)
+Sitemap: https://yourdomain.com/sitemap.xml

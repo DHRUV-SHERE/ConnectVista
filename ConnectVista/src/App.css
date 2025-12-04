@@ -1,0 +1,58 @@
+:root {
+  --bg-color: #ffffff;
+  --text-color: #1b1b1b;
+  --accent-color: #f76c5e; /* Coral Flame */
+  --accent-dark: #d64541;  /* Deep Coral */
+  --accent-fade: #fca89e;  /* Soft Peach */
+  --foreground: #000000;
+  --background: #ffffff;
+  --card-bg: rgba(255, 255, 255, 0.65);
+  --btn-bg: linear-gradient(90deg, #f76c5e, #d64541);
+  --btn-hover: 0 0 15px rgba(247, 108, 94, 0.4);
+  --glow-color: rgba(247, 108, 94, 0.15);
+  --overlay-bg: rgba(255, 255, 255, 0.9);
+  --overlay-text: #2e2e2e;
+  --border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] {
+  --bg-color: #0f0f0f;
+  --text-color: #f8f9fa;
+  --accent-color: #f76c5e;
+  --accent-dark: #d64541;
+  --accent-fade: #fca89e;
+  --foreground: #ffffff;
+  --background: #0f0f0f;
+  --card-bg: rgba(30, 30, 30, 0.7);
+  --btn-bg: linear-gradient(90deg, #f76c5e, #d64541);
+  --btn-hover: 0 0 20px rgba(247, 108, 94, 0.4);
+  --glow-color: rgba(247, 108, 94, 0.25);
+  --overlay-bg: rgba(15, 15, 15, 0.9);
+  --overlay-text: #f1f1f1;
+  --border-color: rgba(255, 255, 255, 0.1);
+}
+
+.btn-primary {
+  background: var(--btn-bg);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.75rem 1.5rem;
+  box-shadow: var(--btn-hover);
+  transition: all 0.3s ease;
+}
+.btn-primary:hover {
+  box-shadow: 0 0 25px var(--btn-hover);
+  opacity: 0.95;
+}
+
+@font-face {
+    font-family: ConnectVistaPrimary;
+    src: url(./fonts/NBInternationalProBoo.ttf);
+}
+
+@font-face {
+    font-family: ConnectVistaSecondary;
+    src: url(./fonts/Rejouice-Headline.ttf);
+}
+
