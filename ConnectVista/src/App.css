@@ -47,12 +47,18 @@
 }
 
 @font-face {
-    font-family: ConnectVistaPrimary;
-    src: url(./fonts/NBInternationalProBoo.ttf);
+  font-family: 'ConnectVistaPrimary';
+  src: url('./fonts/NBInternationalProBoo.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
-    font-family: ConnectVistaSecondary;
-    src: url(./fonts/Rejouice-Headline.ttf);
+  font-family: 'ConnectVistaSecondary';
+  src: url('./fonts/Rejouice-Headline.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }
 

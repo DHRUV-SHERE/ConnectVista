@@ -5,12 +5,11 @@ import {
   Mail,
   Clock,
   Send,
-  MessageCircle,
   Users,
   Zap,
+  MessageSquare,
 } from "lucide-react";
 import { useState } from "react";
-import { motion } from "framer-motion";
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -24,7 +23,6 @@ export default function ContactPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // Simulate form submission
     await new Promise((resolve) => setTimeout(resolve, 2000));
     setIsSubmitting(false);
     alert("Message sent successfully!");
@@ -36,25 +34,15 @@ export default function ContactPage() {
       icon: Phone,
       title: "Call Us",
       description: "Speak directly with our team",
-      details: "+1 (555) 123-4567",
+      details: "+91 93168 46548",
       action: "Call Now",
-      color: "from-green-500 to-emerald-600",
     },
     {
       icon: Mail,
       title: "Email Us",
       description: "Send us an email anytime",
-      details: "support@connectvista.com",
+      details: "sheredhruv@gmail.com",
       action: "Send Email",
-      color: "from-blue-500 to-cyan-600",
-    },
-    {
-      icon: MessageCircle,
-      title: "Live Chat",
-      description: "Instant messaging support",
-      details: "Available 24/7",
-      action: "Start Chat",
-      color: "from-purple-500 to-pink-600",
     },
     {
       icon: Users,
@@ -62,591 +50,393 @@ export default function ContactPage() {
       description: "Join our community forum",
       details: "5000+ members",
       action: "Join Forum",
-      color: "from-orange-500 to-red-600",
     },
   ];
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.2,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { y: 50, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        duration: 0.6,
-        ease: "easeOut",
-      },
-    },
-  };
-
-  const cardHoverVariants = {
-    hover: {
-      y: -10,
-      scale: 1.02,
-      transition: {
-        duration: 0.3,
-        ease: "easeOut",
-      },
-    },
-  };
-
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen" style={{ backgroundColor: "var(--bg-color)" }}>
       {/* Hero Section */}
-      <section className="relative py-20 md:py-28 overflow-hidden">
+      <section className="relative pt-20 pb-16">
         <div
           className="absolute inset-0"
           style={{
             background: `linear-gradient(135deg, var(--accent-color), var(--accent-dark))`,
           }}
         />
-
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          {[...Array(20)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute rounded-full bg-white opacity-10"
-              style={{
-                width: Math.random() * 80 + 20,
-                height: Math.random() * 80 + 20,
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-              }}
-              animate={{
-                y: [0, -30, 0],
-                opacity: [0.1, 0.2, 0.1],
-              }}
-              transition={{
-                duration: Math.random() * 4 + 3,
-                repeat: Infinity,
-                delay: Math.random() * 2,
-              }}
-            />
-          ))}
+        
+        <div className="relative w-[85vw] mx-auto px-4 text-center text-white">
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-8" style={{ fontFamily: "var(--font-secondary)" }}>
+              Get in Touch With Us
+            </h1>
+            <p className="text-xl md:text-2xl opacity-95 max-w-2xl mx-auto mb-10">
+              Have questions or need assistance? We're here to help you every step of the way.
+            </p>
+            
+            <div className="flex flex-wrap gap-4 justify-center items-center">
+              <button
+                className="px-8 py-3 bg-white text-[var(--accent-color)] rounded-xl font-semibold text-lg hover:opacity-95 transition-opacity"
+                style={{ fontFamily: "var(--font-primary)" }}
+              >
+                Start Conversation
+              </button>
+              <button
+                className="px-8 py-3 border-2 border-white text-white rounded-xl font-semibold text-lg hover:bg-white/10 transition-colors"
+                style={{ fontFamily: "var(--font-primary)" }}
+              >
+                Quick Help
+              </button>
+            </div>
+          </div>
         </div>
-
-        <motion.div
-          className="relative container mx-auto px-4 text-center text-white"
-          initial="hidden"
-          animate="visible"
-          variants={containerVariants}
-        >
-          <motion.h1
-            className="text-5xl md:text-7xl font-bold mb-6"
-            variants={itemVariants}
-          >
-            Let's Connect
-          </motion.h1>
-          <motion.p
-            className="text-xl md:text-2xl opacity-90 max-w-3xl mx-auto mb-8"
-            variants={itemVariants}
-          >
-            Ready to transform your local service experience? We're here to help
-            you every step of the way.
-          </motion.p>
-          <motion.div
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-            variants={itemVariants}
-          >
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-8 py-3 bg-white text-[var(--accent-color)] rounded-full font-semibold cursor-pointer"
-            >
-              Get Started Today
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-8 py-3 border-2 border-white text-white rounded-full font-semibold cursor-pointer"
-            >
-              Learn More
-            </motion.div>
-          </motion.div>
-        </motion.div>
       </section>
 
       {/* Contact Methods Grid */}
-      <section style={{ backgroundColor: "var(--bg-color)" }} className="py-20">
-        <div className="container mx-auto px-4">
-          <motion.div
-            className="text-center mb-16"
-            initial={{ y: 50, opacity: 0 }}
-            whileInView={{ y: 0, opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-          >
-            <h2
-              style={{ color: "var(--text-color)" }}
-              className="text-4xl md:text-5xl font-bold mb-4"
-            >
-              Multiple Ways to Connect
+      <section className="py-16">
+        <div className="w-[85vw] mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6" style={{ 
+              color: "var(--text-color)",
+              fontFamily: "var(--font-secondary)" 
+            }}>
+              Connect With Us
             </h2>
-            <p
-              style={{ color: "var(--text-color)" }}
-              className="text-xl opacity-80 max-w-2xl mx-auto"
-            >
-              Choose your preferred method to get in touch with our team
+            <p className="text-lg md:text-xl max-w-2xl mx-auto" style={{ color: "var(--text-color)" }}>
+              Choose your preferred way to reach out. We're always ready to assist.
             </p>
-          </motion.div>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {contactMethods.map((method, index) => (
-              <motion.div
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {contactMethods.map((method) => (
+              <div
                 key={method.title}
-                className="group p-6 rounded-2xl border cursor-pointer"
+                className="p-8 rounded-xl border hover:border-[var(--accent-color)] hover:shadow-lg transition-all duration-300"
                 style={{
                   backgroundColor: "var(--card-bg)",
                   borderColor: "var(--border-color)",
                 }}
-                variants={cardHoverVariants}
-                whileHover="hover"
-                initial={{ y: 50, opacity: 0 }}
-                whileInView={{ y: 0, opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
               >
-                <motion.div
-                  className={`w-14 h-14 rounded-xl flex items-center justify-center mb-4 text-white bg-gradient-to-br ${method.color}`}
-                  whileHover={{ rotate: 360 }}
-                  transition={{ duration: 0.6 }}
-                >
-                  <method.icon className="h-7 w-7" />
-                </motion.div>
-                <h3
-                  style={{ color: "var(--text-color)" }}
-                  className="text-xl font-semibold mb-3"
-                >
-                  {method.title}
-                </h3>
-                <p
-                  style={{ color: "var(--text-color)" }}
-                  className="opacity-80 mb-2"
-                >
-                  {method.description}
-                </p>
+                <div className="flex flex-col items-center text-center mb-6">
+                  <div
+                    className="w-16 h-16 rounded-full flex items-center justify-center text-white mb-4"
+                    style={{ backgroundColor: "var(--accent-color)" }}
+                  >
+                    <method.icon className="h-8 w-8" />
+                  </div>
+                  <h3
+                    className="text-2xl font-semibold mb-2"
+                    style={{ 
+                      color: "var(--text-color)",
+                      fontFamily: "var(--font-secondary)" 
+                    }}
+                  >
+                    {method.title}
+                  </h3>
+                  <p
+                    className="text-lg mb-4"
+                    style={{ color: "var(--text-color)" }}
+                  >
+                    {method.description}
+                  </p>
+                </div>
                 <div
-                  style={{ color: "var(--text-color)" }}
-                  className="text-sm font-medium mb-4"
+                  className="text-xl font-medium mb-6 text-center"
+                  style={{ 
+                    color: "var(--accent-color)",
+                  }}
                 >
                   {method.details}
                 </div>
-                <motion.button
-                  className="w-full py-2 rounded-lg border-2 font-semibold"
-                  style={{
-                    borderColor: "var(--accent-color)",
-                    color: "var(--accent-color)",
-                    backgroundColor: "transparent",
-                  }}
-                  whileHover={{
+                <button
+                  className="w-full py-3 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity"
+                  style={{ 
                     backgroundColor: "var(--accent-color)",
                     color: "white",
                   }}
-                  whileTap={{ scale: 0.95 }}
                 >
                   {method.action}
-                </motion.button>
-              </motion.div>
+                </button>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* Main Contact Form Section */}
-      <section style={{ backgroundColor: "var(--bg-color)" }} className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
-            {/* Contact Form */}
-            <motion.div
-              className="p-8 rounded-2xl border"
-              style={{
+      <section className="py-16">
+        <div className="w-[85vw] mx-auto px-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+            {/* Contact Information */}
+            <div className="lg:col-span-1 space-y-8">
+              <div className="p-8 rounded-xl border" style={{
                 backgroundColor: "var(--card-bg)",
                 borderColor: "var(--border-color)",
-              }}
-              initial={{ x: -50, opacity: 0 }}
-              whileInView={{ x: 0, opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8 }}
-            >
-              <div className="flex items-center gap-3 mb-6">
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center text-white"
-                  style={{ backgroundColor: "var(--accent-color)" }}
-                >
-                  <Send className="h-6 w-6" />
-                </div>
-                <div>
-                  <h2
-                    style={{ color: "var(--text-color)" }}
-                    className="text-3xl font-bold"
-                  >
-                    Send us a Message
-                  </h2>
-                  <p
-                    style={{ color: "var(--text-color)" }}
-                    className="opacity-80"
-                  >
-                    We typically respond within 2 hours
-                  </p>
+              }}>
+                <h3 className="text-2xl font-bold mb-8" style={{ 
+                  color: "var(--text-color)",
+                  fontFamily: "var(--font-secondary)" 
+                }}>
+                  Contact Details
+                </h3>
+                
+                <div className="space-y-6">
+                  <div className="flex items-start gap-4 p-4 rounded-lg" style={{ backgroundColor: "var(--bg-color)" }}>
+                    <MapPin className="h-6 w-6 mt-1 flex-shrink-0" style={{ color: "var(--accent-color)" }} />
+                    <div>
+                      <h4 className="font-semibold text-lg mb-1" style={{ color: "var(--text-color)" }}>Our Address</h4>
+                      <p className="text-base" style={{ color: "var(--text-color)" }}>
+                        Naroda, Ahmedabad<br />Gujarat - 382330, India
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 p-4 rounded-lg" style={{ backgroundColor: "var(--bg-color)" }}>
+                    <Phone className="h-6 w-6 flex-shrink-0" style={{ color: "var(--accent-color)" }} />
+                    <div>
+                      <h4 className="font-semibold text-lg mb-1" style={{ color: "var(--text-color)" }}>Phone Number</h4>
+                      <p className="text-base" style={{ color: "var(--text-color)" }}>+91 93168 46548</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 p-4 rounded-lg" style={{ backgroundColor: "var(--bg-color)" }}>
+                    <Mail className="h-6 w-6 flex-shrink-0" style={{ color: "var(--accent-color)" }} />
+                    <div>
+                      <h4 className="font-semibold text-lg mb-1" style={{ color: "var(--text-color)" }}>Email Address</h4>
+                      <p className="text-base" style={{ color: "var(--text-color)" }}>sheredhruv@gmail.com</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 p-4 rounded-lg" style={{ backgroundColor: "var(--bg-color)" }}>
+                    <Clock className="h-6 w-6 flex-shrink-0" style={{ color: "var(--accent-color)" }} />
+                    <div>
+                      <h4 className="font-semibold text-lg mb-1" style={{ color: "var(--text-color)" }}>Business Hours</h4>
+                      <p className="text-base" style={{ color: "var(--text-color)" }}>Monday - Saturday: 9AM - 6PM</p>
+                      <p className="text-base" style={{ color: "var(--text-color)" }}>Sunday: Closed</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Quick Support Card */}
+              <div className="p-8 rounded-xl text-white" style={{ 
+                background: "linear-gradient(135deg, var(--accent-color), var(--accent-dark))"
+              }}>
+                <div className="flex items-center gap-4 mb-6">
+                  <Zap className="h-8 w-8" />
+                  <h3 className="text-2xl font-bold">Quick Response</h3>
+                </div>
+                <p className="text-lg mb-6 opacity-90">
+                  Need immediate assistance? We typically respond within 1 hour during business hours.
+                </p>
+                <button className="w-full py-3 bg-white rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity" 
+                  style={{ color: "var(--accent-color)" }}>
+                  Get Quick Help
+                </button>
+              </div>
+            </div>
+
+            {/* Contact Form */}
+            <div className="lg:col-span-2">
+              <div className="p-8 rounded-xl border h-full" style={{
+                backgroundColor: "var(--card-bg)",
+                borderColor: "var(--border-color)",
+              }}>
+                <div className="flex items-center gap-6 mb-10">
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center text-white" 
+                    style={{ backgroundColor: "var(--accent-color)" }}>
+                    <MessageSquare className="h-8 w-8" />
+                  </div>
                   <div>
-                    <label
-                      style={{ color: "var(--text-color)" }}
-                      className="block text-sm font-medium mb-2"
-                    >
-                      Name
+                    <h2 className="text-3xl font-bold" style={{ 
+                      color: "var(--text-color)",
+                      fontFamily: "var(--font-secondary)" 
+                    }}>
+                      Send Us a Message
+                    </h2>
+                    <p className="text-lg opacity-90" style={{ color: "var(--text-color)" }}>
+                      Fill out the form below and we'll get back to you as soon as possible.
+                    </p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-lg font-medium mb-3" style={{ color: "var(--text-color)" }}>
+                        Your Name
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        className="w-full rounded-xl border px-5 py-4 text-lg"
+                        style={{
+                          backgroundColor: "var(--bg-color)",
+                          borderColor: "var(--border-color)",
+                          color: "var(--text-color)",
+                        }}
+                        placeholder="Enter your full name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-lg font-medium mb-3" style={{ color: "var(--text-color)" }}>
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        className="w-full rounded-xl border px-5 py-4 text-lg"
+                        style={{
+                          backgroundColor: "var(--bg-color)",
+                          borderColor: "var(--border-color)",
+                          color: "var(--text-color)",
+                        }}
+                        placeholder="Enter your email address"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-lg font-medium mb-3" style={{ color: "var(--text-color)" }}>
+                      Subject
                     </label>
                     <input
                       type="text"
                       required
-                      className="w-full rounded-xl border px-4 py-3"
+                      className="w-full rounded-xl border px-5 py-4 text-lg"
                       style={{
-                        backgroundColor: "var(--card-bg)",
+                        backgroundColor: "var(--bg-color)",
                         borderColor: "var(--border-color)",
                         color: "var(--text-color)",
                       }}
-                      placeholder="Your full name"
-                      value={formData.name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
+                      placeholder="What is this regarding?"
+                      value={formData.subject}
+                      onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                     />
                   </div>
+
                   <div>
-                    <label
-                      style={{ color: "var(--text-color)" }}
-                      className="block text-sm font-medium mb-2"
-                    >
-                      Email
+                    <label className="block text-lg font-medium mb-3" style={{ color: "var(--text-color)" }}>
+                      Your Message
                     </label>
-                    <input
-                      type="email"
+                    <textarea
+                      rows={6}
                       required
-                      className="w-full rounded-xl border px-4 py-3"
+                      className="w-full rounded-xl border px-5 py-4 text-lg resize-none"
                       style={{
-                        backgroundColor: "var(--card-bg)",
+                        backgroundColor: "var(--bg-color)",
                         borderColor: "var(--border-color)",
                         color: "var(--text-color)",
                       }}
-                      placeholder="your@email.com"
-                      value={formData.email}
-                      onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
-                      }
+                      placeholder="Please describe your inquiry in detail..."
+                      value={formData.message}
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label
-                    style={{ color: "var(--text-color)" }}
-                    className="block text-sm font-medium mb-2"
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full py-4 rounded-xl font-semibold text-white text-xl flex items-center justify-center gap-3 hover:opacity-95 transition-opacity"
+                    style={{ backgroundColor: "var(--accent-color)" }}
                   >
-                    Subject
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full rounded-xl border px-4 py-3"
-                    style={{
-                      backgroundColor: "var(--card-bg)",
-                      borderColor: "var(--border-color)",
-                      color: "var(--text-color)",
-                    }}
-                    placeholder="What's this about?"
-                    value={formData.subject}
-                    onChange={(e) =>
-                      setFormData({ ...formData, subject: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label
-                    style={{ color: "var(--text-color)" }}
-                    className="block text-sm font-medium mb-2"
-                  >
-                    Message
-                  </label>
-                  <textarea
-                    rows={6}
-                    required
-                    className="w-full rounded-xl border px-4 py-3 resize-none"
-                    style={{
-                      backgroundColor: "var(--card-bg)",
-                      borderColor: "var(--border-color)",
-                      color: "var(--text-color)",
-                    }}
-                    placeholder="Tell us how we can help you..."
-                    value={formData.message}
-                    onChange={(e) =>
-                      setFormData({ ...formData, message: e.target.value })
-                    }
-                  />
-                </div>
-
-                <motion.button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full py-4 rounded-xl font-semibold text-white flex items-center justify-center gap-2"
-                  style={{ backgroundColor: "var(--accent-color)" }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{
-                          duration: 1,
-                          repeat: Infinity,
-                          ease: "linear",
-                        }}
-                        className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                      />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-5 w-5" />
-                      Send Message
-                    </>
-                  )}
-                </motion.button>
-              </form>
-            </motion.div>
-
-            {/* Contact Information */}
-            <motion.div
-              className="space-y-6"
-              initial={{ x: 50, opacity: 0 }}
-              whileInView={{ x: 0, opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8 }}
-            >
-              <div
-                className="p-8 rounded-2xl border"
-                style={{
-                  backgroundColor: "var(--card-bg)",
-                  borderColor: "var(--border-color)",
-                }}
-              >
-                <h3
-                  style={{ color: "var(--text-color)" }}
-                  className="text-2xl font-bold mb-6"
-                >
-                  Contact Information
-                </h3>
-                <div className="space-y-4">
-                  <div
-                    className="flex items-start gap-4 p-4 rounded-lg transition-colors"
-                    style={{ backgroundColor: "var(--bg-color)" }}
-                  >
-                    <MapPin
-                      className="h-6 w-6 mt-1"
-                      style={{ color: "var(--accent-color)" }}
-                    />
-                    <div>
-                      <h4
-                        style={{ color: "var(--text-color)" }}
-                        className="font-semibold"
-                      >
-                        Our Office
-                      </h4>
-                      <p
-                        style={{ color: "var(--text-color)" }}
-                        className="opacity-80"
-                      >
-                        123 Service Street, Community City, CC 12345
-                      </p>
-                    </div>
-                  </div>
-
-                  <div
-                    className="flex items-center gap-4 p-4 rounded-lg transition-colors"
-                    style={{ backgroundColor: "var(--bg-color)" }}
-                  >
-                    <Phone
-                      className="h-6 w-6"
-                      style={{ color: "var(--accent-color)" }}
-                    />
-                    <div>
-                      <h4
-                        style={{ color: "var(--text-color)" }}
-                        className="font-semibold"
-                      >
-                        Phone
-                      </h4>
-                      <p
-                        style={{ color: "var(--text-color)" }}
-                        className="opacity-80"
-                      >
-                        +1 (555) 123-4567
-                      </p>
-                    </div>
-                  </div>
-
-                  <div
-                    className="flex items-center gap-4 p-4 rounded-lg transition-colors"
-                    style={{ backgroundColor: "var(--bg-color)" }}
-                  >
-                    <Mail
-                      className="h-6 w-6"
-                      style={{ color: "var(--accent-color)" }}
-                    />
-                    <div>
-                      <h4
-                        style={{ color: "var(--text-color)" }}
-                        className="font-semibold"
-                      >
-                        Email
-                      </h4>
-                      <p
-                        style={{ color: "var(--text-color)" }}
-                        className="opacity-80"
-                      >
-                        support@connectvista.com
-                      </p>
-                    </div>
-                  </div>
-
-                  <div
-                    className="flex items-center gap-4 p-4 rounded-lg transition-colors"
-                    style={{ backgroundColor: "var(--bg-color)" }}
-                  >
-                    <Clock
-                      className="h-6 w-6"
-                      style={{ color: "var(--accent-color)" }}
-                    />
-                    <div>
-                      <h4
-                        style={{ color: "var(--text-color)" }}
-                        className="font-semibold"
-                      >
-                        Business Hours
-                      </h4>
-                      <p
-                        style={{ color: "var(--text-color)" }}
-                        className="opacity-80"
-                      >
-                        Mon - Fri: 9:00 AM - 6:00 PM
-                      </p>
-                      <p
-                        style={{ color: "var(--text-color)" }}
-                        className="opacity-80"
-                      >
-                        Sat: 10:00 AM - 4:00 PM
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                    {isSubmitting ? (
+                      <>
+                        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Sending Your Message...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-6 w-6" />
+                        Send Message
+                      </>
+                    )}
+                  </button>
+                </form>
               </div>
-
-              {/* Emergency Contact Card */}
-              <motion.div
-                className="p-8 rounded-2xl border text-white text-center relative overflow-hidden"
-                style={{ backgroundColor: "var(--accent-color)" }}
-                whileHover={{ scale: 1.02 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -translate-y-16 translate-x-16"></div>
-                <Zap className="h-12 w-12 mx-auto mb-4" />
-                <h3 className="text-xl font-bold mb-2">Need Immediate Help?</h3>
-                <p className="opacity-90 mb-4">
-                  For urgent inquiries, call our 24/7 support line
-                </p>
-                <motion.button
-                  className="px-6 py-3 bg-white rounded-full font-semibold"
-                  style={{ color: "var(--accent-color)" }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Call Now: +1 (555) 123-4567
-                </motion.button>
-              </motion.div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Map Section */}
-      <section style={{ backgroundColor: "var(--bg-color)" }} className="py-20">
-        <div className="container mx-auto px-4">
-          <motion.div
-            className="text-center mb-12"
-            initial={{ y: 50, opacity: 0 }}
-            whileInView={{ y: 0, opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-          >
-            <h2
-              style={{ color: "var(--text-color)" }}
-              className="text-4xl md:text-5xl font-bold mb-4"
-            >
-              Visit Us
+      <section className="py-16">
+        <div className="w-[85vw] mx-auto px-4">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6" style={{ 
+              color: "var(--text-color)",
+              fontFamily: "var(--font-secondary)" 
+            }}>
+              Find Our Location
             </h2>
-            <p
-              style={{ color: "var(--text-color)" }}
-              className="text-xl opacity-80 max-w-2xl mx-auto"
-            >
-              Come see us in person at our headquarters in Community City
+            <p className="text-xl max-w-2xl mx-auto" style={{ color: "var(--text-color)" }}>
+              Based in the heart of Ahmedabad, serving communities across Gujarat and beyond.
             </p>
-          </motion.div>
+          </div>
 
-          <motion.div
-            className="rounded-2xl border overflow-hidden flex items-center justify-center min-h-[400px]"
-            style={{
-              backgroundColor: "var(--card-bg)",
-              borderColor: "var(--border-color)",
-            }}
-            initial={{ scale: 0.9, opacity: 0 }}
-            whileInView={{ scale: 1, opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-          >
-            <div className="text-center p-8">
-              <MapPin
-                size={48}
-                style={{ color: "var(--accent-color)" }}
-                className="mx-auto mb-4"
-              />
-              <h3
-                style={{ color: "var(--text-color)" }}
-                className="text-2xl font-bold mb-2"
-              >
-                Our Location
-              </h3>
-              <p
-                style={{ color: "var(--text-color)" }}
-                className="opacity-80 mb-4"
-              >
-                Naroda, Ahmedabad, Gujarat - 382330
-              </p>
-              <div className="w-7xl h-96 bg-gray-200 flex items-center justify-center text-gray-500">
-                <iframe
-                  title="Our Location"
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d14683.057508209224!2d72.64323279689985!3d23.069098406749877!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x395e86d301d564e9%3A0x4a614a618d618d60!2sNaroda%2C%20Ahmedabad%2C%20Gujarat!5e0!3m2!1sen!2sin!4v1760263733341!5m2!1sen!2sin"
-                  className="w-full h-full border-0"
-                  allowFullScreen=""
-                  loading="lazy"
-                ></iframe>
+          <div className="rounded-xl border overflow-hidden shadow-lg" style={{
+            backgroundColor: "var(--card-bg)",
+            borderColor: "var(--border-color)",
+          }}>
+            <div className="p-6 flex items-center gap-4 border-b" style={{ borderColor: "var(--border-color)" }}>
+              <MapPin className="h-8 w-8" style={{ color: "var(--accent-color)" }} />
+              <div>
+                <h3 className="text-xl font-semibold" style={{ color: "var(--text-color)" }}>Naroda, Ahmedabad</h3>
+                <p className="text-lg" style={{ color: "var(--text-color)" }}>Gujarat - 382330, India</p>
               </div>
             </div>
-          </motion.div>
+            <div className="h-[500px]">
+              <iframe
+                title="ConnectVista Location"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d14683.057508209224!2d72.64323279689985!3d23.069098406749877!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x395e86d301d564e9%3A0x4a614a618d618d60!2sNaroda%2C%20Ahmedabad%2C%20Gujarat!5e0!3m2!1sen!2sin!4v1760263733341!5m2!1sen!2sin"
+                className="w-full h-full border-0"
+                allowFullScreen
+                loading="lazy"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer CTA */}
+      <section className="py-16" style={{ backgroundColor: "var(--card-bg)" }}>
+        <div className="w-[85vw] mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-8 p-10 rounded-xl" 
+              style={{ backgroundColor: "var(--accent-fade)" }}>
+              <div className="text-left">
+                <h3 className="text-2xl font-bold mb-4" style={{ 
+                  color: "var(--text-color)",
+                  fontFamily: "var(--font-secondary)" 
+                }}>
+                  Still Have Questions?
+                </h3>
+                <p className="text-lg" style={{ color: "var(--text-color)" }}>
+                  Check our FAQ section or contact our support team for immediate assistance.
+                </p>
+              </div>
+              <div className="flex gap-4">
+                <button className="px-8 py-3 rounded-xl font-semibold text-lg border hover:opacity-90 transition-opacity"
+                  style={{ 
+                    borderColor: "var(--accent-color)",
+                    color: "var(--accent-color)",
+                    backgroundColor: "transparent"
+                  }}>
+                  View FAQ
+                </button>
+                <button className="px-8 py-3 rounded-xl font-semibold text-lg hover:opacity-90 transition-opacity"
+                  style={{ 
+                    backgroundColor: "var(--accent-color)",
+                    color: "white"
+                  }}>
+                  Contact Support
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </main>

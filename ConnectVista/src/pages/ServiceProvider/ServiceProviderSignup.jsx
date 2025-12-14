@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Eye,
@@ -15,12 +16,14 @@ import {
   Building,
   Briefcase,
   Award,
+  Home
 } from "lucide-react";
 import resources from "../../resources";
 
 export default function ServiceProviderSignup() {
   const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     // Step 1: Personal & Business Info
     fullName: "",
@@ -98,6 +101,11 @@ export default function ServiceProviderSignup() {
     { number: 3, title: "Location" },
   ];
 
+  
+  const handleBackToHome = () => {
+    navigate("/")
+  }
+
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Illustration & Content */}
@@ -107,34 +115,18 @@ export default function ServiceProviderSignup() {
           backgroundColor: 'var(--accent-dark)' // Using Deep Coral for the background
         }}
       >
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0">
-          {[...Array(15)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute rounded-full"
-              style={{
-                width: Math.random() * 100 + 50,
-                height: Math.random() * 100 + 50,
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                backgroundColor: 'var(--accent-color)', // Using Coral Flame for animated elements
-                opacity: 0.15
-              }}
-              animate={{
-                y: [0, -30, 0],
-                opacity: [0.1, 0.2, 0.1],
-              }}
-              transition={{
-                duration: Math.random() * 4 + 3,
-                repeat: Infinity,
-                delay: Math.random() * 2,
-              }}
-            />
-          ))}
-        </div>
+        {/* Back to Home Button - Top Left */}
+        <button
+          onClick={handleBackToHome}
+          className="absolute top-6 left-6 z-20 flex items-center gap-2 px-4 py-2 rounded-lg text-white hover:bg-white/10 transition-colors"
+          style={{ fontFamily: "var(--font-primary)" }}
+        >
+          <Home className="h-5 w-5" />
+          <span className="text-lg">Back to Home</span>
+        </button>
 
-        {/* Content Container */}
+
+         {/* Content Container */}
         <div className="relative z-10 flex flex-col justify-center items-center w-full px-8 space-y-8">
           {/* Illustration */}
           <motion.div

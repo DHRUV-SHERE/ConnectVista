@@ -1,7 +1,8 @@
-"use client"
+"use client";
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Eye, EyeOff, Mail, Lock, LogIn, ArrowRight, User, Smartphone } from "lucide-react"
+import { Eye, EyeOff, Home, Mail, Lock, LogIn, ArrowRight, User, Smartphone } from "lucide-react"
+import { useNavigate } from "react-router-dom"; // Added missing import
 import resources from "../resources"
 
 export default function LoginPage() {
@@ -12,6 +13,7 @@ export default function LoginPage() {
     rememberMe: false
   })
   const [isLoading, setIsLoading] = useState(false)
+  const navigate = useNavigate(); // Added useNavigate hook
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -21,6 +23,8 @@ export default function LoginPage() {
     await new Promise(resolve => setTimeout(resolve, 2000))
     setIsLoading(false)
     // Handle login logic here
+    // After successful login, you might navigate to another page
+    // navigate("/dashboard");
   }
 
   const handleChange = (e) => {
@@ -30,6 +34,10 @@ export default function LoginPage() {
       [name]: type === 'checkbox' ? checked : value
     }))
   }
+  
+  const handleBackToHome = () => {
+    navigate("/")
+  }
 
   return (
     <div className="min-h-screen flex">
@@ -37,35 +45,18 @@ export default function LoginPage() {
       <div 
         className="hidden lg:flex lg:w-1/2 relative overflow-hidden"
         style={{ 
-          backgroundColor: 'var(--accent-dark)' // Using Deep Coral for the background
+          backgroundColor: 'var(--accent-dark)'
         }}
       >
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0">
-          {[...Array(15)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute rounded-full"
-              style={{
-                width: Math.random() * 100 + 50,
-                height: Math.random() * 100 + 50,
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                backgroundColor: 'var(--accent-color)', // Using Coral Flame for animated elements
-                opacity: 0.15
-              }}
-              animate={{
-                y: [0, -30, 0],
-                opacity: [0.1, 0.2, 0.1],
-              }}
-              transition={{
-                duration: Math.random() * 4 + 3,
-                repeat: Infinity,
-                delay: Math.random() * 2,
-              }}
-            />
-          ))}
-        </div>
+        {/* Back to Home Button - Top Left */}
+        <button
+          onClick={handleBackToHome}
+          className="absolute top-6 left-6 z-20 flex items-center gap-2 px-4 py-2 rounded-lg text-white hover:bg-white/10 transition-colors"
+          style={{ fontFamily: "var(--font-primary)" }}
+        >
+          <Home className="h-5 w-5" />
+          <span className="text-lg">Back to Home</span>
+        </button>
 
         {/* Content Container - Centered without scroll */}
         <div className="relative z-10 flex flex-col justify-center items-center w-full px-8 space-y-8">
@@ -95,7 +86,7 @@ export default function LoginPage() {
             transition={{ duration: 0.8, delay: 0.4 }}
           >
             <h2 className="text-3xl font-bold" style={{ color: 'var(--overlay-text)' }}>
-              Welcome to <span style={{fontFamily:"ConnectVistaSecondary", fontSize:"3vw", color: 'var(--overlay-text)'}}>Connect<span style={{color:"var(--accent-color)"}}>Vista</span></span>
+              Welcome to <span style={{fontFamily:"var(--font-secondary)", fontSize:"3vw", color: 'var(--overlay-text)'}}>Connect<span style={{color:"var(--accent-fade)"}}>Vista</span></span>
             </h2>
             <p className="text-lg" style={{ color: 'var(--overlay-text)', opacity: 0.8 }}>
               Join thousands of service providers and seekers building stronger communities together
@@ -105,7 +96,8 @@ export default function LoginPage() {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-white">
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8" 
+        style={{ backgroundColor: "var(--bg-color)" }}>
         <div className="max-w-md w-full space-y-8">
           <motion.div
             initial={{ y: -50, opacity: 0 }}
@@ -125,10 +117,10 @@ export default function LoginPage() {
               >
                 <User className="h-8 w-8 text-white" />
               </motion.div>
-              <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+              <h2 className="mt-6 text-3xl font-extrabold" style={{ color: "var(--text-color)" }}>
                 Sign in to your account
               </h2>
-              <p className="mt-2 text-sm text-gray-600">
+              <p className="mt-2 text-sm" style={{ color: "var(--text-color)" }}>
                 Or{" "}
                 <a
                   href="/signup"
@@ -151,11 +143,11 @@ export default function LoginPage() {
             <div className="space-y-4">
               {/* Email Input */}
               <div className="relative">
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="email" className="block text-sm font-medium mb-2" style={{ color: "var(--text-color)" }}>
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5" style={{ color: "var(--text-color)", opacity: 0.5 }} />
                   <input
                     id="email"
                     name="email"
@@ -164,7 +156,13 @@ export default function LoginPage() {
                     required
                     value={formData.email}
                     onChange={handleChange}
-                    className="appearance-none relative block w-full px-12 py-4 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                    className="appearance-none relative block w-full px-12 py-4 border placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 transition-all duration-200"
+                    style={{ 
+                      backgroundColor: "var(--card-bg)",
+                      borderColor: "var(--border-color)",
+                      color: "var(--text-color)",
+                      focusRingColor: "var(--accent-color)"
+                    }}
                     placeholder="Enter your email"
                   />
                 </div>
@@ -172,11 +170,11 @@ export default function LoginPage() {
 
               {/* Password Input */}
               <div className="relative">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="password" className="block text-sm font-medium mb-2" style={{ color: "var(--text-color)" }}>
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5" style={{ color: "var(--text-color)", opacity: 0.5 }} />
                   <input
                     id="password"
                     name="password"
@@ -185,13 +183,20 @@ export default function LoginPage() {
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    className="appearance-none relative block w-full px-12 py-4 pr-12 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                    className="appearance-none relative block w-full px-12 py-4 pr-12 border placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 transition-all duration-200"
+                    style={{ 
+                      backgroundColor: "var(--card-bg)",
+                      borderColor: "var(--border-color)",
+                      color: "var(--text-color)",
+                      focusRingColor: "var(--accent-color)"
+                    }}
                     placeholder="Enter your password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 transition-colors duration-200"
+                    style={{ color: "var(--text-color)", opacity: 0.5 }}
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
@@ -208,9 +213,14 @@ export default function LoginPage() {
                   type="checkbox"
                   checked={formData.rememberMe}
                   onChange={handleChange}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 focus:ring-2 rounded"
+                  style={{ 
+                    color: 'var(--accent-color)',
+                    focusRingColor: 'var(--accent-color)',
+                    borderColor: 'var(--border-color)'
+                  }}
                 />
-                <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-900">
+                <label htmlFor="rememberMe" className="ml-2 block text-sm" style={{ color: "var(--text-color)" }}>
                   Remember me
                 </label>
               </div>
@@ -255,10 +265,15 @@ export default function LoginPage() {
             {/* Divider */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
+                <div className="w-full border-t" style={{ borderColor: "var(--border-color)" }} />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                <span className="px-2" style={{ 
+                  backgroundColor: "var(--bg-color)",
+                  color: "var(--text-color)"
+                }}>
+                  Or continue with
+                </span>
               </div>
             </div>
 
@@ -266,7 +281,12 @@ export default function LoginPage() {
             <div className="grid grid-cols-2 gap-3">
               <motion.button
                 type="button"
-                className="w-full inline-flex justify-center py-3 px-4 border border-gray-300 rounded-xl shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-all duration-200"
+                className="w-full inline-flex justify-center py-3 px-4 border rounded-xl shadow-sm text-sm font-medium transition-all duration-200"
+                style={{ 
+                  backgroundColor: "var(--card-bg)",
+                  borderColor: "var(--border-color)",
+                  color: "var(--text-color)"
+                }}
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -281,7 +301,12 @@ export default function LoginPage() {
 
               <motion.button
                 type="button"
-                className="w-full inline-flex justify-center py-3 px-4 border border-gray-300 rounded-xl shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-all duration-200"
+                className="w-full inline-flex justify-center py-3 px-4 border rounded-xl shadow-sm text-sm font-medium transition-all duration-200"
+                style={{ 
+                  backgroundColor: "var(--card-bg)",
+                  borderColor: "var(--border-color)",
+                  color: "var(--text-color)"
+                }}
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -292,7 +317,7 @@ export default function LoginPage() {
 
             {/* Sign Up Link */}
             <div className="text-center">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm" style={{ color: "var(--text-color)" }}>
                 Don't have an account?{" "}
                 <a
                   href="/signup"

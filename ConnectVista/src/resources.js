@@ -35,5 +35,9 @@ const resources = {
         src: Founder,
         alt: 'Founder Image',
     },
+    HeroImage: {
+        src: "https://res.cloudinary.com/dcclfe5tv/image/upload/v1765709504/Home_xhu4dv_e_background_removal_f_png_dpe81s.png",
+        alt: 'Hero Image',
+    },
 };
 export default resources;
