@@ -48,9 +48,9 @@ const CommonNavbar = () => {
             <img
               src={resources.Logo.src}
               alt="ConnectVista Logo"
-              className="h-16 w-auto object-contain transition-all mr-0"
+              className="h-16 w-auto object-contain transition-all mr-1"
               style={{ maxHeight: "80px" }}
-            />
+            /> 
             <span
               className="font-bold text-3xl m-auto hidden sm:block"
               style={{
@@ -58,7 +58,7 @@ const CommonNavbar = () => {
                 fontFamily: "ConnectVistaSecondary",
               }}
             >
-              Connect
+               Connect
               <span style={{ color: "var(--accent-color)" }}>Vista</span>
             </span>
           </Link>

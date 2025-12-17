@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Moon, Sun, Menu, X, User, Bell, MessageSquare } from "lucide-react";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useState, useRef, useEffect } from "react";
@@ -7,8 +7,10 @@ import resources from "../../resources";
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [hoverTimeout, setHoverTimeout] = useState(null);
   const notificationsRef = useRef(null);
 
   // Mock notifications data
@@ -31,19 +33,80 @@ const Navbar = () => {
 
   const isActive = (path) => location.pathname === path;
 
+  // Handle hover on desktop
+  const handleMouseEnter = () => {
+    if (window.innerWidth >= 768) { // Desktop only
+      const timeout = setTimeout(() => {
+        setNotificationsOpen(true);
+      }, 200); // Small delay for better UX
+      setHoverTimeout(timeout);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout);
+      setHoverTimeout(null);
+    }
+    
+    // Delay closing for better UX (allows moving cursor to dropdown)
+    setTimeout(() => {
+      if (window.innerWidth >= 768 && notificationsOpen) {
+        // Check if mouse is still over the button or dropdown
+        if (!notificationsRef.current?.contains(document.activeElement)) {
+          setNotificationsOpen(false);
+        }
+      }
+    }, 100);
+  };
+
+  // Handle click - navigate to notifications page
+  const handleNotificationClick = () => {
+    // Clear any pending hover timeout
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout);
+      setHoverTimeout(null);
+    }
+    
+    if (window.innerWidth < 768) {
+      // On mobile, navigate directly
+      navigate("/user/notifications");
+      setMobileMenuOpen(false);
+    } else {
+      // On desktop, only navigate if dropdown is not open
+      if (!notificationsOpen) {
+        navigate("/user/notifications");
+      }
+    }
+  };
+
+  // Handle notification item click
+  const handleNotificationItemClick = (notificationId) => {
+    // Handle notification click (mark as read, etc.)
+    console.log(`Notification ${notificationId} clicked`);
+    setNotificationsOpen(false);
+  };
+
   // Close notifications dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
         setNotificationsOpen(false);
+        if (hoverTimeout) {
+          clearTimeout(hoverTimeout);
+          setHoverTimeout(null);
+        }
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      if (hoverTimeout) {
+        clearTimeout(hoverTimeout);
+      }
     };
-  }, []);
+  }, [notificationsOpen, hoverTimeout]);
 
   // Close mobile menu when opening notifications
   useEffect(() => {
@@ -54,7 +117,7 @@ const Navbar = () => {
 
   return (
     <nav
-      className="sticky top-0 z-50 w-full border-b overflow-hidden"
+      className="sticky top-0 z-50 w-full border-b overflow-visible"
       style={{
         background: "var(--overlay-bg)",
         borderColor: "var(--border-color)",
@@ -62,8 +125,11 @@ const Navbar = () => {
     >
       <div className="mx-auto w-full max-w-full px-3 sm:px-4 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          {/* Logo - Mobile Optimized */}
-          <Link to="/user/home" className="flex items-center space-x-2 shrink-0 max-w-[140px] sm:max-w-none">
+          {/* Logo */}
+          <Link 
+            to="/user/home" 
+            className="flex items-center space-x-2 shrink-0 max-w-[140px] sm:max-w-none cursor-pointer relative z-50"
+          >
             <img
               src={resources.Logo.src}
               alt="ConnectVista Logo"
@@ -71,8 +137,12 @@ const Navbar = () => {
               style={{ maxHeight: "64px" }}
             />
             <span
-              className="font-bold text-xl sm:text-2xl md:text-3xl hidden sm:block"
-              style={{ color: "var(--text-color)", fontFamily: "ConnectVistaSecondary" }}
+              className="font-bold text-xl sm:text-2xl md:text-3xl hidden sm:block hover:underline transition-all duration-300"
+              style={{ 
+                color: "var(--text-color)", 
+                fontFamily: "ConnectVistaSecondary",
+                textDecorationColor: "var(--accent-color)"
+              }}
             >
               Connect
               <span style={{ color: "var(--accent-color)" }}>Vista</span>
@@ -80,20 +150,22 @@ const Navbar = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-1">
+          <div className="hidden md:flex items-center space-x-1 relative z-50">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
-                className={`px-3 py-2 rounded-md text-sm lg:text-base font-medium transition-all duration-300 ${
+                className={`px-3 py-2 rounded-md text-sm lg:text-base font-medium transition-all duration-300 cursor-pointer ${
                   isActive(link.to)
                     ? "text-white"
                     : "text-[var(--text-color)] hover:bg-[var(--accent-color)] hover:bg-opacity-10"
-                }`}
+                } hover:underline`}
                 style={{
                   backgroundColor: isActive(link.to)
                     ? "var(--accent-color)"
                     : "transparent",
+                  textDecorationColor: "var(--accent-color)",
+                  textUnderlineOffset: "4px",
                 }}
               >
                 {link.label}
@@ -101,21 +173,26 @@ const Navbar = () => {
             ))}
           </div>
 
-          {/* Right Side - Mobile Optimized */}
-          <div className="flex items-center space-x-1 sm:space-x-2">
+          {/* Right Side */}
+          <div className="flex items-center space-x-1 sm:space-x-2 relative z-50">
             {/* Notifications */}
-            <div className="relative" ref={notificationsRef}>
+            <div 
+              className="relative" 
+              ref={notificationsRef}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+              style={{ zIndex: 100 }}
+            >
               <button
-                onClick={() => {
-                  setNotificationsOpen(!notificationsOpen);
-                  if (mobileMenuOpen) setMobileMenuOpen(false);
-                }}
-                className="p-1.5 sm:p-2 rounded-full border transition relative"
+                onClick={handleNotificationClick}
+                className="p-1.5 sm:p-2 rounded-full border transition relative cursor-pointer hover:scale-105 active:scale-95"
                 style={{
                   borderColor: "var(--border-color)",
                   backgroundColor: "var(--bg-color)",
                   color: "var(--text-color)",
+                  zIndex: 100
                 }}
+                aria-label={`Notifications (${unreadCount} unread)`}
               >
                 <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
                 {unreadCount > 0 && (
@@ -131,16 +208,20 @@ const Navbar = () => {
                 )}
               </button>
 
-              {/* Notifications Dropdown */}
+              {/* Notifications Dropdown - Shows on hover (desktop) */}
               {notificationsOpen && (
                 <div 
-                  className="fixed sm:absolute right-2 sm:right-0 top-16 mt-2 w-[calc(100vw-1rem)] sm:w-80 max-w-sm rounded-lg shadow-lg z-50 border md:block"
+                  className="fixed sm:absolute right-2 sm:right-0 top-16 mt-2 w-[calc(100vw-1rem)] sm:w-80 max-w-sm rounded-lg shadow-lg z-[9999] border md:block overflow-visible"
                   style={{
                     backgroundColor: "var(--bg-color)",
                     borderColor: "var(--border-color)",
                     maxHeight: "calc(100vh - 80px)",
-                    overflowY: "auto"
+                    overflowY: "auto",
+                    boxShadow: "0 10px 25px rgba(0, 0, 0, 0.15)",
+                    zIndex: 9999
                   }}
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={handleMouseLeave}
                 >
                   <div className="p-3 sm:p-4 border-b" style={{ borderColor: "var(--border-color)" }}>
                     <div className="flex justify-between items-center">
@@ -148,7 +229,13 @@ const Navbar = () => {
                         Notifications
                       </h3>
                       {unreadCount > 0 && (
-                        <button className="text-sm sm:text-base font-medium" style={{ color: "var(--accent-color)" }}>
+                        <button 
+                          className="text-sm sm:text-base font-medium cursor-pointer hover:underline transition-all duration-300"
+                          style={{ 
+                            color: "var(--accent-color)",
+                            textDecorationColor: "var(--accent-color)"
+                          }}
+                        >
                           Mark all as read
                         </button>
                       )}
@@ -167,6 +254,7 @@ const Navbar = () => {
                             backgroundColor: !notification.read ? 'var(--accent-fade)' : 'transparent',
                             borderBottom: '1px solid var(--border-color)'
                           }}
+                          onClick={() => handleNotificationItemClick(notification.id)}
                         >
                           <div className="flex items-start gap-2 sm:gap-3">
                             <div className="mt-0.5 sm:mt-1">
@@ -201,8 +289,11 @@ const Navbar = () => {
                   <div className="p-3 sm:p-4 border-t" style={{ borderColor: "var(--border-color)" }}>
                     <Link 
                       to="/user/notifications" 
-                      className="block text-center font-medium text-sm sm:text-base transition-colors"
-                      style={{ color: "var(--accent-color)" }}
+                      className="block text-center font-medium text-sm sm:text-base transition-colors cursor-pointer hover:underline"
+                      style={{ 
+                        color: "var(--accent-color)",
+                        textDecorationColor: "var(--accent-color)"
+                      }}
                       onClick={() => {
                         setNotificationsOpen(false);
                         setMobileMenuOpen(false);
@@ -218,12 +309,13 @@ const Navbar = () => {
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
-              className="p-1.5 sm:p-2 rounded-full border transition"
+              className="p-1.5 sm:p-2 rounded-full border transition cursor-pointer hover:scale-105 active:scale-95"
               style={{
                 borderColor: "var(--border-color)",
                 backgroundColor: "var(--bg-color)",
                 color: "var(--text-color)",
               }}
+              aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
             >
               {theme === "light" ? (
                 <Moon className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -235,10 +327,11 @@ const Navbar = () => {
             {/* Profile Button */}
             <Link to="/user/profile" className="hidden md:block">
               <button
-                className="px-4 py-2 lg:px-5 lg:py-2.5 rounded-lg transition flex items-center gap-2 font-medium text-sm lg:text-base"
+                className="px-4 py-2 lg:px-5 lg:py-2.5 rounded-lg transition flex items-center gap-2 font-medium text-sm lg:text-base cursor-pointer hover:scale-105 active:scale-95 hover:underline"
                 style={{
                   backgroundColor: "var(--accent-color)",
                   color: "white",
+                  textDecorationColor: "white",
                 }}
               >
                 <User className="h-4 w-4 lg:h-5 lg:w-5" />
@@ -246,14 +339,15 @@ const Navbar = () => {
               </button>
             </Link>
 
-            {/* Mobile Profile Button (Icon Only) */}
+            {/* Mobile Profile Button */}
             <Link to="/user/profile" className="md:hidden">
               <button
-                className="p-1.5 sm:p-2.5 rounded-full transition"
+                className="p-1.5 sm:p-2.5 rounded-full transition cursor-pointer hover:scale-105 active:scale-95"
                 style={{
                   backgroundColor: "var(--accent-color)",
                   color: "white",
                 }}
+                aria-label="Profile"
               >
                 <User className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
@@ -265,13 +359,13 @@ const Navbar = () => {
                 setMobileMenuOpen(!mobileMenuOpen);
                 if (notificationsOpen) setNotificationsOpen(false);
               }}
-              className="p-1.5 sm:p-2.5 rounded-lg md:hidden transition border ml-1"
+              className="p-1.5 sm:p-2.5 rounded-lg md:hidden transition border ml-1 cursor-pointer hover:scale-105 active:scale-95"
               style={{
                 backgroundColor: "var(--bg-color)",
                 borderColor: "var(--border-color)",
                 color: "var(--text-color)",
               }}
-              aria-label="Toggle menu"
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             >
               {mobileMenuOpen ? (
                 <X className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -285,15 +379,18 @@ const Navbar = () => {
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
           <div
-            className="md:hidden py-3 space-y-1 border-t overflow-auto max-h-[calc(100vh-64px)]"
-            style={{ borderColor: "var(--border-color)" }}
+            className="md:hidden py-3 space-y-1 border-t overflow-auto max-h-[calc(100vh-64px)] z-40 relative"
+            style={{ 
+              borderColor: "var(--border-color)",
+              backgroundColor: "var(--bg-color)"
+            }}
           >
             {navLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3 py-2.5 mx-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+                className={`block px-3 py-2.5 mx-2 rounded-lg text-sm font-medium transition-all duration-300 cursor-pointer hover:underline ${
                   isActive(link.to)
                     ? "text-white"
                     : "text-[var(--text-color)] hover:bg-[var(--accent-color)] hover:bg-opacity-10"
@@ -302,19 +399,25 @@ const Navbar = () => {
                   backgroundColor: isActive(link.to)
                     ? "var(--accent-color)"
                     : "transparent",
+                  textDecorationColor: "var(--accent-color)",
+                  textUnderlineOffset: "4px",
                 }}
               >
                 {link.label}
               </Link>
             ))}
 
-            {/* Mobile Notifications */}
+            {/* Mobile Notifications Link */}
             <div className="px-3 py-2.5 mx-2">
               <Link 
                 to="/user/notifications" 
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 text-sm font-medium"
-                style={{ color: "var(--text-color)" }}
+                className="flex items-center gap-2 text-sm font-medium cursor-pointer hover:underline transition-all duration-300"
+                style={{ 
+                  color: "var(--text-color)",
+                  textDecorationColor: "var(--accent-color)",
+                  textUnderlineOffset: "4px",
+                }}
               >
                 <Bell className="h-4 w-4" />
                 Notifications
@@ -336,10 +439,12 @@ const Navbar = () => {
             <Link 
               to="/user/profile" 
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2.5 mx-2 rounded-lg text-sm font-medium text-center transition-all duration-300"
+              className="block px-3 py-2.5 mx-2 rounded-lg text-sm font-medium text-center transition-all duration-300 cursor-pointer hover:underline hover:scale-[1.02] active:scale-[0.98]"
               style={{
                 backgroundColor: 'var(--accent-color)',
                 color: 'white',
+                textDecorationColor: 'white',
+                textUnderlineOffset: '4px',
               }}
             >
               View Profile
