@@ -90,13 +90,34 @@ const uploadDocuments = async (req, res) => {
 // Get verification status
 const getVerificationStatus = async (req, res) => {
   try {
+    console.log("=== GET VERIFICATION STATUS ===");
+    console.log("User ID from token:", req.user?.id);
+    
     const providerId = req.user.id;
     
+    // Find the service provider
     const provider = await ServiceProvider.findOne({ userId: providerId });
+    console.log("Found provider:", provider ? `Yes (${provider.businessName})` : 'No');
+    
     if (!provider) {
-      return res.status(404).json({
-        success: false,
-        message: 'Service provider not found'
+      // If no provider record exists, create a basic one
+      console.log("Creating provider record...");
+      const newProvider = await ServiceProvider.create({
+        userId: providerId,
+        businessName: "My Business",
+        verificationStatus: "not-submitted",
+        isVerified: false
+      });
+      
+      return res.json({
+        success: true,
+        data: {
+          provider: {
+            isVerified: false,
+            verificationStatus: "not-submitted"
+          },
+          verification: null
+        }
       });
     }
 
@@ -104,22 +125,26 @@ const getVerificationStatus = async (req, res) => {
       providerId: provider._id 
     }).populate('reviewedBy', 'email name');
 
+    console.log("Verification data:", verification ? "Found" : "Not found");
+
     res.json({
       success: true,
       data: {
         provider: {
           isVerified: provider.isVerified,
-          verificationStatus: provider.verificationStatus
+          verificationStatus: provider.verificationStatus || "not-submitted"
         },
         verification: verification || null
       }
     });
 
   } catch (error) {
-    console.error('Get verification error:', error);
+    console.error('❌ Get verification error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch verification status'
+      message: 'Failed to fetch verification status',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };

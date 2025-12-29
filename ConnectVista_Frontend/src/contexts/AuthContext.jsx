@@ -137,27 +137,53 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, password) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await authService.login(email, password);
+  // In AuthContext.jsx - Update the login function:
+const login = async (email, password) => {
+  try {
+    setLoading(true);
+    setError(null);
+    const response = await authService.login(email, password);
 
-      if (response.success) {
-        localStorage.setItem("accessToken", response.data.accessToken);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
-        setUser(response.data.user);
+    if (response.success) {
+      localStorage.setItem('accessToken', response.data.accessToken);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      setUser(response.data.user);
+      
+      // IMPORTANT: If provider, fetch fresh verification status
+      if (response.data.user.role === 'provider') {
+        try {
+          const verificationResponse = await api.get("/verification/status");
+          if (verificationResponse.data.success) {
+            // Update profile with verification data
+            const profileData = {
+              ...response.data.profile,
+              isVerified: verificationResponse.data.data.provider.isVerified,
+              verificationStatus: verificationResponse.data.data.provider.verificationStatus
+            };
+            setProfile(profileData);
+            
+            // Also update the response
+            response.data.profile = profileData;
+          }
+        } catch (verificationError) {
+          console.warn('Could not fetch verification status:', verificationError);
+          // Continue with existing profile data
+          setProfile(response.data.profile);
+        }
+      } else {
         setProfile(response.data.profile);
       }
-      return response;
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || "Login failed";
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
     }
-  };
+    return response;
+  } catch (err) {
+    const errorMessage = err.response?.data?.message || "Login failed";
+    setError(errorMessage);
+    throw new Error(errorMessage);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const logout = async () => {
     try {

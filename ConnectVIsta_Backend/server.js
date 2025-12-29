@@ -48,7 +48,7 @@ app.use(cookieParser());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/verification', verificationRoutes);
-app.get('/auth/profile', auth(), authController.getProfile);
+app.get('/api/auth/profile', auth(), authController.getProfile);
 
 // Health check
 app.get('/api/health', (req, res) => {

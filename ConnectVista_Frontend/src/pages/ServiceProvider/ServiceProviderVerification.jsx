@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   Upload,
@@ -14,7 +14,7 @@ import {
   Eye,
   Trash2,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api";
 import resources from "../../resources";
@@ -90,61 +90,116 @@ const getStatusColor = (status) => {
 };
 
 export default function ProviderVerification() {
-  const { refreshProfile,profile, refreshAuth } = useAuth();
+  const { refreshProfile, profile, refreshAuth } = useAuth();
+  const navigate = useNavigate();
   const [verificationData, setVerificationData] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState(null);
   const [uploadProgress, setUploadProgress] = useState({});
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const hasCheckedRedirect = useRef(false);
+  const hasLoadedStatus = useRef(false);
 
-  useEffect(() => {
-    fetchVerificationStatus();
-  }, []);
-// Replace the problematic useEffect with this:
-useEffect(() => {
-  const checkAndRedirect = async () => {
-    // Check if user is already verified and redirect
-    if (verificationStatus?.provider?.verificationStatus === "approved") {
-      // Also refresh auth state
-      await refreshAuth();
-      
-      // Use a small delay to ensure user sees the approved state
-      const timer = setTimeout(() => {
-        console.log("Redirecting to dashboard - Status is approved");
-        window.location.href = "/service-provider/dashboard";
-      }, 1500);
-
-      return () => clearTimeout(timer);
-    }
-    
-    // Also check profile from auth context
-    if (profile?.isVerified) {
-      const timer = setTimeout(() => {
-        window.location.href = "/service-provider/dashboard";
-      }, 1500);
-      
-      return () => clearTimeout(timer);
-    }
-  };
-
-  checkAndRedirect();
-}, [verificationStatus, profile, refreshAuth]);
-
+  // Fetch verification status
   const fetchVerificationStatus = async () => {
     try {
+      console.log("Fetching verification status...");
       const response = await api.get("/verification/status");
-      console.log("API Response:", response.data); // Debug log
+      console.log("API Response:", response.data);
+      
       if (response.data.success) {
         const data = response.data.data;
         setVerificationStatus(data);
+        hasLoadedStatus.current = true;
+        return data;
+      } else {
+        throw new Error(response.data.message || "Failed to fetch verification status");
       }
     } catch (error) {
       console.error("Failed to fetch verification status:", error);
-      toast.error("Failed to load verification status");
-    } finally {
-      setIsLoading(false);
+      setError(error.message || "Failed to load verification status");
+      
+      // Create a fallback verification status
+      const fallbackStatus = {
+        provider: {
+          isVerified: false,
+          verificationStatus: "not-submitted"
+        },
+        verification: null
+      };
+      setVerificationStatus(fallbackStatus);
+      hasLoadedStatus.current = true;
+      return fallbackStatus;
     }
   };
+
+  // Initial load
+  useEffect(() => {
+    let mounted = true;
+    
+    const loadData = async () => {
+      if (hasLoadedStatus.current) return;
+      
+      try {
+        await fetchVerificationStatus();
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadData();
+    
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Check if user should be redirected (only once after loading)
+  useEffect(() => {
+    const checkRedirect = async () => {
+      // Skip if still loading or already checked
+      if (isLoading || hasCheckedRedirect.current || !hasLoadedStatus.current) return;
+      
+      console.log("Checking if should redirect...");
+      console.log("Verification status:", verificationStatus);
+      console.log("Profile:", profile);
+      
+      let shouldRedirect = false;
+      
+      // Check verification status from API
+      if (verificationStatus?.provider?.verificationStatus === "approved") {
+        console.log("✅ Verified via API, redirecting to dashboard");
+        shouldRedirect = true;
+      }
+      
+      // Check profile from auth context
+      if (profile?.isVerified) {
+        console.log("✅ Verified via profile, redirecting to dashboard");
+        shouldRedirect = true;
+      }
+      
+      if (shouldRedirect) {
+        hasCheckedRedirect.current = true;
+        
+        // Show success message briefly, then redirect
+        toast.success("Your account is already verified! Redirecting to dashboard...");
+        
+        setTimeout(() => {
+          console.log("Redirecting to dashboard...");
+          navigate("/service-provider/dashboard", { replace: true });
+        }, 1500);
+      } else {
+        console.log("❌ Not verified, showing verification form");
+        console.log("Status:", verificationStatus?.provider?.verificationStatus);
+        hasCheckedRedirect.current = true;
+      }
+    };
+
+    checkRedirect();
+  }, [isLoading, verificationStatus, profile, navigate]);
 
   const handleFileChange = (fieldName, file) => {
     if (file) {
@@ -213,18 +268,24 @@ useEffect(() => {
           setUploadProgress({ overall: progress });
         },
       });
-      // In handleSubmit function, after successful upload:
+
       if (response.data.success) {
         toast.success(
           "Documents uploaded successfully! Verification is under review."
         );
         setVerificationData({});
+        
+        // Refresh data
         await refreshProfile();
-        await refreshAuth(); // Add this line to refresh auth state
-
-        // Redirect to dashboard after 2 seconds
+        await refreshAuth();
+        
+        // Fetch updated verification status
+        hasLoadedStatus.current = false;
+        await fetchVerificationStatus();
+        
+        // Redirect to dashboard (even though verification is pending)
         setTimeout(() => {
-          window.location.href = "/service-provider/dashboard";
+          navigate("/service-provider/dashboard", { replace: true });
         }, 2000);
       }
     } catch (error) {
@@ -246,6 +307,8 @@ useEffect(() => {
       const response = await api.delete(`/verification/document/${documentId}`);
       if (response.data.success) {
         toast.success("Document deleted successfully");
+        // Reset loaded status to fetch fresh data
+        hasLoadedStatus.current = false;
         await fetchVerificationStatus();
       }
     } catch (error) {
@@ -270,8 +333,44 @@ useEffect(() => {
     );
   }
 
-  // If user is already approved, show success message and redirect
-  if (verificationStatus?.provider?.verificationStatus === "approved") {
+  // Error state
+  if (error && !verificationStatus) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center max-w-md mx-4">
+          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">
+            Unable to Load Verification Status
+          </h2>
+          <p className="text-gray-600 mb-6">
+            {error}
+          </p>
+          <div className="space-y-3">
+            <button
+              onClick={async () => {
+                setIsLoading(true);
+                setError(null);
+                await fetchVerificationStatus();
+                setIsLoading(false);
+              }}
+              className="px-6 py-3 bg-[var(--accent-color)] text-white font-medium rounded-xl hover:opacity-90 transition-opacity"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => navigate("/service-provider/dashboard")}
+              className="px-6 py-3 bg-gray-200 text-gray-800 font-medium rounded-xl hover:bg-gray-300 transition-colors"
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is already approved (fallback check)
+  if (verificationStatus?.provider?.verificationStatus === "approved" && !hasCheckedRedirect.current) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center max-w-md mx-4">
@@ -317,9 +416,7 @@ useEffect(() => {
               />
             </div>
             <button
-              onClick={() =>
-                (window.location.href = "/service-provider/dashboard")
-              }
+              onClick={() => navigate("/service-provider/dashboard", { replace: true })}
               className="mt-4 inline-flex items-center px-6 py-3 bg-[var(--accent-color)] text-white font-medium rounded-xl hover:opacity-90 transition-opacity shadow-lg"
             >
               Go to Dashboard Now
@@ -805,9 +902,7 @@ useEffect(() => {
                   "approved" && (
                   <div className="mt-4">
                     <button
-                      onClick={() =>
-                        (window.location.href = "/service-provider/dashboard")
-                      }
+                      onClick={() => navigate("/service-provider/dashboard", { replace: true })}
                       className="text-blue-600 hover:text-blue-800 underline text-sm"
                     >
                       Click here if not redirected automatically
