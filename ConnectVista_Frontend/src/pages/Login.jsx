@@ -2,7 +2,8 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
 import { Eye, EyeOff, Home, Mail, Lock, LogIn, ArrowRight, User, Smartphone } from "lucide-react"
-import { useNavigate } from "react-router-dom"; // Added missing import
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import resources from "../resources"
 
 export default function LoginPage() {
@@ -13,18 +14,52 @@ export default function LoginPage() {
     rememberMe: false
   })
   const [isLoading, setIsLoading] = useState(false)
-  const navigate = useNavigate(); // Added useNavigate hook
+  const [loginError, setLoginError] = useState("")
+  const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
+    setLoginError("")
     
-    // Simulate login process
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    setIsLoading(false)
-    // Handle login logic here
-    // After successful login, you might navigate to another page
-    // navigate("/dashboard");
+    try {
+      const response = await login(formData.email, formData.password);
+      
+      if (response.success) {
+        // Store remember me preference
+        if (formData.rememberMe) {
+          localStorage.setItem('rememberMe', 'true');
+        } else {
+          localStorage.removeItem('rememberMe');
+        }
+
+        // Redirect based on role
+        const role = response.data.role;
+        switch (role) {
+          case 'seeker':
+            navigate('/user/home');
+            break;
+          case 'provider':
+            // Check if provider is verified
+            if (response.data.profile?.isVerified) {
+              navigate('/service-provider/dashboard');
+            } else {
+              navigate('/service-provider/verify');
+            }
+            break;
+          case 'admin':
+            navigate('/admin/dashboard');
+            break;
+          default:
+            navigate('/');
+        }
+      }
+    } catch (error) {
+      setLoginError(error.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const handleChange = (e) => {
@@ -33,6 +68,8 @@ export default function LoginPage() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }))
+    // Clear error when user starts typing
+    if (loginError) setLoginError("");
   }
   
   const handleBackToHome = () => {
@@ -122,16 +159,27 @@ export default function LoginPage() {
               </h2>
               <p className="mt-2 text-sm" style={{ color: "var(--text-color)" }}>
                 Or{" "}
-                <a
-                  href="/signup"
+                <Link
+                  to="/signup"
                   className="font-medium transition-colors duration-200"
                   style={{ color: 'var(--accent-color)' }}
                 >
                   create a new account
-                </a>
+                </Link>
               </p>
             </div>
           </motion.div>
+
+          {/* Error Message */}
+          {loginError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"
+            >
+              {loginError}
+            </motion.div>
+          )}
 
           <motion.form
             className="mt-8 space-y-6"
@@ -226,13 +274,13 @@ export default function LoginPage() {
               </div>
 
               <div className="text-sm">
-                <a
-                  href="/forgot-password"
+                <Link
+                  to="/forgot-password"
                   className="font-medium transition-colors duration-200"
                   style={{ color: 'var(--accent-color)' }}
                 >
                   Forgot your password?
-                </a>
+                </Link>
               </div>
             </div>
 
@@ -319,14 +367,14 @@ export default function LoginPage() {
             <div className="text-center">
               <p className="text-sm" style={{ color: "var(--text-color)" }}>
                 Don't have an account?{" "}
-                <a
-                  href="/signup"
+                <Link
+                  to="/signup"
                   className="font-medium inline-flex items-center transition-all duration-200 group"
                   style={{ color: 'var(--accent-color)' }}
                 >
                   Sign up now
                   <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform duration-200" />
-                </a>
+                </Link>
               </p>
             </div>
           </motion.form>

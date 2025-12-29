@@ -15,16 +15,21 @@ import {
   Check,
   Home,
 } from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
 import resources from "../../resources";
 
 export default function ServiceSeekerSignup() {
   const navigate = useNavigate();
+  const { signupSeeker } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  
   const [formData, setFormData] = useState({
     // Step 1
-    fullName: "",
+    name: "",
     email: "",
     phone: "",
 
@@ -40,20 +45,81 @@ export default function ServiceSeekerSignup() {
     pinCode: "",
   });
 
-  const [isLoading, setIsLoading] = useState(false);
+  const validateStep = (step) => {
+    const newErrors = {};
+    
+    switch (step) {
+      case 1:
+        if (!formData.name.trim()) newErrors.name = "Name is required";
+        if (!formData.email.trim()) newErrors.email = "Email is required";
+        else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Email is invalid";
+        if (!formData.phone.trim()) newErrors.phone = "Phone number is required";
+        else if (!/^\d{10}$/.test(formData.phone.replace(/\D/g, ''))) newErrors.phone = "Phone number must be 10 digits";
+        break;
+      case 2:
+        if (!formData.password) newErrors.password = "Password is required";
+        else if (formData.password.length < 6) newErrors.password = "Password must be at least 6 characters";
+        if (!formData.confirmPassword) newErrors.confirmPassword = "Please confirm password";
+        else if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = "Passwords do not match";
+        if (!formData.gender) newErrors.gender = "Please select gender";
+        break;
+      case 3:
+        if (!formData.address.trim()) newErrors.address = "Address is required";
+        if (!formData.city.trim()) newErrors.city = "City is required";
+        if (!formData.state.trim()) newErrors.state = "State is required";
+        if (!formData.pinCode.trim()) newErrors.pinCode = "PIN code is required";
+        else if (!/^\d{6}$/.test(formData.pinCode)) newErrors.pinCode = "PIN code must be 6 digits";
+        break;
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
     if (currentStep < 3) {
-      setCurrentStep(currentStep + 1);
+      if (validateStep(currentStep)) {
+        setCurrentStep(currentStep + 1);
+      }
       return;
     }
 
+    if (!validateStep(currentStep)) return;
+
     setIsLoading(true);
-    // Simulate signup process
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setIsLoading(false);
-    // Handle signup logic here
+    
+    try {
+      // Prepare data for API
+      const signupData = {
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+        role: 'seeker',
+        name: formData.name,
+        gender: formData.gender,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        pinCode: formData.pinCode,
+        profileImage: 'default-avatar.png'
+      };
+
+      const response = await signupSeeker(signupData);
+      
+      if (response.success) {
+        navigate('/user/home');
+      }
+    } catch (error) {
+      console.error('Signup error:', error);
+      // Handle API errors
+      if (error.message.includes('already exists')) {
+        setErrors({ email: error.message });
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -62,10 +128,14 @@ export default function ServiceSeekerSignup() {
       ...prev,
       [name]: value,
     }));
+    // Clear error for this field
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const nextStep = () => {
-    if (currentStep < 3) {
+    if (validateStep(currentStep)) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -92,7 +162,7 @@ export default function ServiceSeekerSignup() {
       <div
         className="hidden lg:flex lg:w-1/2 relative overflow-hidden"
         style={{
-          backgroundColor: "var(--accent-dark)", // Using Deep Coral for the background
+          backgroundColor: "var(--accent-dark)",
         }}
       >
         {/* Back to Home Button - Top Left */}
@@ -245,24 +315,30 @@ export default function ServiceSeekerSignup() {
                 <div className="space-y-4">
                   <div className="relative">
                     <label
-                      htmlFor="fullName"
+                      htmlFor="name"
                       className="block text-sm font-medium text-gray-700 mb-2"
                     >
-                      Full Name
+                      Full Name *
                     </label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                       <input
-                        id="fullName"
-                        name="fullName"
+                        id="name"
+                        name="name"
                         type="text"
                         required
-                        value={formData.fullName}
+                        value={formData.name}
                         onChange={handleChange}
-                        className="appearance-none relative block w-full px-12 py-4 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-[var(--accent-color)] transition-all duration-200"
+                        className={`appearance-none relative block w-full px-12 py-4 border placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:border-[var(--accent-color)] transition-all duration-200 ${
+                          errors.name ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        style={errors.name ? {} : { focusRingColor: 'var(--accent-color)' }}
                         placeholder="Enter your full name"
                       />
                     </div>
+                    {errors.name && (
+                      <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+                    )}
                   </div>
 
                   <div className="relative">
@@ -270,7 +346,7 @@ export default function ServiceSeekerSignup() {
                       htmlFor="email"
                       className="block text-sm font-medium text-gray-700 mb-2"
                     >
-                      Email Address
+                      Email Address *
                     </label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -281,10 +357,16 @@ export default function ServiceSeekerSignup() {
                         required
                         value={formData.email}
                         onChange={handleChange}
-                        className="appearance-none relative block w-full px-12 py-4 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-[var(--accent-color)] transition-all duration-200"
+                        className={`appearance-none relative block w-full px-12 py-4 border placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:border-[var(--accent-color)] transition-all duration-200 ${
+                          errors.email ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        style={errors.email ? {} : { focusRingColor: 'var(--accent-color)' }}
                         placeholder="Enter your email"
                       />
                     </div>
+                    {errors.email && (
+                      <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                    )}
                   </div>
 
                   <div className="relative">
@@ -292,7 +374,7 @@ export default function ServiceSeekerSignup() {
                       htmlFor="phone"
                       className="block text-sm font-medium text-gray-700 mb-2"
                     >
-                      Phone Number
+                      Phone Number *
                     </label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -303,10 +385,16 @@ export default function ServiceSeekerSignup() {
                         required
                         value={formData.phone}
                         onChange={handleChange}
-                        className="appearance-none relative block w-full px-12 py-4 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-[var(--accent-color)] transition-all duration-200"
+                        className={`appearance-none relative block w-full px-12 py-4 border placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:border-[var(--accent-color)] transition-all duration-200 ${
+                          errors.phone ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        style={errors.phone ? {} : { focusRingColor: 'var(--accent-color)' }}
                         placeholder="Enter your phone number"
                       />
                     </div>
+                    {errors.phone && (
+                      <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -319,7 +407,7 @@ export default function ServiceSeekerSignup() {
                       htmlFor="password"
                       className="block text-sm font-medium text-gray-700 mb-2"
                     >
-                      Password
+                      Password *
                     </label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -330,7 +418,10 @@ export default function ServiceSeekerSignup() {
                         required
                         value={formData.password}
                         onChange={handleChange}
-                        className="appearance-none relative block w-full px-12 py-4 pr-12 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-[var(--accent-color)] transition-all duration-200"
+                        className={`appearance-none relative block w-full px-12 py-4 pr-12 border placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:border-[var(--accent-color)] transition-all duration-200 ${
+                          errors.password ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        style={errors.password ? {} : { focusRingColor: 'var(--accent-color)' }}
                         placeholder="Create a password"
                       />
                       <button
@@ -345,6 +436,9 @@ export default function ServiceSeekerSignup() {
                         )}
                       </button>
                     </div>
+                    {errors.password && (
+                      <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+                    )}
                   </div>
 
                   <div className="relative">
@@ -352,7 +446,7 @@ export default function ServiceSeekerSignup() {
                       htmlFor="confirmPassword"
                       className="block text-sm font-medium text-gray-700 mb-2"
                     >
-                      Confirm Password
+                      Confirm Password *
                     </label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -363,7 +457,10 @@ export default function ServiceSeekerSignup() {
                         required
                         value={formData.confirmPassword}
                         onChange={handleChange}
-                        className="appearance-none relative block w-full px-12 py-4 pr-12 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-[var(--accent-color)] transition-all duration-200"
+                        className={`appearance-none relative block w-full px-12 py-4 pr-12 border placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:border-[var(--accent-color)] transition-all duration-200 ${
+                          errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        style={errors.confirmPassword ? {} : { focusRingColor: 'var(--accent-color)' }}
                         placeholder="Confirm your password"
                       />
                       <button
@@ -380,6 +477,9 @@ export default function ServiceSeekerSignup() {
                         )}
                       </button>
                     </div>
+                    {errors.confirmPassword && (
+                      <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+                    )}
                   </div>
 
                   <div className="relative">
@@ -387,14 +487,17 @@ export default function ServiceSeekerSignup() {
                       htmlFor="gender"
                       className="block text-sm font-medium text-gray-700 mb-2"
                     >
-                      Gender
+                      Gender *
                     </label>
                     <select
                       id="gender"
                       name="gender"
                       value={formData.gender}
                       onChange={handleChange}
-                      className="appearance-none relative block w-full px-4 py-4 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-[var(--accent-color)] transition-all duration-200"
+                      className={`appearance-none relative block w-full px-4 py-4 border placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:border-[var(--accent-color)] transition-all duration-200 ${
+                        errors.gender ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      style={errors.gender ? {} : { focusRingColor: 'var(--accent-color)' }}
                     >
                       <option value="">Select Gender</option>
                       <option value="male">Male</option>
@@ -404,6 +507,9 @@ export default function ServiceSeekerSignup() {
                         Prefer not to say
                       </option>
                     </select>
+                    {errors.gender && (
+                      <p className="mt-1 text-sm text-red-600">{errors.gender}</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -416,7 +522,7 @@ export default function ServiceSeekerSignup() {
                       htmlFor="address"
                       className="block text-sm font-medium text-gray-700 mb-2"
                     >
-                      Address
+                      Address *
                     </label>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-4 h-5 w-5 text-gray-400" />
@@ -427,10 +533,16 @@ export default function ServiceSeekerSignup() {
                         required
                         value={formData.address}
                         onChange={handleChange}
-                        className="appearance-none relative block w-full px-12 py-4 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-[var(--accent-color)] transition-all duration-200 resize-none"
+                        className={`appearance-none relative block w-full px-12 py-4 border placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:border-[var(--accent-color)] transition-all duration-200 resize-none ${
+                          errors.address ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        style={errors.address ? {} : { focusRingColor: 'var(--accent-color)' }}
                         placeholder="Enter your complete address"
                       />
                     </div>
+                    {errors.address && (
+                      <p className="mt-1 text-sm text-red-600">{errors.address}</p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -439,7 +551,7 @@ export default function ServiceSeekerSignup() {
                         htmlFor="city"
                         className="block text-sm font-medium text-gray-700 mb-2"
                       >
-                        City
+                        City *
                       </label>
                       <input
                         id="city"
@@ -448,9 +560,15 @@ export default function ServiceSeekerSignup() {
                         required
                         value={formData.city}
                         onChange={handleChange}
-                        className="appearance-none relative block w-full px-4 py-4 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-[var(--accent-color)] transition-all duration-200"
+                        className={`appearance-none relative block w-full px-4 py-4 border placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:border-[var(--accent-color)] transition-all duration-200 ${
+                          errors.city ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        style={errors.city ? {} : { focusRingColor: 'var(--accent-color)' }}
                         placeholder="City"
                       />
+                      {errors.city && (
+                        <p className="mt-1 text-sm text-red-600">{errors.city}</p>
+                      )}
                     </div>
 
                     <div className="relative">
@@ -458,7 +576,7 @@ export default function ServiceSeekerSignup() {
                         htmlFor="state"
                         className="block text-sm font-medium text-gray-700 mb-2"
                       >
-                        State
+                        State *
                       </label>
                       <input
                         id="state"
@@ -467,9 +585,15 @@ export default function ServiceSeekerSignup() {
                         required
                         value={formData.state}
                         onChange={handleChange}
-                        className="appearance-none relative block w-full px-4 py-4 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-[var(--accent-color)] transition-all duration-200"
+                        className={`appearance-none relative block w-full px-4 py-4 border placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:border-[var(--accent-color)] transition-all duration-200 ${
+                          errors.state ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        style={errors.state ? {} : { focusRingColor: 'var(--accent-color)' }}
                         placeholder="State"
                       />
+                      {errors.state && (
+                        <p className="mt-1 text-sm text-red-600">{errors.state}</p>
+                      )}
                     </div>
                   </div>
 
@@ -478,7 +602,7 @@ export default function ServiceSeekerSignup() {
                       htmlFor="pinCode"
                       className="block text-sm font-medium text-gray-700 mb-2"
                     >
-                      PIN Code
+                      PIN Code *
                     </label>
                     <input
                       id="pinCode"
@@ -487,9 +611,15 @@ export default function ServiceSeekerSignup() {
                       required
                       value={formData.pinCode}
                       onChange={handleChange}
-                      className="appearance-none relative block w-full px-4 py-4 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-[var(--accent-color)] transition-all duration-200"
+                      className={`appearance-none relative block w-full px-4 py-4 border placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:border-[var(--accent-color)] transition-all duration-200 ${
+                        errors.pinCode ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      style={errors.pinCode ? {} : { focusRingColor: 'var(--accent-color)' }}
                       placeholder="Enter PIN code"
                     />
+                    {errors.pinCode && (
+                      <p className="mt-1 text-sm text-red-600">{errors.pinCode}</p>
+                    )}
                   </div>
                 </div>
               )}

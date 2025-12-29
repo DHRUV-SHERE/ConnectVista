@@ -1,25 +1,24 @@
 import { Routes, Route } from "react-router-dom";
-// ServiceProviderRoutes.jsx (Alternative)
-import ServiceProviderLayout from "../layout/ServiceProviderLayout";
-import ServiceProviderDashboard from "../pages/ServiceProvider/ServiceProviderDashboard";
-import ServiceProviderProfile from "../pages/ServiceProvider/ServiceProviderProfile";
-import ServiceProviderNotification from "../pages/ServiceProvider/ServiceProviderNotification";
-import ServiceProviderBookings from "../pages/ServiceProvider/ServiceProviderBookings";
-import ServiceProviderReviews from "../pages/ServiceProvider/ServiceProviderReviews";
-import ServiceProviderSettings from "../pages/ServiceProvider/ServiceProviderSettings";
-import ServiceProviderSubscription from "../pages/ServiceProvider/ServiceProviderSubscription";
+import UserLayout from "../layout/UserLayout";
+import UserHome from "../pages/User/UserHome";
+import AboutPage from "../pages/Common/CommonAbout";
+import ContactPage from "../pages/Common/CommonContact";
+import UserServices from "../pages/User/UserServices";
+import UserExplore from "../pages/User/UserExplore";
+import UserProfile from "../pages/User/UserProfile";
+import UserNotification from "../pages/User/UserNotification";
 
-const ServiceProviderRoute = (
-  <Route path="/service-provider" element={<ServiceProviderLayout />}>
-    <Route index element={<ServiceProviderDashboard />} />
-    <Route path="dashboard" element={<ServiceProviderDashboard />} />
-    <Route path="profile" element={<ServiceProviderProfile />} />
-    <Route path="bookings" element={<ServiceProviderBookings />} />
-    <Route path="reviews" element={<ServiceProviderReviews/>} />
-    <Route path="notifications" element={<ServiceProviderNotification />} />
-    <Route path="subscription" element={<ServiceProviderSubscription/>} />
-    <Route path="settings" element={<ServiceProviderSettings />} />
+const UserRoutes = (
+  <Route element={<UserLayout />}>
+    <Route index element={<UserHome />} />
+    <Route path="home" element={<UserHome />} />
+    <Route path="services" element={<UserServices />} />
+    <Route path="explore" element={<UserExplore />} />
+    <Route path="about" element={<AboutPage />} />
+    <Route path="contact" element={<ContactPage />} />
+    <Route path="profile" element={<UserProfile />} />
+    <Route path="notifications" element={<UserNotification />} />
   </Route>
 );
 
-export default ServiceProviderRoute;
+export default UserRoutes;

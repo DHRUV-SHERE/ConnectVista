@@ -5,14 +5,13 @@ const connectDB = async () => {
     // MongoDB connection URI
     const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/connectvista';
     
-    console.log(`🔗 Attempting to connect to MongoDB: ${mongoURI.replace(/:([^:]+)@/, ':****@')}`);
+    // console.log(`🔗 Attempting to connect to MongoDB: ${mongoURI.replace(/:([^:]+)@/, ':****@')}`);
     
     // For Mongoose 7+, these options are no longer needed
     const conn = await mongoose.connect(mongoURI);
     
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    console.log(`📊 Database: ${conn.connection.name}`);
-
+    // console.log(`✅ MongoDB Connected: ${conn.connection.host} , 📊 Database: ${conn.connection.name}`);
+    console.log('MongoDB Connected');
     // Event listeners for connection
     mongoose.connection.on('connected', () => {
       console.log('📊 Mongoose connected to DB');
