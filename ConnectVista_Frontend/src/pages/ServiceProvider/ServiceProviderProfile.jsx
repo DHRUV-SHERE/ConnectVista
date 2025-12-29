@@ -1,5 +1,9 @@
-import { useState, useCallback, memo } from 'react';
-import { Upload, Plus, X, Clock } from 'lucide-react';
+"use client";
+import { useState, useEffect, useCallback, memo } from 'react';
+import { Upload, Plus, X, Clock, Save, Loader2 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import profileService from '../../services/profileService';
+import toast from 'react-hot-toast';
 
 // Memoized components for better performance
 const ServiceTag = memo(({ service, onRemove }) => (
@@ -10,10 +14,9 @@ const ServiceTag = memo(({ service, onRemove }) => (
       gap: '0.5rem',
       padding: '0.75rem 1.25rem',
       backgroundColor: 'var(--accent-color)',
-      opacity: 0.1,
       borderRadius: '9999px',
       fontSize: '1rem',
-      color: 'var(--accent-color)'
+      color: 'white'
     }}
   >
     {service}
@@ -23,7 +26,7 @@ const ServiceTag = memo(({ service, onRemove }) => (
         background: 'none',
         border: 'none',
         cursor: 'pointer',
-        color: 'inherit',
+        color: 'white',
         opacity: 0.7,
         display: 'flex',
         alignItems: 'center',
@@ -38,9 +41,8 @@ const ServiceTag = memo(({ service, onRemove }) => (
 
 ServiceTag.displayName = 'ServiceTag';
 
-const ImageUpload = memo(({ index, onDelete }) => (
+const ImageUpload = memo(({ image, index, onDelete, onView }) => (
   <div
-    key={index}
     style={{
       aspectRatio: '1',
       backgroundColor: 'var(--border-color)',
@@ -49,15 +51,22 @@ const ImageUpload = memo(({ index, onDelete }) => (
       alignItems: 'center',
       justifyContent: 'center',
       position: 'relative',
+      backgroundImage: image.url ? `url(${image.url})` : 'none',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
       transition: 'transform 0.2s'
     }}
     className="image-upload"
     onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
     onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+    onClick={() => onView(image.url)}
   >
-    <Upload size={40} style={{ opacity: 0.5 }} />
+    {!image.url && <Upload size={40} style={{ opacity: 0.5 }} />}
     <button
-      onClick={onDelete}
+      onClick={(e) => {
+        e.stopPropagation();
+        onDelete(index);
+      }}
       style={{
         position: 'absolute',
         top: '0.75rem',
@@ -84,113 +93,302 @@ const ImageUpload = memo(({ index, onDelete }) => (
 
 ImageUpload.displayName = 'ImageUpload';
 
-const WorkingHoursRow = memo(({ day }) => (
-  <div
-    key={day}
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '1.5rem',
-      flexWrap: 'wrap',
-      padding: '1rem',
-      backgroundColor: 'var(--background)',
-      borderRadius: '0.5rem',
-      transition: 'background-color 0.2s'
-    }}
-    className="working-hours-row"
-    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--hover-bg)'}
-    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--background)'}
-  >
-    <div style={{ width: '9rem', minWidth: '9rem' }}>
-      <p style={{
-        fontSize: '1rem',
-        fontWeight: '500',
-        margin: 0
-      }}>{day}</p>
-    </div>
-    <div style={{
-      flex: 1,
-      display: 'flex',
-      alignItems: 'center',
-      gap: '1rem',
-      flexWrap: 'wrap',
-      minWidth: 'min(300px, 100%)'
-    }}>
-      <input 
-        type="time" 
-        defaultValue="08:00" 
-        style={{
-          width: '10rem',
-          padding: '0.75rem 1rem',
-          border: '1px solid var(--border-color)',
-          borderRadius: '0.5rem',
-          backgroundColor: 'var(--card-bg)',
-          color: 'var(--text-color)',
-          fontSize: '1rem'
-        }}
-      />
-      <span style={{ opacity: 0.7, fontSize: '1rem' }}>to</span>
-      <input 
-        type="time" 
-        defaultValue="18:00" 
-        style={{
-          width: '10rem',
-          padding: '0.75rem 1rem',
-          border: '1px solid var(--border-color)',
-          borderRadius: '0.5rem',
-          backgroundColor: 'var(--card-bg)',
-          color: 'var(--text-color)',
-          fontSize: '1rem'
-        }}
-      />
-    </div>
-    <button
+const WorkingHoursRow = memo(({ day, schedule, onChange }) => {
+  const dayKey = day.toLowerCase();
+  const daySchedule = schedule[dayKey] || { isAvailable: true, startTime: '09:00', endTime: '18:00' };
+
+  return (
+    <div
+      key={day}
       style={{
-        padding: '0.75rem 1.5rem',
-        backgroundColor: 'transparent',
-        border: '1px solid var(--border-color)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '1.5rem',
+        flexWrap: 'wrap',
+        padding: '1rem',
+        backgroundColor: 'var(--background)',
         borderRadius: '0.5rem',
-        cursor: 'pointer',
-        fontSize: '1rem',
-        minWidth: '8rem',
-        transition: 'all 0.2s'
+        transition: 'background-color 0.2s'
       }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.backgroundColor = 'var(--accent-color)';
-        e.currentTarget.style.color = 'white';
-        e.currentTarget.style.borderColor = 'var(--accent-color)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = 'transparent';
-        e.currentTarget.style.color = 'var(--text-color)';
-        e.currentTarget.style.borderColor = 'var(--border-color)';
-      }}
+      className="working-hours-row"
+      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--hover-bg)'}
+      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--background)'}
     >
-      Closed
-    </button>
-  </div>
-));
+      <div style={{ width: '9rem', minWidth: '9rem' }}>
+        <p style={{
+          fontSize: '1rem',
+          fontWeight: '500',
+          margin: 0
+        }}>{day}</p>
+      </div>
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '1rem',
+        flexWrap: 'wrap',
+        minWidth: 'min(300px, 100%)'
+      }}>
+        <input 
+          type="time" 
+          value={daySchedule.startTime}
+          onChange={(e) => onChange(dayKey, 'startTime', e.target.value)}
+          disabled={!daySchedule.isAvailable}
+          style={{
+            width: '10rem',
+            padding: '0.75rem 1rem',
+            border: '1px solid var(--border-color)',
+            borderRadius: '0.5rem',
+            backgroundColor: 'var(--card-bg)',
+            color: 'var(--text-color)',
+            fontSize: '1rem',
+            opacity: daySchedule.isAvailable ? 1 : 0.5
+          }}
+        />
+        <span style={{ opacity: daySchedule.isAvailable ? 0.7 : 0.3, fontSize: '1rem' }}>to</span>
+        <input 
+          type="time" 
+          value={daySchedule.endTime}
+          onChange={(e) => onChange(dayKey, 'endTime', e.target.value)}
+          disabled={!daySchedule.isAvailable}
+          style={{
+            width: '10rem',
+            padding: '0.75rem 1rem',
+            border: '1px solid var(--border-color)',
+            borderRadius: '0.5rem',
+            backgroundColor: 'var(--card-bg)',
+            color: 'var(--text-color)',
+            fontSize: '1rem',
+            opacity: daySchedule.isAvailable ? 1 : 0.5
+          }}
+        />
+      </div>
+      <button
+        type="button"
+        onClick={() => onChange(dayKey, 'isAvailable', !daySchedule.isAvailable)}
+        style={{
+          padding: '0.75rem 1.5rem',
+          backgroundColor: daySchedule.isAvailable ? 'transparent' : 'var(--accent-color)',
+          border: `1px solid ${daySchedule.isAvailable ? 'var(--border-color)' : 'var(--accent-color)'}`,
+          borderRadius: '0.5rem',
+          cursor: 'pointer',
+          fontSize: '1rem',
+          color: daySchedule.isAvailable ? 'var(--text-color)' : 'white',
+          minWidth: '8rem',
+          transition: 'all 0.2s'
+        }}
+        onMouseEnter={(e) => {
+          if (daySchedule.isAvailable) {
+            e.currentTarget.style.backgroundColor = 'var(--accent-color)';
+            e.currentTarget.style.color = 'white';
+            e.currentTarget.style.borderColor = 'var(--accent-color)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (daySchedule.isAvailable) {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = 'var(--text-color)';
+            e.currentTarget.style.borderColor = 'var(--border-color)';
+          }
+        }}
+      >
+        {daySchedule.isAvailable ? 'Mark Closed' : 'Mark Open'}
+      </button>
+    </div>
+  );
+});
 
 WorkingHoursRow.displayName = 'WorkingHoursRow';
 
 const ServiceProviderProfile = () => {
-  const [services, setServices] = useState([
-    'Leak Repairs',
-    'Pipe Installation',
-    'Drain Cleaning',
-  ]);
+  const { profile, user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    businessName: '',
+    description: '',
+    businessAddress: {
+      street: '',
+      city: '',
+      state: '',
+      pinCode: ''
+    },
+    experienceYears: 0,
+    languages: [],
+    startingPrice: 0,
+    emergencyCharge: 0,
+    extraChargeNote: '',
+    services: [],
+    schedule: {
+      responseTime: 'within-2-hours',
+      serviceAreaRadius: 10,
+      weeklySchedule: {
+        monday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
+        tuesday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
+        wednesday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
+        thursday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
+        friday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
+        saturday: { isAvailable: false, startTime: '10:00', endTime: '16:00' },
+        sunday: { isAvailable: false, startTime: '10:00', endTime: '14:00' }
+      },
+      isAvailable: true
+    }
+  });
+  
+  const [services, setServices] = useState([]);
   const [newService, setNewService] = useState('');
+  const [businessImages, setBusinessImages] = useState([]);
+  const [newImages, setNewImages] = useState([]);
 
-  const handleSave = useCallback(() => {
-    alert('Profile updated! Your business profile has been saved successfully.');
+  const daysOfWeek = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+
+  // Load profile data
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        setLoading(true);
+        const response = await profileService.getProviderProfile();
+        
+        if (response.success && response.data) {
+          const { provider, services: providerServices, schedule } = response.data;
+          
+          // Set form data
+          setFormData({
+            businessName: provider.businessName || '',
+            description: provider.description || '',
+            businessAddress: provider.businessAddress || {
+              street: '',
+              city: '',
+              state: '',
+              pinCode: ''
+            },
+            experienceYears: provider.experienceYears || 0,
+            languages: provider.languages || [],
+            startingPrice: provider.startingPrice || 0,
+            emergencyCharge: provider.emergencyCharge || 0,
+            extraChargeNote: provider.extraChargeNote || '',
+            services: providerServices || [],
+            schedule: schedule || {
+              responseTime: 'within-2-hours',
+              serviceAreaRadius: 10,
+              weeklySchedule: {
+                monday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
+                tuesday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
+                wednesday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
+                thursday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
+                friday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
+                saturday: { isAvailable: false, startTime: '10:00', endTime: '16:00' },
+                sunday: { isAvailable: false, startTime: '10:00', endTime: '14:00' }
+              },
+              isAvailable: true
+            }
+          });
+
+          // Set services
+          setServices(providerServices.map(ps => ps.serviceId?.name || ps.name).filter(Boolean));
+          
+          // Set business images
+          if (provider.businessImages) {
+            setBusinessImages(provider.businessImages);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load profile:', error);
+        toast.error('Failed to load profile data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
   }, []);
 
+  const handleInputChange = useCallback((field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  }, []);
+
+  const handleAddressChange = useCallback((field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      businessAddress: {
+        ...prev.businessAddress,
+        [field]: value
+      }
+    }));
+  }, []);
+
+  const handleScheduleChange = useCallback((day, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      schedule: {
+        ...prev.schedule,
+        weeklySchedule: {
+          ...prev.schedule.weeklySchedule,
+          [day]: {
+            ...prev.schedule.weeklySchedule[day],
+            [field]: value
+          }
+        }
+      }
+    }));
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      
+      // Prepare services data
+      const servicesData = services.map(service => ({
+        name: service,
+        category: 'General', // You can enhance this
+        minPrice: formData.startingPrice,
+        maxPrice: formData.startingPrice * 2,
+        pricingType: 'fixed'
+      }));
+
+      // Prepare update data
+      const updateData = {
+        ...formData,
+        services: servicesData
+      };
+
+      // Update profile
+      const response = await profileService.updateProviderProfile(updateData);
+      
+      if (response.success) {
+        // Upload new images if any
+        if (newImages.length > 0) {
+          await profileService.uploadBusinessImages(newImages);
+          setNewImages([]);
+        }
+        
+        toast.success('Profile updated successfully!');
+      }
+    } catch (error) {
+      console.error('Failed to save profile:', error);
+      toast.error(error.message || 'Failed to save profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const addService = useCallback(() => {
-    if (newService.trim()) {
+    if (newService.trim() && !services.includes(newService.trim())) {
       setServices(prev => [...prev, newService.trim()]);
       setNewService('');
     }
-  }, [newService]);
+  }, [newService, services]);
 
   const removeService = useCallback((index) => {
     setServices(prev => prev.filter((_, i) => i !== index));
@@ -203,15 +401,55 @@ const ServiceProviderProfile = () => {
     }
   }, [addService]);
 
-  const daysOfWeek = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday',
-  ];
+  const handleImageUpload = useCallback((e) => {
+    const files = Array.from(e.target.files);
+    if (businessImages.length + files.length > 10) {
+      toast.error('Maximum 10 images allowed');
+      return;
+    }
+    
+    const newImageFiles = files.map(file => ({
+      file,
+      url: URL.createObjectURL(file)
+    }));
+    
+    setNewImages(prev => [...prev, ...files]);
+    setBusinessImages(prev => [...prev, ...newImageFiles]);
+  }, [businessImages.length]);
+
+  const handleImageDelete = async (index) => {
+    try {
+      // If it's a newly uploaded image (not saved yet)
+      if (index >= businessImages.length - newImages.length) {
+        setBusinessImages(prev => prev.filter((_, i) => i !== index));
+        setNewImages(prev => {
+          const newImagesCopy = [...prev];
+          newImagesCopy.splice(index - (businessImages.length - newImages.length), 1);
+          return newImagesCopy;
+        });
+      } else {
+        // If it's a saved image
+        await profileService.deleteBusinessImage(index);
+        setBusinessImages(prev => prev.filter((_, i) => i !== index));
+        toast.success('Image deleted successfully');
+      }
+    } catch (error) {
+      console.error('Failed to delete image:', error);
+      toast.error('Failed to delete image');
+    }
+  };
+
+  const handleImageClick = (url) => {
+    window.open(url, '_blank');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -223,15 +461,17 @@ const ServiceProviderProfile = () => {
         color: 'var(--text-color)',
         padding: '1rem',
         margin: '0 auto',
-        width: '100%'
+        width: '100%',
+        maxWidth: '1200px'
       }}
     >
       {/* Header */}
       <div style={{
         display: 'flex',
-        flexDirection: 'column',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         gap: '1.5rem',
-        alignItems: 'flex-start'
+        flexWrap: 'wrap'
       }} className="responsive-header">
         <div>
           <h1 style={{
@@ -250,28 +490,48 @@ const ServiceProviderProfile = () => {
         </div>
         <button 
           onClick={handleSave}
+          disabled={saving}
           style={{
             padding: '0.875rem 1.75rem',
             backgroundColor: 'var(--accent-color)',
             color: 'white',
             border: 'none',
             borderRadius: '0.5rem',
-            cursor: 'pointer',
+            cursor: saving ? 'not-allowed' : 'pointer',
             fontWeight: '600',
             fontSize: '1rem',
             transition: 'transform 0.2s, background-color 0.2s',
-            minWidth: '10rem'
+            minWidth: '10rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            opacity: saving ? 0.7 : 1
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.backgroundColor = 'var(--accent-color-dark)';
+            if (!saving) {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.backgroundColor = 'var(--accent-color-dark)';
+            }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.backgroundColor = 'var(--accent-color)';
+            if (!saving) {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.backgroundColor = 'var(--accent-color)';
+            }
           }}
         >
-          Save Changes
+          {saving ? (
+            <>
+              <Loader2 size={20} className="animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save size={20} />
+              Save Changes
+            </>
+          )}
         </button>
       </div>
 
@@ -303,10 +563,12 @@ const ServiceProviderProfile = () => {
             <label style={{
               fontSize: '1rem',
               fontWeight: '500'
-            }}>Business Name</label>
+            }}>Business Name *</label>
             <input 
               type="text"
-              defaultValue="QuickFix Plumbing"
+              value={formData.businessName}
+              onChange={(e) => handleInputChange('businessName', e.target.value)}
+              required
               style={{
                 padding: '0.875rem 1rem',
                 border: '1px solid var(--border-color)',
@@ -320,15 +582,16 @@ const ServiceProviderProfile = () => {
             />
           </div>
 
-          {/* Category */}
+          {/* Email (read-only) */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <label style={{
               fontSize: '1rem',
               fontWeight: '500'
-            }}>Category</label>
+            }}>Email</label>
             <input 
-              type="text"
-              defaultValue="Plumbing Services"
+              type="email"
+              value={user?.email || ''}
+              readOnly
               style={{
                 padding: '0.875rem 1rem',
                 border: '1px solid var(--border-color)',
@@ -337,7 +600,8 @@ const ServiceProviderProfile = () => {
                 color: 'var(--text-color)',
                 fontSize: '1rem',
                 width: '100%',
-                maxWidth: '500px'
+                maxWidth: '500px',
+                opacity: 0.7
               }}
             />
           </div>
@@ -350,7 +614,9 @@ const ServiceProviderProfile = () => {
             }}>Description</label>
             <textarea 
               rows={4}
-              defaultValue="Professional plumbing services with over 15 years of experience. We specialize in residential and commercial plumbing."
+              value={formData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
+              placeholder="Describe your business and services..."
               style={{
                 padding: '0.875rem 1rem',
                 border: '1px solid var(--border-color)',
@@ -360,6 +626,31 @@ const ServiceProviderProfile = () => {
                 resize: 'vertical',
                 fontSize: '1rem',
                 width: '100%'
+              }}
+            />
+          </div>
+
+          {/* Experience */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <label style={{
+              fontSize: '1rem',
+              fontWeight: '500'
+            }}>Years of Experience</label>
+            <input 
+              type="number"
+              value={formData.experienceYears}
+              onChange={(e) => handleInputChange('experienceYears', parseInt(e.target.value) || 0)}
+              min="0"
+              max="100"
+              style={{
+                padding: '0.875rem 1rem',
+                border: '1px solid var(--border-color)',
+                borderRadius: '0.5rem',
+                backgroundColor: 'var(--background)',
+                color: 'var(--text-color)',
+                fontSize: '1rem',
+                width: '100%',
+                maxWidth: '500px'
               }}
             />
           </div>
@@ -377,7 +668,8 @@ const ServiceProviderProfile = () => {
               }}>Phone</label>
               <input 
                 type="tel"
-                defaultValue="+1 (555) 123-4567"
+                value={user?.phone || ''}
+                readOnly
                 style={{
                   padding: '0.875rem 1rem',
                   border: '1px solid var(--border-color)',
@@ -385,18 +677,23 @@ const ServiceProviderProfile = () => {
                   backgroundColor: 'var(--background)',
                   color: 'var(--text-color)',
                   fontSize: '1rem',
-                  width: '100%'
+                  width: '100%',
+                  opacity: 0.7
                 }}
               />
             </div>
+            
+            {/* Languages */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <label style={{
                 fontSize: '1rem',
                 fontWeight: '500'
-              }}>Email</label>
+              }}>Languages (comma separated)</label>
               <input 
-                type="email"
-                defaultValue="contact@quickfixplumbing.com"
+                type="text"
+                value={formData.languages.join(', ')}
+                onChange={(e) => handleInputChange('languages', e.target.value.split(',').map(lang => lang.trim()).filter(lang => lang))}
+                placeholder="English, Spanish, French..."
                 style={{
                   padding: '0.875rem 1rem',
                   border: '1px solid var(--border-color)',
@@ -410,25 +707,109 @@ const ServiceProviderProfile = () => {
             </div>
           </div>
 
-          {/* Address */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <label style={{
-              fontSize: '1rem',
-              fontWeight: '500'
-            }}>Address</label>
-            <input 
-              type="text"
-              defaultValue="123 Service Street, Business City, ST 12345"
-              style={{
-                padding: '0.875rem 1rem',
-                border: '1px solid var(--border-color)',
-                borderRadius: '0.5rem',
-                backgroundColor: 'var(--background)',
-                color: 'var(--text-color)',
+          {/* Address Section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '600', margin: 0 }}>Business Address</h3>
+            
+            {/* Street Address */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <label style={{
                 fontSize: '1rem',
-                width: '100%'
-              }}
-            />
+                fontWeight: '500'
+              }}>Street Address *</label>
+              <input 
+                type="text"
+                value={formData.businessAddress.street}
+                onChange={(e) => handleAddressChange('street', e.target.value)}
+                required
+                placeholder="123 Service Street"
+                style={{
+                  padding: '0.875rem 1rem',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '0.5rem',
+                  backgroundColor: 'var(--background)',
+                  color: 'var(--text-color)',
+                  fontSize: '1rem',
+                  width: '100%'
+                }}
+              />
+            </div>
+
+            {/* City, State, Pincode Grid */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))',
+              gap: '1.5rem'
+            }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <label style={{
+                  fontSize: '1rem',
+                  fontWeight: '500'
+                }}>City *</label>
+                <input 
+                  type="text"
+                  value={formData.businessAddress.city}
+                  onChange={(e) => handleAddressChange('city', e.target.value)}
+                  required
+                  placeholder="Business City"
+                  style={{
+                    padding: '0.875rem 1rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '0.5rem',
+                    backgroundColor: 'var(--background)',
+                    color: 'var(--text-color)',
+                    fontSize: '1rem',
+                    width: '100%'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <label style={{
+                  fontSize: '1rem',
+                  fontWeight: '500'
+                }}>State *</label>
+                <input 
+                  type="text"
+                  value={formData.businessAddress.state}
+                  onChange={(e) => handleAddressChange('state', e.target.value)}
+                  required
+                  placeholder="State"
+                  style={{
+                    padding: '0.875rem 1rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '0.5rem',
+                    backgroundColor: 'var(--background)',
+                    color: 'var(--text-color)',
+                    fontSize: '1rem',
+                    width: '100%'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <label style={{
+                  fontSize: '1rem',
+                  fontWeight: '500'
+                }}>Pin Code *</label>
+                <input 
+                  type="text"
+                  value={formData.businessAddress.pinCode}
+                  onChange={(e) => handleAddressChange('pinCode', e.target.value)}
+                  required
+                  placeholder="12345"
+                  style={{
+                    padding: '0.875rem 1rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '0.5rem',
+                    backgroundColor: 'var(--background)',
+                    color: 'var(--text-color)',
+                    fontSize: '1rem',
+                    width: '100%'
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -473,7 +854,7 @@ const ServiceProviderProfile = () => {
           }} className="add-service-container">
             <input
               type="text"
-              placeholder="Add a service..."
+              placeholder="Add a service (e.g., Plumbing Repair, Electrical Work)..."
               value={newService}
               onChange={(e) => setNewService(e.target.value)}
               onKeyPress={handleKeyPress}
@@ -490,24 +871,34 @@ const ServiceProviderProfile = () => {
             />
             <button 
               onClick={addService}
+              disabled={!newService.trim()}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.5rem',
                 padding: '0.875rem 1.5rem',
-                backgroundColor: 'var(--accent-color)',
+                backgroundColor: newService.trim() ? 'var(--accent-color)' : 'var(--border-color)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '0.5rem',
-                cursor: 'pointer',
+                cursor: newService.trim() ? 'pointer' : 'not-allowed',
                 fontWeight: '600',
                 fontSize: '1rem',
                 whiteSpace: 'nowrap',
-                transition: 'transform 0.2s'
+                transition: 'transform 0.2s',
+                opacity: newService.trim() ? 1 : 0.7
               }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              onMouseEnter={(e) => {
+                if (newService.trim()) {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (newService.trim()) {
+                  e.currentTarget.style.transform = 'scale(1)';
+                }
+              }}
             >
               <Plus size={20} />
               Add Service
@@ -531,7 +922,7 @@ const ServiceProviderProfile = () => {
             fontSize: '1.25rem',
             fontWeight: '600',
             margin: 0
-          }}>Business Images</h2>
+          }}>Business Images ({businessImages.length}/10)</h2>
         </div>
         <div style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div style={{
@@ -539,40 +930,52 @@ const ServiceProviderProfile = () => {
             gridTemplateColumns: 'repeat(auto-fill, minmax(min(180px, 100%), 1fr))',
             gap: '1.5rem'
           }}>
-            {[1, 2, 3].map((i) => (
+            {businessImages.map((image, index) => (
               <ImageUpload
-                key={i}
-                index={i}
-                onDelete={() => console.log(`Delete image ${i}`)}
+                key={index}
+                image={image}
+                index={index}
+                onDelete={handleImageDelete}
+                onView={handleImageClick}
               />
             ))}
-            <button
-              style={{
-                aspectRatio: '1',
-                border: '2px dashed var(--border-color)',
-                borderRadius: '0.75rem',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: 'transparent',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                padding: '1rem'
-              }}
-              className="add-image-btn"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--hover-bg)';
-                e.currentTarget.style.borderColor = 'var(--accent-color)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.borderColor = 'var(--border-color)';
-              }}
-            >
-              <Plus size={40} style={{ opacity: 0.5, marginBottom: '0.75rem' }} />
-              <span style={{ fontSize: '1rem', opacity: 0.8 }}>Add Image</span>
-            </button>
+            
+            {businessImages.length < 10 && (
+              <label
+                style={{
+                  aspectRatio: '1',
+                  border: '2px dashed var(--border-color)',
+                  borderRadius: '0.75rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'transparent',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  padding: '1rem'
+                }}
+                className="add-image-btn"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--hover-bg)';
+                  e.currentTarget.style.borderColor = 'var(--accent-color)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.borderColor = 'var(--border-color)';
+                }}
+              >
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  style={{ display: 'none' }}
+                />
+                <Plus size={40} style={{ opacity: 0.5, marginBottom: '0.75rem' }} />
+                <span style={{ fontSize: '1rem', opacity: 0.8 }}>Add Image</span>
+              </label>
+            )}
           </div>
           <p style={{
             fontSize: '0.9375rem',
@@ -580,7 +983,7 @@ const ServiceProviderProfile = () => {
             margin: 0,
             lineHeight: '1.5'
           }}>
-            Upload up to 10 images. Recommended size: 800x800px
+            Upload up to 10 images of your business, equipment, or previous work. Recommended size: 800x800px. Max 5MB per image.
           </p>
         </div>
       </div>
@@ -608,7 +1011,12 @@ const ServiceProviderProfile = () => {
         </div>
         <div style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {daysOfWeek.map((day) => (
-            <WorkingHoursRow key={day} day={day} />
+            <WorkingHoursRow
+              key={day}
+              day={day}
+              schedule={formData.schedule.weeklySchedule}
+              onChange={handleScheduleChange}
+            />
           ))}
         </div>
       </div>
@@ -645,12 +1053,16 @@ const ServiceProviderProfile = () => {
               <label style={{
                 fontSize: '1rem',
                 fontWeight: '500'
-              }}>Starting Price</label>
+              }}>Starting Price *</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <span style={{ opacity: 0.8, fontSize: '1.125rem' }}>$</span>
                 <input 
                   type="number" 
-                  defaultValue="50" 
+                  value={formData.startingPrice}
+                  onChange={(e) => handleInputChange('startingPrice', parseFloat(e.target.value) || 0)}
+                  min="0"
+                  step="0.01"
+                  required
                   style={{
                     width: '10rem',
                     padding: '0.875rem 1rem',
@@ -674,7 +1086,10 @@ const ServiceProviderProfile = () => {
                 <span style={{ opacity: 0.8, fontSize: '1.125rem' }}>$</span>
                 <input 
                   type="number" 
-                  defaultValue="100" 
+                  value={formData.emergencyCharge}
+                  onChange={(e) => handleInputChange('emergencyCharge', parseFloat(e.target.value) || 0)}
+                  min="0"
+                  step="0.01"
                   style={{
                     width: '10rem',
                     padding: '0.875rem 1rem',
@@ -689,11 +1104,90 @@ const ServiceProviderProfile = () => {
               </div>
             </div>
           </div>
+
+          {/* Extra Charge Note */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <label style={{
+              fontSize: '1rem',
+              fontWeight: '500'
+            }}>Extra Charge Notes</label>
+            <textarea 
+              rows={2}
+              value={formData.extraChargeNote}
+              onChange={(e) => handleInputChange('extraChargeNote', e.target.value)}
+              placeholder="Additional charges for materials, travel, or special circumstances..."
+              style={{
+                padding: '0.875rem 1rem',
+                border: '1px solid var(--border-color)',
+                borderRadius: '0.5rem',
+                backgroundColor: 'var(--background)',
+                color: 'var(--text-color)',
+                resize: 'vertical',
+                fontSize: '1rem',
+                width: '100%'
+              }}
+            />
+          </div>
         </div>
       </div>
 
+      {/* Save Button at Bottom */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'flex-end',
+        padding: '1.5rem 0'
+      }}>
+        <button 
+          onClick={handleSave}
+          disabled={saving}
+          style={{
+            padding: '1rem 2rem',
+            backgroundColor: 'var(--accent-color)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '0.5rem',
+            cursor: saving ? 'not-allowed' : 'pointer',
+            fontWeight: '600',
+            fontSize: '1.125rem',
+            transition: 'all 0.2s',
+            minWidth: '12rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.75rem',
+            opacity: saving ? 0.7 : 1
+          }}
+          onMouseEnter={(e) => {
+            if (!saving) {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 10px 20px rgba(0, 0, 0, 0.1)';
+              e.currentTarget.style.backgroundColor = 'var(--accent-color-dark)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!saving) {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.backgroundColor = 'var(--accent-color)';
+            }
+          }}
+        >
+          {saving ? (
+            <>
+              <Loader2 size={20} className="animate-spin" />
+              Saving Changes...
+            </>
+          ) : (
+            <>
+              <Save size={20} />
+              Save All Changes
+            </>
+          )}
+        </button>
+      </div>
+
       {/* Responsive CSS */}
-      <style jsx = "true">{`
+      <style jsx="true">{`
         @media (max-width: 768px) {
           .responsive-header {
             flex-direction: column !important;
@@ -744,6 +1238,10 @@ const ServiceProviderProfile = () => {
           opacity: 1 !important;
         }
         
+        .image-upload {
+          cursor: pointer;
+        }
+        
         .add-image-btn:hover {
           transform: scale(1.02);
         }
@@ -757,8 +1255,12 @@ const ServiceProviderProfile = () => {
           outline-offset: 2px;
         }
         
-        button:active {
+        button:active:not(:disabled) {
           transform: scale(0.98);
+        }
+        
+        input:disabled, textarea:disabled {
+          cursor: not-allowed;
         }
       `}</style>
     </div>

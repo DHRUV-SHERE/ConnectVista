@@ -7,31 +7,31 @@ const serviceProviderSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
-  
+
   name: {
     type: String,
     required: [true, 'Name is required'],
     trim: true
   },
-  
+
   businessName: {
     type: String,
     required: [true, 'Business name is required'],
     trim: true
   },
-  
+
   description: {
     type: String,
     trim: true,
     maxlength: [1000, 'Description cannot exceed 1000 characters']
   },
-  
+
   experienceYears: {
     type: Number,
     min: [0, 'Experience cannot be negative'],
     default: 0
   },
-  
+
   // Business Address
   businessAddress: {
     street: {
@@ -66,12 +66,12 @@ const serviceProviderSchema = new mongoose.Schema({
       }
     }
   },
-  
+
   languages: [{
     type: String,
     trim: true
   }],
-  
+
   // Ratings
   rating: {
     average: {
@@ -92,59 +92,76 @@ const serviceProviderSchema = new mongoose.Schema({
       '5': { type: Number, default: 0 }
     }
   },
-  
+
   // Pricing
   startingPrice: {
     type: Number,
     required: [true, 'Starting price is required'],
     min: [0, 'Price cannot be negative']
   },
-  
+
   emergencyCharge: {
     type: Number,
     default: 0,
     min: [0, 'Emergency charge cannot be negative']
   },
-  
+
   extraChargeNote: {
     type: String,
     trim: true
   },
-  
+
   // Verification
   isVerified: {
     type: Boolean,
     default: false
   },
-  
+
   verificationStatus: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
   },
-  
+
   // Stats
   totalJobsCompleted: {
     type: Number,
     default: 0
   },
-  
+
   totalEarnings: {
     type: Number,
     default: 0
   },
-  
+
   platformEarnings: {
     type: Number,
     default: 0
   },
-  
+// Add this to your ServiceProvider schema
+businessImages: [{
+  url: {
+    type: String,
+    required: true
+  },
+  filename: {
+    type: String
+  },
+  originalName: {
+    type: String
+  },
+  uploadedAt: {
+    type: Date,
+    default: Date.now
+  }
+}],
+
   // Timestamps
   createdAt: {
     type: Date,
     default: Date.now
   },
-  
+
   updatedAt: {
     type: Date,
     default: Date.now
