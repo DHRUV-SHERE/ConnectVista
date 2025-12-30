@@ -5,6 +5,8 @@ import Signup_Illustration from './assets/Signup_Illustration.jpg';
 import Unauthorized_Illustration from './assets/Unauthorized_Illustration.jpg';
 import Error_Illustration from './assets/Error_Illustration.jpg';
 import Founder from './assets/Founder.png';
+import Location from './assets/Location.svg';
+import Provider from './assets/Provider.svg';
 
 const resources = {
     Logo: {
@@ -38,6 +40,14 @@ const resources = {
     HeroImage: {
         src: "https://res.cloudinary.com/dcclfe5tv/image/upload/v1765709504/Home_xhu4dv_e_background_removal_f_png_dpe81s.png",
         alt: 'Hero Image',
+    },
+    LocationIcon: {
+        src: Location,
+        alt: 'Location Icon',
+    },
+    ProviderIcon: {
+        src: Provider,
+        alt: 'Provider Icon',
     },
 };
 export default resources;

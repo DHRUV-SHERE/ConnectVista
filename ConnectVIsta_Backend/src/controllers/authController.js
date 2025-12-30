@@ -39,19 +39,21 @@ const signup = async (req, res) => {
 
     let profile;
 
-    // Create profile based on role
-    if (role === 'seeker') {
-      profile = await ServiceSeeker.create({
-        user: user._id,
-        name: profileData.name,
-        gender: profileData.gender,
-        address: profileData.address,
-        city: profileData.city,
-        state: profileData.state,
-        pinCode: profileData.pinCode,
-        profileImage: profileData.profileImage || 'default-avatar.png'
-      });
-    } else if (role === 'provider') {
+    // In authController.js, update the seeker creation part:
+if (role === 'seeker') {
+  profile = await ServiceSeeker.create({
+    user: user._id,
+    name: profileData.name,
+    gender: profileData.gender,
+    address: {
+      street: profileData.address || '', // This should be street address
+      city: profileData.city || '',
+      state: profileData.state || '',
+      pinCode: profileData.pinCode || '',
+    },
+    profileImage: profileData.profileImage || 'default-avatar.png'
+  });
+} else if (role === 'provider') {
       profile = await ServiceProvider.create({
         userId: user._id,
         name: profileData.name,

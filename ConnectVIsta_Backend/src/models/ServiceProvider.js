@@ -32,28 +32,12 @@ const serviceProviderSchema = new mongoose.Schema({
     default: 0
   },
 
-  // Business Address
+  // Already in your schema, but ensure it's properly structured:
   businessAddress: {
-    street: {
-      type: String,
-      required: [true, 'Street address is required'],
-      trim: true
-    },
-    city: {
-      type: String,
-      required: [true, 'City is required'],
-      trim: true
-    },
-    state: {
-      type: String,
-      required: [true, 'State is required'],
-      trim: true
-    },
-    pinCode: {
-      type: String,
-      required: [true, 'Pin code is required'],
-      trim: true
-    },
+    street: { type: String, required: true },
+    city: { type: String, required: true },
+    state: { type: String, required: true },
+    pinCode: { type: String, required: true },
     coordinates: {
       type: {
         type: String,
@@ -61,8 +45,16 @@ const serviceProviderSchema = new mongoose.Schema({
         default: 'Point'
       },
       coordinates: {
-        type: [Number],
-        default: [0, 0] // [longitude, latitude]
+        type: [Number], // [longitude, latitude]
+        required: true,
+        validate: {
+          validator: function (v) {
+            return v.length === 2 &&
+              v[0] >= -180 && v[0] <= 180 &&
+              v[1] >= -90 && v[1] <= 90;
+          },
+          message: 'Coordinates must be [longitude, latitude] with valid ranges'
+        }
       }
     }
   },
@@ -138,23 +130,23 @@ const serviceProviderSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-// Add this to your ServiceProvider schema
-businessImages: [{
-  url: {
-    type: String,
-    required: true
-  },
-  filename: {
-    type: String
-  },
-  originalName: {
-    type: String
-  },
-  uploadedAt: {
-    type: Date,
-    default: Date.now
-  }
-}],
+  // Add this to your ServiceProvider schema
+  businessImages: [{
+    url: {
+      type: String,
+      required: true
+    },
+    filename: {
+      type: String
+    },
+    originalName: {
+      type: String
+    },
+    uploadedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
 
   // Timestamps
   createdAt: {

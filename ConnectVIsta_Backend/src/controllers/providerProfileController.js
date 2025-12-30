@@ -3,16 +3,17 @@ const ProviderService = require('../models/ProviderService');
 const ProviderSchedule = require('../models/ProviderSchedule');
 const Service = require('../models/Service');
 const User = require('../models/User');
+const geocodingService = require('../services/geocodingService');
 
 // Get provider profile
 const getProviderProfile = async (req, res) => {
   try {
     console.log('=== GET PROVIDER PROFILE ===');
     console.log('User ID:', req.user.id);
-    
+
     // Find provider
     const provider = await ServiceProvider.findOne({ userId: req.user.id });
-    
+
     if (!provider) {
       return res.status(200).json({
         success: true,
@@ -50,13 +51,12 @@ const getProviderProfile = async (req, res) => {
   }
 };
 
-// Create or update provider profile
 const updateProviderProfile = async (req, res) => {
   try {
     console.log('=== UPDATE PROVIDER PROFILE ===');
     console.log('User ID:', req.user.id);
     console.log('Update data:', req.body);
-    
+
     const {
       businessName,
       description,
@@ -72,7 +72,18 @@ const updateProviderProfile = async (req, res) => {
 
     // Check if provider exists or create new one
     let provider = await ServiceProvider.findOne({ userId: req.user.id });
-    
+
+    // Geocode the address to get coordinates
+    let coordinates = { type: 'Point', coordinates: [0, 0] };
+    if (businessAddress) {
+      try {
+        coordinates = await geocodingService.getCoordinatesFromAddress(businessAddress);
+        console.log('Geocoded coordinates:', coordinates);
+      } catch (geocodeError) {
+        console.warn('Geocoding failed, using default coordinates:', geocodeError);
+      }
+    }
+
     if (!provider) {
       // Create new provider profile
       provider = new ServiceProvider({
@@ -81,12 +92,14 @@ const updateProviderProfile = async (req, res) => {
         businessName: businessName || 'My Business',
         description: description || '',
         experienceYears: experienceYears || 0,
-        businessAddress: businessAddress || {
-          street: '',
-          city: '',
-          state: '',
-          pinCode: '',
-          coordinates: { type: 'Point', coordinates: [0, 0] }
+        businessAddress: {
+          ...(businessAddress || {
+            street: '',
+            city: '',
+            state: '',
+            pinCode: ''
+          }),
+          coordinates: coordinates
         },
         languages: languages || [],
         startingPrice: startingPrice || 50,
@@ -103,41 +116,42 @@ const updateProviderProfile = async (req, res) => {
       if (startingPrice !== undefined) provider.startingPrice = startingPrice;
       if (emergencyCharge !== undefined) provider.emergencyCharge = emergencyCharge;
       if (extraChargeNote !== undefined) provider.extraChargeNote = extraChargeNote;
-      
+
       if (languages && Array.isArray(languages)) {
         provider.languages = languages.filter(lang => lang.trim() !== '');
       }
 
-      // Update address
+      // Update address with geocoded coordinates
       if (businessAddress) {
         provider.businessAddress = {
           ...provider.businessAddress,
           ...businessAddress,
-          coordinates: businessAddress.coordinates || { type: 'Point', coordinates: [0, 0] }
+          coordinates: coordinates
         };
       }
     }
 
     await provider.save();
+    console.log('Provider profile saved:', provider);
 
     // Update services if provided
     if (services && Array.isArray(services)) {
       // Remove existing services
       await ProviderService.deleteMany({ providerId: provider._id });
-      
+
       // Add new services
       const servicePromises = services.map(async (service) => {
         if (!service.name || service.name.trim() === '') return null;
-        
+
         // Find existing service with similar name (case-insensitive)
-        let serviceDoc = await Service.findOne({ 
+        let serviceDoc = await Service.findOne({
           name: { $regex: new RegExp(`^${service.name.trim()}$`, 'i') }
         });
-        
+
         if (!serviceDoc) {
           // Map to valid category from enum or use 'other'
           const validCategory = mapToValidCategory(service.category);
-          
+
           serviceDoc = await Service.create({
             name: service.name.trim(),
             category: validCategory,
@@ -166,7 +180,7 @@ const updateProviderProfile = async (req, res) => {
     // Update schedule if provided
     if (schedule) {
       let providerSchedule = await ProviderSchedule.findOne({ providerId: provider._id });
-      
+
       const defaultSchedule = {
         monday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
         tuesday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
@@ -225,10 +239,10 @@ const updateProviderProfile = async (req, res) => {
 // Helper function to map service name to valid category
 function mapToValidCategory(category) {
   if (!category) return 'other';
-  
+
   const categoryLower = category.toLowerCase().trim();
   const validCategories = [
-    'plumbing', 'electrical', 'carpentry', 'cleaning', 
+    'plumbing', 'electrical', 'carpentry', 'cleaning',
     'painting', 'appliance-repair', 'moving', 'gardening',
     'pest-control', 'renovation', 'other'
   ];
@@ -267,9 +281,9 @@ const uploadBusinessImages = async (req, res) => {
   try {
     console.log('=== UPLOAD BUSINESS IMAGES ===');
     console.log('Files received:', req.files);
-    
+
     const provider = await ServiceProvider.findOne({ userId: req.user.id });
-    
+
     if (!provider) {
       return res.status(404).json({
         success: false,
@@ -324,7 +338,7 @@ const deleteBusinessImage = async (req, res) => {
   try {
     const { imageIndex } = req.params;
     const provider = await ServiceProvider.findOne({ userId: req.user.id });
-    
+
     if (!provider) {
       return res.status(404).json({
         success: false,
@@ -349,7 +363,7 @@ const deleteBusinessImage = async (req, res) => {
 
     // Get the image to delete
     const imageToDelete = provider.businessImages[index];
-    
+
     // Delete from Cloudinary if it has a publicId
     if (imageToDelete.publicId) {
       try {
@@ -382,9 +396,146 @@ const deleteBusinessImage = async (req, res) => {
   }
 };
 
+
+// Add new endpoint to get nearby providers for seekers
+const getNearbyProviders = async (req, res) => {
+  try {
+    console.log('=== GET NEARBY PROVIDERS ===');
+    
+    const { 
+      latitude, 
+      longitude, 
+      radius = 10, // Default 10km radius
+      service,
+      minRating,
+      maxPrice,
+      page = 1,
+      limit = 20
+    } = req.query;
+
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        success: false,
+        message: 'Latitude and longitude are required'
+      });
+    }
+
+    const userLat = parseFloat(latitude);
+    const userLng = parseFloat(longitude);
+    const maxDistance = parseFloat(radius) * 1000; // Convert km to meters
+
+    // Build query
+    const query = { 
+      isVerified: true,
+      'businessAddress.coordinates': {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [userLng, userLat]
+          },
+          $maxDistance: maxDistance
+        }
+      }
+    };
+
+    // Add service filter if provided
+    if (service) {
+      // This would require a more complex query with service joining
+      // For now, we'll search in provider's services array
+      query['languages'] = { $regex: service, $options: 'i' };
+    }
+
+    // Add rating filter
+    if (minRating) {
+      query['rating.average'] = { $gte: parseFloat(minRating) };
+    }
+
+    // Add price filter
+    if (maxPrice) {
+      query.startingPrice = { $lte: parseFloat(maxPrice) };
+    }
+
+    const skip = (page - 1) * limit;
+
+    // Get nearby providers with distance calculation
+    const providers = await ServiceProvider.aggregate([
+      {
+        $geoNear: {
+          near: {
+            type: 'Point',
+            coordinates: [userLng, userLat]
+          },
+          distanceField: 'distance',
+          maxDistance: maxDistance,
+          spherical: true,
+          query: query
+        }
+      },
+      {
+        $lookup: {
+          from: 'providerservices',
+          localField: '_id',
+          foreignField: 'providerId',
+          as: 'services'
+        }
+      },
+      {
+        $lookup: {
+          from: 'providerschedules',
+          localField: '_id',
+          foreignField: 'providerId',
+          as: 'schedule'
+        }
+      },
+      { $unwind: { path: '$schedule', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          businessName: 1,
+          description: 1,
+          businessAddress: 1,
+          experienceYears: 1,
+          rating: 1,
+          startingPrice: 1,
+          emergencyCharge: 1,
+          languages: 1,
+          services: 1,
+          businessImages: 1,
+          isVerified: 1,
+          distance: { $divide: ['$distance', 1000] }, // Convert to km
+          schedule: 1
+        }
+      },
+      { $skip: skip },
+      { $limit: parseInt(limit) }
+    ]);
+
+    // Get total count
+    const total = await ServiceProvider.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: providers,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Get nearby providers error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch nearby providers'
+    });
+  }
+};
+
 module.exports = {
   getProviderProfile,
   updateProviderProfile,
   uploadBusinessImages,
-  deleteBusinessImage
+  deleteBusinessImage,
+  getNearbyProviders
 };

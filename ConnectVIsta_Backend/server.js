@@ -15,9 +15,11 @@ const connectDB = require('./src/config/db');
 // Import routes (these should be after dotenv.config)
 const authRoutes = require('./src/routes/authRoutes');
 const verificationRoutes = require('./src/routes/verificationRoutes');
-const profileRoutes = require('./src/routes/providerProfileRoutes'); // Add this import
+const providerprofileRoutes = require('./src/routes/providerProfileRoutes'); // Add this import
+const seekerProfileRoutes = require('./src/routes/seekerProfileRoutes'); // Add this import
 const authController = require('./src/controllers/authController');
 const auth = require('./src/middleware/auth');
+
 
 // Initialize express
 const app = express();
@@ -53,7 +55,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/verification', verificationRoutes);
-app.use('/api/profile', profileRoutes); // Add this line to register profile routes
+app.use('/api/profile', providerprofileRoutes); // Add this line to register profile routes
+app.use('/api/seeker', seekerProfileRoutes); // Add this line to register seeker profile routes
 app.get('/api/auth/profile', auth(), authController.getProfile);
 
 // Health check

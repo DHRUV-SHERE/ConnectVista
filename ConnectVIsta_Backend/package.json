@@ -11,6 +11,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@googlemaps/google-maps-services-js": "^3.4.2",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^1.41.0",
@@ -30,6 +31,7 @@
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^4.0.0",
+    "node-geocoder": "^4.4.1",
     "nodemailer": "^7.0.12",
     "razorpay": "^2.9.6",
     "redis": "^5.10.0",

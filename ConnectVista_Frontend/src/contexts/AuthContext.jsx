@@ -93,27 +93,51 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const signupSeeker = async (userData) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await authService.signupSeeker(userData);
+  // In AuthContext.jsx, update the signupSeeker function:
 
-      if (response.success) {
-        localStorage.setItem("accessToken", response.data.accessToken);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
-        setUser(response.data.user);
-        setProfile(response.data.profile);
-      }
-      return response;
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || "Signup failed";
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
+const signupSeeker = async (userData) => {
+  try {
+    setLoading(true);
+    setError(null);
+    
+    // Log what we're sending
+    console.log('📤 Sending signup data:', userData);
+    
+    const response = await authService.signupSeeker(userData);
+
+    if (response.success) {
+      localStorage.setItem("accessToken", response.data.accessToken);
+      localStorage.setItem("user", JSON.stringify(response.data.user));
+      setUser(response.data.user);
+      setProfile(response.data.profile);
     }
-  };
+    return response;
+  } catch (err) {
+    console.error('❌ Signup error details:', {
+      error: err,
+      response: err.response,
+      data: err.response?.data
+    });
+    
+    // Better error handling
+    let errorMessage = "Signup failed";
+    
+    if (err.response?.data?.message) {
+      errorMessage = err.response.data.message;
+    } else if (err.response?.data?.errors) {
+      // Handle Mongoose validation errors
+      const errors = err.response.data.errors;
+      errorMessage = Object.values(errors).map(err => err.message).join(', ');
+    } else if (err.message) {
+      errorMessage = err.message;
+    }
+    
+    setError(errorMessage);
+    throw new Error(errorMessage);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const signupProvider = async (userData) => {
     try {
