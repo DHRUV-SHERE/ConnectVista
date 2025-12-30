@@ -1,21 +1,22 @@
 const multer = require('multer');
-const path = require('path');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const { cloudinary } = require('../config/cloudinary');
 
-// Configure storage for local file system
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/business-images/');
+// Create Cloudinary storage engine for business images
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'connectvista/business-images',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
+    resource_type: 'image',
+    transformation: [{ width: 1000, height: 1000, crop: 'limit' }]
   },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'business-' + uniqueSuffix + path.extname(file.originalname));
-  }
 });
 
 // File filter for business images
 const fileFilter = (req, file, cb) => {
   const allowedTypes = /jpeg|jpg|png|gif/;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+  const extname = allowedTypes.test(file.originalname.toLowerCase().match(/\.[0-9a-z]+$/i)?.[0] || '');
   const mimetype = allowedTypes.test(file.mimetype);
   
   if (mimetype && extname) {

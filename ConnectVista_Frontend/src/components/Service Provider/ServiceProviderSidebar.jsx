@@ -15,7 +15,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 
 const ServiceProviderSidebar = ({ sidebarOpen, setSidebarOpen, currentPath }) => {
-  const { user, profile } = useAuth();
+  const { user, profile, logout } = useAuth();
   
   const navigation = [
     { name: 'Dashboard', href: '/service-provider/dashboard', icon: LayoutDashboard },
@@ -82,6 +82,16 @@ const ServiceProviderSidebar = ({ sidebarOpen, setSidebarOpen, currentPath }) =>
     return 'text-gray-600 bg-gray-50 border-gray-200';
   };
 
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      setSidebarOpen(false); // Close sidebar on mobile
+      await logout(); // Call the logout function from AuthContext
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -113,7 +123,7 @@ const ServiceProviderSidebar = ({ sidebarOpen, setSidebarOpen, currentPath }) =>
             <div className="flex-shrink-0">
               <div className="h-12 w-12 rounded-full bg-[var(--accent-color)] 
                 bg-opacity-10 flex items-center justify-center border-2" 
-                style={{ borderColor: 'var(--accent-color)', borderColor: 'var(--border-color)' }}>
+                style={{ borderColor: 'var(--accent-color)' }}>
                 {user?.name ? (
                   <span 
                     className="text-lg font-bold"
@@ -199,12 +209,10 @@ const ServiceProviderSidebar = ({ sidebarOpen, setSidebarOpen, currentPath }) =>
           {/* Logout Button */}
           <div className="mt-auto pt-4 border-t" style={{ borderColor: 'var(--border-color)' }}>
             <button
+              onClick={handleLogout}
               className="flex items-center gap-3 w-full rounded-lg px-3 py-3
                 text-base font-medium text-red-500 hover:bg-red-50
                 transition-all duration-200"
-              onClick={() => {
-                console.log('Logout clicked');
-              }}
             >
               <LogOut size={22} />
               <span>Logout</span>

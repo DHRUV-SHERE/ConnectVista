@@ -127,14 +127,21 @@ const updateProviderProfile = async (req, res) => {
       
       // Add new services
       const servicePromises = services.map(async (service) => {
-        // Find or create service
-        let serviceDoc = await Service.findOne({ name: service.name });
+        if (!service.name || service.name.trim() === '') return null;
         
-        if (!serviceDoc && service.name) {
+        // Find existing service with similar name (case-insensitive)
+        let serviceDoc = await Service.findOne({ 
+          name: { $regex: new RegExp(`^${service.name.trim()}$`, 'i') }
+        });
+        
+        if (!serviceDoc) {
+          // Map to valid category from enum or use 'other'
+          const validCategory = mapToValidCategory(service.category);
+          
           serviceDoc = await Service.create({
-            name: service.name,
-            category: service.category || 'General',
-            description: service.description || ''
+            name: service.name.trim(),
+            category: validCategory,
+            description: service.description || `Professional ${service.name.trim()} services`
           });
         }
 
@@ -145,7 +152,7 @@ const updateProviderProfile = async (req, res) => {
             serviceId: serviceDoc._id,
             specialization: service.specialization,
             minPrice: service.minPrice || provider.startingPrice,
-            maxPrice: service.maxPrice || provider.startingPrice,
+            maxPrice: service.maxPrice || (provider.startingPrice * 2),
             pricingType: service.pricingType || 'fixed',
             isAvailable: service.isAvailable !== false
           });
@@ -153,7 +160,7 @@ const updateProviderProfile = async (req, res) => {
         return null;
       });
 
-      await Promise.all(servicePromises);
+      await Promise.all(servicePromises.filter(promise => promise !== null));
     }
 
     // Update schedule if provided
@@ -215,10 +222,51 @@ const updateProviderProfile = async (req, res) => {
   }
 };
 
+// Helper function to map service name to valid category
+function mapToValidCategory(category) {
+  if (!category) return 'other';
+  
+  const categoryLower = category.toLowerCase().trim();
+  const validCategories = [
+    'plumbing', 'electrical', 'carpentry', 'cleaning', 
+    'painting', 'appliance-repair', 'moving', 'gardening',
+    'pest-control', 'renovation', 'other'
+  ];
+
+  // Try to match based on keywords
+  const categoryMapping = {
+    'plumbing': ['plumber', 'pipe', 'leak', 'drain', 'water', 'toilet', 'bathroom'],
+    'electrical': ['electric', 'wiring', 'light', 'socket', 'switch', 'power'],
+    'carpentry': ['carpenter', 'wood', 'furniture', 'cabinet', 'door', 'window'],
+    'cleaning': ['clean', 'maid', 'housekeeping', 'vacuum', 'dust'],
+    'painting': ['paint', 'wall', 'color', 'brush'],
+    'appliance-repair': ['appliance', 'fridge', 'washing', 'oven', 'microwave', 'ac', 'air conditioner'],
+    'moving': ['move', 'pack', 'shift', 'transport'],
+    'gardening': ['garden', 'lawn', 'plant', 'tree', 'landscape'],
+    'pest-control': ['pest', 'insect', 'bug', 'rodent', 'termite'],
+    'renovation': ['renovate', 'remodel', 'construction', 'build']
+  };
+
+  // Check if category is already valid
+  if (validCategories.includes(categoryLower)) {
+    return categoryLower;
+  }
+
+  // Try to match by keywords
+  for (const [validCat, keywords] of Object.entries(categoryMapping)) {
+    if (keywords.some(keyword => categoryLower.includes(keyword))) {
+      return validCat;
+    }
+  }
+
+  return 'other';
+}
+
 // Upload business images
 const uploadBusinessImages = async (req, res) => {
   try {
     console.log('=== UPLOAD BUSINESS IMAGES ===');
+    console.log('Files received:', req.files);
     
     const provider = await ServiceProvider.findOne({ userId: req.user.id });
     
@@ -234,14 +282,16 @@ const uploadBusinessImages = async (req, res) => {
       provider.businessImages = [];
     }
 
-    // Process uploaded files
+    // Process uploaded files from Cloudinary
     const uploadedImages = [];
     if (req.files && req.files.length > 0) {
       req.files.forEach(file => {
+        // Cloudinary returns file in a different format
         uploadedImages.push({
-          url: `/uploads/${file.filename}`,
+          url: file.path, // Cloudinary URL
           filename: file.filename,
           originalName: file.originalname,
+          publicId: file.filename, // Cloudinary public_id
           uploadedAt: new Date()
         });
       });
@@ -263,7 +313,8 @@ const uploadBusinessImages = async (req, res) => {
     console.error('Upload images error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to upload images'
+      message: 'Failed to upload images',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -294,6 +345,20 @@ const deleteBusinessImage = async (req, res) => {
         success: false,
         message: 'Invalid image index'
       });
+    }
+
+    // Get the image to delete
+    const imageToDelete = provider.businessImages[index];
+    
+    // Delete from Cloudinary if it has a publicId
+    if (imageToDelete.publicId) {
+      try {
+        await cloudinary.uploader.destroy(imageToDelete.publicId);
+        console.log('Deleted image from Cloudinary:', imageToDelete.publicId);
+      } catch (cloudinaryError) {
+        console.error('Cloudinary delete error:', cloudinaryError);
+        // Continue even if Cloudinary deletion fails
+      }
     }
 
     // Remove image from array

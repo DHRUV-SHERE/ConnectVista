@@ -223,7 +223,7 @@ const ServiceProviderLayout = () => {
                   {user.name.charAt(0).toUpperCase()}
                 </span>
               ) : (
-                <User size={20} style={{ color: 'var(--accent-color)' }} />
+                <User size={20} style={{ color: 'var(--bg-color)' }} />
               )}
               
               {/* Tooltip on hover */}

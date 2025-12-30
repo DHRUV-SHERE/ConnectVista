@@ -1,36 +1,39 @@
 "use client";
-import { useState, useEffect, useCallback, memo } from 'react';
-import { Upload, Plus, X, Clock, Save, Loader2 } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import profileService from '../../services/profileService';
-import toast from 'react-hot-toast';
+import { useState, useEffect, useCallback, memo } from "react";
+import { Upload, Plus, X, Clock, Save, Loader2 } from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
+import profileService from "../../services/profileService";
+import toast from "react-hot-toast";
+import resources from "../../resources";
 
 // Memoized components for better performance
 const ServiceTag = memo(({ service, onRemove }) => (
   <div
     style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      padding: '0.75rem 1.25rem',
-      backgroundColor: 'var(--accent-color)',
-      borderRadius: '9999px',
-      fontSize: '1rem',
-      color: 'white'
+      display: "flex",
+      alignItems: "center",
+      gap: "0.5rem",
+      padding: "0.75rem 1.25rem",
+      background: "var(--btn-bg)",
+      borderRadius: "9999px",
+      fontSize: "1rem",
+      color: "white",
+      boxShadow: "var(--btn-hover)",
     }}
   >
     {service}
     <button
       onClick={onRemove}
       style={{
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        color: 'white',
+        background: "none",
+        border: "none",
+        cursor: "pointer",
+        color: "white",
         opacity: 0.7,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        transition: "opacity 0.2s",
       }}
       aria-label={`Remove ${service}`}
     >
@@ -39,26 +42,24 @@ const ServiceTag = memo(({ service, onRemove }) => (
   </div>
 ));
 
-ServiceTag.displayName = 'ServiceTag';
+ServiceTag.displayName = "ServiceTag";
 
 const ImageUpload = memo(({ image, index, onDelete, onView }) => (
   <div
     style={{
-      aspectRatio: '1',
-      backgroundColor: 'var(--border-color)',
-      borderRadius: '0.75rem',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      position: 'relative',
-      backgroundImage: image.url ? `url(${image.url})` : 'none',
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      transition: 'transform 0.2s'
+      aspectRatio: "1",
+      backgroundColor: "var(--border-color)",
+      borderRadius: "0.75rem",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+      backgroundImage: image.url ? `url(${image.url})` : "none",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      transition: "transform 0.2s, box-shadow 0.2s",
     }}
-    className="image-upload"
-    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+    className="image-upload hover-glow"
     onClick={() => onView(image.url)}
   >
     {!image.url && <Upload size={40} style={{ opacity: 0.5 }} />}
@@ -68,20 +69,21 @@ const ImageUpload = memo(({ image, index, onDelete, onView }) => (
         onDelete(index);
       }}
       style={{
-        position: 'absolute',
-        top: '0.75rem',
-        right: '0.75rem',
-        padding: '0.375rem',
-        backgroundColor: '#ef4444',
-        color: 'white',
-        border: 'none',
-        borderRadius: '50%',
-        cursor: 'pointer',
+        position: "absolute",
+        top: "0.75rem",
+        right: "0.75rem",
+        padding: "0.375rem",
+        background: "linear-gradient(90deg, #EC4899, #DB2777)",
+        color: "white",
+        border: "none",
+        borderRadius: "50%",
+        cursor: "pointer",
         opacity: 0,
-        transition: 'opacity 0.2s',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
+        transition: "opacity 0.2s, transform 0.2s",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow: "0 0 10px rgba(236, 72, 153, 0.3)",
       }}
       className="delete-btn"
       aria-label="Delete image"
@@ -91,163 +93,174 @@ const ImageUpload = memo(({ image, index, onDelete, onView }) => (
   </div>
 ));
 
-ImageUpload.displayName = 'ImageUpload';
+ImageUpload.displayName = "ImageUpload";
 
 const WorkingHoursRow = memo(({ day, schedule, onChange }) => {
   const dayKey = day.toLowerCase();
-  const daySchedule = schedule[dayKey] || { isAvailable: true, startTime: '09:00', endTime: '18:00' };
+  const daySchedule = schedule[dayKey] || {
+    isAvailable: true,
+    startTime: "09:00",
+    endTime: "18:00",
+  };
 
   return (
     <div
       key={day}
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '1.5rem',
-        flexWrap: 'wrap',
-        padding: '1rem',
-        backgroundColor: 'var(--background)',
-        borderRadius: '0.5rem',
-        transition: 'background-color 0.2s'
+        display: "flex",
+        alignItems: "center",
+        gap: "1.5rem",
+        flexWrap: "wrap",
+        padding: "1rem",
+        backgroundColor: "var(--background)",
+        borderRadius: "0.5rem",
+        transition: "background-color 0.2s",
       }}
       className="working-hours-row"
-      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--hover-bg)'}
-      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--background)'}
     >
-      <div style={{ width: '9rem', minWidth: '9rem' }}>
-        <p style={{
-          fontSize: '1rem',
-          fontWeight: '500',
-          margin: 0
-        }}>{day}</p>
+      <div style={{ width: "9rem", minWidth: "9rem" }}>
+        <p
+          style={{
+            fontSize: "1rem",
+            fontWeight: "500",
+            margin: 0,
+          }}
+        >
+          {day}
+        </p>
       </div>
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '1rem',
-        flexWrap: 'wrap',
-        minWidth: 'min(300px, 100%)'
-      }}>
-        <input 
-          type="time" 
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          gap: "1rem",
+          flexWrap: "wrap",
+          minWidth: "min(300px, 100%)",
+        }}
+      >
+        <input
+          type="time"
           value={daySchedule.startTime}
-          onChange={(e) => onChange(dayKey, 'startTime', e.target.value)}
+          onChange={(e) => onChange(dayKey, "startTime", e.target.value)}
           disabled={!daySchedule.isAvailable}
           style={{
-            width: '10rem',
-            padding: '0.75rem 1rem',
-            border: '1px solid var(--border-color)',
-            borderRadius: '0.5rem',
-            backgroundColor: 'var(--card-bg)',
-            color: 'var(--text-color)',
-            fontSize: '1rem',
-            opacity: daySchedule.isAvailable ? 1 : 0.5
+            width: "10rem",
+            padding: "0.75rem 1rem",
+            border: "1px solid var(--border-color)",
+            borderRadius: "0.5rem",
+            backgroundColor: "var(--card-bg)",
+            color: "var(--text-color)",
+            fontSize: "1rem",
+            opacity: daySchedule.isAvailable ? 1 : 0.5,
           }}
         />
-        <span style={{ opacity: daySchedule.isAvailable ? 0.7 : 0.3, fontSize: '1rem' }}>to</span>
-        <input 
-          type="time" 
+        <span
+          style={{
+            opacity: daySchedule.isAvailable ? 0.7 : 0.3,
+            fontSize: "1rem",
+          }}
+        >
+          to
+        </span>
+        <input
+          type="time"
           value={daySchedule.endTime}
-          onChange={(e) => onChange(dayKey, 'endTime', e.target.value)}
+          onChange={(e) => onChange(dayKey, "endTime", e.target.value)}
           disabled={!daySchedule.isAvailable}
           style={{
-            width: '10rem',
-            padding: '0.75rem 1rem',
-            border: '1px solid var(--border-color)',
-            borderRadius: '0.5rem',
-            backgroundColor: 'var(--card-bg)',
-            color: 'var(--text-color)',
-            fontSize: '1rem',
-            opacity: daySchedule.isAvailable ? 1 : 0.5
+            width: "10rem",
+            padding: "0.75rem 1rem",
+            border: "1px solid var(--border-color)",
+            borderRadius: "0.5rem",
+            backgroundColor: "var(--card-bg)",
+            color: "var(--text-color)",
+            fontSize: "1rem",
+            opacity: daySchedule.isAvailable ? 1 : 0.5,
           }}
         />
       </div>
       <button
         type="button"
-        onClick={() => onChange(dayKey, 'isAvailable', !daySchedule.isAvailable)}
+        onClick={() =>
+          onChange(dayKey, "isAvailable", !daySchedule.isAvailable)
+        }
+        className={`btn-primary schedule-button ${
+          daySchedule.isAvailable ? "open" : "closed"
+        }`}
         style={{
-          padding: '0.75rem 1.5rem',
-          backgroundColor: daySchedule.isAvailable ? 'transparent' : 'var(--accent-color)',
-          border: `1px solid ${daySchedule.isAvailable ? 'var(--border-color)' : 'var(--accent-color)'}`,
-          borderRadius: '0.5rem',
-          cursor: 'pointer',
-          fontSize: '1rem',
-          color: daySchedule.isAvailable ? 'var(--text-color)' : 'white',
-          minWidth: '8rem',
-          transition: 'all 0.2s'
-        }}
-        onMouseEnter={(e) => {
-          if (daySchedule.isAvailable) {
-            e.currentTarget.style.backgroundColor = 'var(--accent-color)';
-            e.currentTarget.style.color = 'white';
-            e.currentTarget.style.borderColor = 'var(--accent-color)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (daySchedule.isAvailable) {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = 'var(--text-color)';
-            e.currentTarget.style.borderColor = 'var(--border-color)';
-          }
+          padding: "0.75rem 1.5rem",
+          background: daySchedule.isAvailable
+            ? "var(--btn-bg)"
+            : "linear-gradient(90deg, #EC4899, #DB2777)",
+          color: "white",
+          border: "none",
+          borderRadius: "0.5rem",
+          cursor: "pointer",
+          fontSize: "1rem",
+          minWidth: "8rem",
+          transition: "all 0.3s ease",
+          boxShadow: daySchedule.isAvailable
+            ? "var(--btn-hover)"
+            : "0 0 15px rgba(236, 72, 153, 0.3)",
         }}
       >
-        {daySchedule.isAvailable ? 'Mark Closed' : 'Mark Open'}
+        {daySchedule.isAvailable ? "Mark Closed" : "Mark Open"}
       </button>
     </div>
   );
 });
 
-WorkingHoursRow.displayName = 'WorkingHoursRow';
+WorkingHoursRow.displayName = "WorkingHoursRow";
 
 const ServiceProviderProfile = () => {
   const { profile, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
-    businessName: '',
-    description: '',
+    businessName: "",
+    description: "",
     businessAddress: {
-      street: '',
-      city: '',
-      state: '',
-      pinCode: ''
+      street: "",
+      city: "",
+      state: "",
+      pinCode: "",
     },
     experienceYears: 0,
     languages: [],
     startingPrice: 0,
     emergencyCharge: 0,
-    extraChargeNote: '',
+    extraChargeNote: "",
     services: [],
     schedule: {
-      responseTime: 'within-2-hours',
+      responseTime: "within-2-hours",
       serviceAreaRadius: 10,
       weeklySchedule: {
-        monday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
-        tuesday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
-        wednesday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
-        thursday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
-        friday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
-        saturday: { isAvailable: false, startTime: '10:00', endTime: '16:00' },
-        sunday: { isAvailable: false, startTime: '10:00', endTime: '14:00' }
+        monday: { isAvailable: true, startTime: "09:00", endTime: "18:00" },
+        tuesday: { isAvailable: true, startTime: "09:00", endTime: "18:00" },
+        wednesday: { isAvailable: true, startTime: "09:00", endTime: "18:00" },
+        thursday: { isAvailable: true, startTime: "09:00", endTime: "18:00" },
+        friday: { isAvailable: true, startTime: "09:00", endTime: "18:00" },
+        saturday: { isAvailable: false, startTime: "10:00", endTime: "16:00" },
+        sunday: { isAvailable: false, startTime: "10:00", endTime: "14:00" },
       },
-      isAvailable: true
-    }
+      isAvailable: true,
+    },
   });
-  
+
   const [services, setServices] = useState([]);
-  const [newService, setNewService] = useState('');
+  const [newService, setNewService] = useState("");
   const [businessImages, setBusinessImages] = useState([]);
   const [newImages, setNewImages] = useState([]);
 
   const daysOfWeek = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday',
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
   ];
 
   // Load profile data
@@ -256,53 +269,89 @@ const ServiceProviderProfile = () => {
       try {
         setLoading(true);
         const response = await profileService.getProviderProfile();
-        
+
         if (response.success && response.data) {
-          const { provider, services: providerServices, schedule } = response.data;
-          
+          const {
+            provider,
+            services: providerServices,
+            schedule,
+          } = response.data;
+
           // Set form data
           setFormData({
-            businessName: provider.businessName || '',
-            description: provider.description || '',
+            businessName: provider.businessName || "",
+            description: provider.description || "",
             businessAddress: provider.businessAddress || {
-              street: '',
-              city: '',
-              state: '',
-              pinCode: ''
+              street: "",
+              city: "",
+              state: "",
+              pinCode: "",
             },
             experienceYears: provider.experienceYears || 0,
             languages: provider.languages || [],
             startingPrice: provider.startingPrice || 0,
             emergencyCharge: provider.emergencyCharge || 0,
-            extraChargeNote: provider.extraChargeNote || '',
+            extraChargeNote: provider.extraChargeNote || "",
             services: providerServices || [],
             schedule: schedule || {
-              responseTime: 'within-2-hours',
+              responseTime: "within-2-hours",
               serviceAreaRadius: 10,
               weeklySchedule: {
-                monday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
-                tuesday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
-                wednesday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
-                thursday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
-                friday: { isAvailable: true, startTime: '09:00', endTime: '18:00' },
-                saturday: { isAvailable: false, startTime: '10:00', endTime: '16:00' },
-                sunday: { isAvailable: false, startTime: '10:00', endTime: '14:00' }
+                monday: {
+                  isAvailable: true,
+                  startTime: "09:00",
+                  endTime: "18:00",
+                },
+                tuesday: {
+                  isAvailable: true,
+                  startTime: "09:00",
+                  endTime: "18:00",
+                },
+                wednesday: {
+                  isAvailable: true,
+                  startTime: "09:00",
+                  endTime: "18:00",
+                },
+                thursday: {
+                  isAvailable: true,
+                  startTime: "09:00",
+                  endTime: "18:00",
+                },
+                friday: {
+                  isAvailable: true,
+                  startTime: "09:00",
+                  endTime: "18:00",
+                },
+                saturday: {
+                  isAvailable: false,
+                  startTime: "10:00",
+                  endTime: "16:00",
+                },
+                sunday: {
+                  isAvailable: false,
+                  startTime: "10:00",
+                  endTime: "14:00",
+                },
               },
-              isAvailable: true
-            }
+              isAvailable: true,
+            },
           });
 
           // Set services
-          setServices(providerServices.map(ps => ps.serviceId?.name || ps.name).filter(Boolean));
-          
+          setServices(
+            providerServices
+              .map((ps) => ps.serviceId?.name || ps.name)
+              .filter(Boolean)
+          );
+
           // Set business images
           if (provider.businessImages) {
             setBusinessImages(provider.businessImages);
           }
         }
       } catch (error) {
-        console.error('Failed to load profile:', error);
-        toast.error('Failed to load profile data');
+        console.error("Failed to load profile:", error);
+        toast.error("Failed to load profile data");
       } finally {
         setLoading(false);
       }
@@ -312,24 +361,24 @@ const ServiceProviderProfile = () => {
   }, []);
 
   const handleInputChange = useCallback((field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   }, []);
 
   const handleAddressChange = useCallback((field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       businessAddress: {
         ...prev.businessAddress,
-        [field]: value
-      }
+        [field]: value,
+      },
     }));
   }, []);
 
   const handleScheduleChange = useCallback((day, field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       schedule: {
         ...prev.schedule,
@@ -337,47 +386,47 @@ const ServiceProviderProfile = () => {
           ...prev.schedule.weeklySchedule,
           [day]: {
             ...prev.schedule.weeklySchedule[day],
-            [field]: value
-          }
-        }
-      }
+            [field]: value,
+          },
+        },
+      },
     }));
   }, []);
 
   const handleSave = async () => {
     try {
       setSaving(true);
-      
+
       // Prepare services data
-      const servicesData = services.map(service => ({
+      const servicesData = services.map((service) => ({
         name: service,
-        category: 'General', // You can enhance this
+        category: "General", // You can enhance this
         minPrice: formData.startingPrice,
         maxPrice: formData.startingPrice * 2,
-        pricingType: 'fixed'
+        pricingType: "fixed",
       }));
 
       // Prepare update data
       const updateData = {
         ...formData,
-        services: servicesData
+        services: servicesData,
       };
 
       // Update profile
       const response = await profileService.updateProviderProfile(updateData);
-      
+
       if (response.success) {
         // Upload new images if any
         if (newImages.length > 0) {
           await profileService.uploadBusinessImages(newImages);
           setNewImages([]);
         }
-        
-        toast.success('Profile updated successfully!');
+
+        toast.success("Profile updated successfully!");
       }
     } catch (error) {
-      console.error('Failed to save profile:', error);
-      toast.error(error.message || 'Failed to save profile');
+      console.error("Failed to save profile:", error);
+      toast.error(error.message || "Failed to save profile");
     } finally {
       setSaving(false);
     }
@@ -385,140 +434,190 @@ const ServiceProviderProfile = () => {
 
   const addService = useCallback(() => {
     if (newService.trim() && !services.includes(newService.trim())) {
-      setServices(prev => [...prev, newService.trim()]);
-      setNewService('');
+      setServices((prev) => [...prev, newService.trim()]);
+      setNewService("");
     }
   }, [newService, services]);
 
   const removeService = useCallback((index) => {
-    setServices(prev => prev.filter((_, i) => i !== index));
+    setServices((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  const handleKeyPress = useCallback((e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addService();
-    }
-  }, [addService]);
+  const handleKeyPress = useCallback(
+    (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addService();
+      }
+    },
+    [addService]
+  );
 
-  const handleImageUpload = useCallback((e) => {
-    const files = Array.from(e.target.files);
-    if (businessImages.length + files.length > 10) {
-      toast.error('Maximum 10 images allowed');
-      return;
-    }
-    
-    const newImageFiles = files.map(file => ({
-      file,
-      url: URL.createObjectURL(file)
-    }));
-    
-    setNewImages(prev => [...prev, ...files]);
-    setBusinessImages(prev => [...prev, ...newImageFiles]);
-  }, [businessImages.length]);
+  const handleImageUpload = useCallback(
+    (e) => {
+      const files = Array.from(e.target.files);
+      if (businessImages.length + files.length > 10) {
+        toast.error("Maximum 10 images allowed");
+        return;
+      }
+
+      const newImageFiles = files.map((file) => ({
+        file,
+        url: URL.createObjectURL(file),
+      }));
+
+      setNewImages((prev) => [...prev, ...files]);
+      setBusinessImages((prev) => [...prev, ...newImageFiles]);
+    },
+    [businessImages.length]
+  );
 
   const handleImageDelete = async (index) => {
     try {
       // If it's a newly uploaded image (not saved yet)
       if (index >= businessImages.length - newImages.length) {
-        setBusinessImages(prev => prev.filter((_, i) => i !== index));
-        setNewImages(prev => {
+        setBusinessImages((prev) => prev.filter((_, i) => i !== index));
+        setNewImages((prev) => {
           const newImagesCopy = [...prev];
-          newImagesCopy.splice(index - (businessImages.length - newImages.length), 1);
+          newImagesCopy.splice(
+            index - (businessImages.length - newImages.length),
+            1
+          );
           return newImagesCopy;
         });
       } else {
         // If it's a saved image
         await profileService.deleteBusinessImage(index);
-        setBusinessImages(prev => prev.filter((_, i) => i !== index));
-        toast.success('Image deleted successfully');
+        setBusinessImages((prev) => prev.filter((_, i) => i !== index));
+        toast.success("Image deleted successfully");
       }
     } catch (error) {
-      console.error('Failed to delete image:', error);
-      toast.error('Failed to delete image');
+      console.error("Failed to delete image:", error);
+      toast.error("Failed to delete image");
     }
   };
 
   const handleImageClick = (url) => {
-    window.open(url, '_blank');
+    window.open(url, "_blank");
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "var(--background)",
+          gap: "1.5rem",
+          padding: "2rem",
+        }}
+      >
+        <img
+          src={resources.CustomLoader.src}
+          alt={resources.CustomLoader.alt}
+          style={{
+            width: "80px",
+            height: "80px",
+            animation: "spin 2s linear infinite",
+          }}
+        />
+        <p
+          style={{
+            color: "var(--text-color)",
+            fontSize: "1.125rem",
+            opacity: 0.8,
+            margin: 0,
+          }}
+        >
+          Loading profile...
+        </p>
+        <style jsx="true">{`
+          @keyframes spin {
+            0% {
+              transform: rotate(0deg);
+            }
+            100% {
+              transform: rotate(360deg);
+            }
+          }
+        `}</style>
       </div>
     );
   }
 
   return (
-    <div 
-      style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        gap: '2rem',
-        backgroundColor: 'var(--background)',
-        color: 'var(--text-color)',
-        padding: '1rem',
-        margin: '0 auto',
-        width: '100%',
-        maxWidth: '1200px'
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "2rem",
+        backgroundColor: "var(--background)",
+        color: "var(--text-color)",
+        padding: "1rem",
+        margin: "0 auto",
+        width: "100%",
+        maxWidth: "1200px",
+        minHeight: "100vh",
       }}
     >
       {/* Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: '1.5rem',
-        flexWrap: 'wrap'
-      }} className="responsive-header">
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: "1.5rem",
+          flexWrap: "wrap",
+        }}
+        className="responsive-header"
+      >
         <div>
-          <h1 style={{
-            fontSize: '2rem',
-            fontWeight: 'bold',
-            margin: '0 0 0.5rem 0',
-            lineHeight: '1.2'
-          }}>Business Profile</h1>
-          <p style={{
-            color: 'var(--text-color)',
-            opacity: 0.8,
-            fontSize: '1.125rem',
-            margin: 0,
-            lineHeight: '1.5'
-          }}>Manage your business information and services</p>
+          <h1
+            style={{
+              fontSize: "2rem",
+              fontWeight: "bold",
+              margin: "0 0 0.5rem 0",
+              lineHeight: "1.2",
+            }}
+          >
+            Business Profile
+          </h1>
+          <p
+            style={{
+              color: "var(--text-color)",
+              opacity: 0.8,
+              fontSize: "1.125rem",
+              margin: 0,
+              lineHeight: "1.5",
+            }}
+          >
+            Manage your business information and services
+          </p>
         </div>
-        <button 
+        <button
           onClick={handleSave}
           disabled={saving}
+          className="btn-primary save-button"
           style={{
-            padding: '0.875rem 1.75rem',
-            backgroundColor: 'var(--accent-color)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '0.5rem',
-            cursor: saving ? 'not-allowed' : 'pointer',
-            fontWeight: '600',
-            fontSize: '1rem',
-            transition: 'transform 0.2s, background-color 0.2s',
-            minWidth: '10rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            opacity: saving ? 0.7 : 1
-          }}
-          onMouseEnter={(e) => {
-            if (!saving) {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.backgroundColor = 'var(--accent-color-dark)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!saving) {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.backgroundColor = 'var(--accent-color)';
-            }
+            padding: "0.875rem 1.75rem",
+            background: "var(--btn-bg)",
+            color: "white",
+            border: "none",
+            borderRadius: "0.5rem",
+            cursor: saving ? "not-allowed" : "pointer",
+            fontWeight: "600",
+            fontSize: "1rem",
+            transition: "all 0.3s ease",
+            minWidth: "10rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "0.5rem",
+            opacity: saving ? 0.7 : 1,
+            boxShadow: "var(--btn-hover)",
           }}
         >
           {saving ? (
@@ -536,276 +635,398 @@ const ServiceProviderProfile = () => {
       </div>
 
       {/* Basic Information */}
-      <div style={{
-        backgroundColor: 'var(--card-bg)',
-        border: '1px solid var(--border-color)',
-        borderRadius: '0.75rem',
-        overflow: 'hidden'
-      }}>
-        <div style={{
-          padding: '1.75rem',
-          borderBottom: '1px solid var(--border-color)'
-        }}>
-          <h2 style={{
-            fontSize: '1.25rem',
-            fontWeight: '600',
-            margin: 0
-          }}>Basic Information</h2>
+      <div
+        style={{
+          backgroundColor: "var(--card-bg)",
+          border: "1px solid var(--border-color)",
+          borderRadius: "0.75rem",
+          overflow: "hidden",
+          backdropFilter: "blur(10px)",
+        }}
+      >
+        <div
+          style={{
+            padding: "1.75rem",
+            borderBottom: "1px solid var(--border-color)",
+          }}
+        >
+          <h2
+            style={{
+              fontSize: "1.25rem",
+              fontWeight: "600",
+              margin: 0,
+            }}
+          >
+            Basic Information
+          </h2>
         </div>
-        <div style={{ 
-          padding: '1.75rem', 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: '1.5rem' 
-        }}>
+        <div
+          style={{
+            padding: "1.75rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1.5rem",
+          }}
+        >
           {/* Business Name */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <label style={{
-              fontSize: '1rem',
-              fontWeight: '500'
-            }}>Business Name *</label>
-            <input 
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+          >
+            <label
+              style={{
+                fontSize: "1rem",
+                fontWeight: "500",
+              }}
+            >
+              Business Name *
+            </label>
+            <input
               type="text"
               value={formData.businessName}
-              onChange={(e) => handleInputChange('businessName', e.target.value)}
+              onChange={(e) =>
+                handleInputChange("businessName", e.target.value)
+              }
               required
               style={{
-                padding: '0.875rem 1rem',
-                border: '1px solid var(--border-color)',
-                borderRadius: '0.5rem',
-                backgroundColor: 'var(--background)',
-                color: 'var(--text-color)',
-                fontSize: '1rem',
-                width: '100%',
-                maxWidth: '500px'
+                padding: "0.875rem 1rem",
+                border: "1px solid var(--border-color)",
+                borderRadius: "0.5rem",
+                backgroundColor: "var(--background)",
+                color: "var(--text-color)",
+                fontSize: "1rem",
+                width: "100%",
+                maxWidth: "500px",
               }}
             />
           </div>
 
           {/* Email (read-only) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <label style={{
-              fontSize: '1rem',
-              fontWeight: '500'
-            }}>Email</label>
-            <input 
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+          >
+            <label
+              style={{
+                fontSize: "1rem",
+                fontWeight: "500",
+              }}
+            >
+              Email
+            </label>
+            <input
               type="email"
-              value={user?.email || ''}
+              value={user?.email || ""}
               readOnly
               style={{
-                padding: '0.875rem 1rem',
-                border: '1px solid var(--border-color)',
-                borderRadius: '0.5rem',
-                backgroundColor: 'var(--background)',
-                color: 'var(--text-color)',
-                fontSize: '1rem',
-                width: '100%',
-                maxWidth: '500px',
-                opacity: 0.7
+                padding: "0.875rem 1rem",
+                border: "1px solid var(--border-color)",
+                borderRadius: "0.5rem",
+                backgroundColor: "var(--background)",
+                color: "var(--text-color)",
+                fontSize: "1rem",
+                width: "100%",
+                maxWidth: "500px",
+                opacity: 0.7,
               }}
             />
           </div>
 
           {/* Description */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <label style={{
-              fontSize: '1rem',
-              fontWeight: '500'
-            }}>Description</label>
-            <textarea 
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+          >
+            <label
+              style={{
+                fontSize: "1rem",
+                fontWeight: "500",
+              }}
+            >
+              Description
+            </label>
+            <textarea
               rows={4}
               value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
+              onChange={(e) => handleInputChange("description", e.target.value)}
               placeholder="Describe your business and services..."
               style={{
-                padding: '0.875rem 1rem',
-                border: '1px solid var(--border-color)',
-                borderRadius: '0.5rem',
-                backgroundColor: 'var(--background)',
-                color: 'var(--text-color)',
-                resize: 'vertical',
-                fontSize: '1rem',
-                width: '100%'
+                padding: "0.875rem 1rem",
+                border: "1px solid var(--border-color)",
+                borderRadius: "0.5rem",
+                backgroundColor: "var(--background)",
+                color: "var(--text-color)",
+                resize: "vertical",
+                fontSize: "1rem",
+                width: "100%",
               }}
             />
           </div>
 
           {/* Experience */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <label style={{
-              fontSize: '1rem',
-              fontWeight: '500'
-            }}>Years of Experience</label>
-            <input 
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+          >
+            <label
+              style={{
+                fontSize: "1rem",
+                fontWeight: "500",
+              }}
+            >
+              Years of Experience
+            </label>
+            <input
               type="number"
               value={formData.experienceYears}
-              onChange={(e) => handleInputChange('experienceYears', parseInt(e.target.value) || 0)}
+              onChange={(e) =>
+                handleInputChange(
+                  "experienceYears",
+                  parseInt(e.target.value) || 0
+                )
+              }
               min="0"
               max="100"
               style={{
-                padding: '0.875rem 1rem',
-                border: '1px solid var(--border-color)',
-                borderRadius: '0.5rem',
-                backgroundColor: 'var(--background)',
-                color: 'var(--text-color)',
-                fontSize: '1rem',
-                width: '100%',
-                maxWidth: '500px'
+                padding: "0.875rem 1rem",
+                border: "1px solid var(--border-color)",
+                borderRadius: "0.5rem",
+                backgroundColor: "var(--background)",
+                color: "var(--text-color)",
+                fontSize: "1rem",
+                width: "100%",
+                maxWidth: "500px",
               }}
             />
           </div>
 
           {/* Contact Info Grid */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))',
-            gap: '1.5rem'
-          }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <label style={{
-                fontSize: '1rem',
-                fontWeight: '500'
-              }}>Phone</label>
-              <input 
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(min(300px, 100%), 1fr))",
+              gap: "1.5rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem",
+              }}
+            >
+              <label
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: "500",
+                }}
+              >
+                Phone
+              </label>
+              <input
                 type="tel"
-                value={user?.phone || ''}
+                value={user?.phone || ""}
                 readOnly
                 style={{
-                  padding: '0.875rem 1rem',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '0.5rem',
-                  backgroundColor: 'var(--background)',
-                  color: 'var(--text-color)',
-                  fontSize: '1rem',
-                  width: '100%',
-                  opacity: 0.7
+                  padding: "0.875rem 1rem",
+                  border: "1px solid var(--border-color)",
+                  borderRadius: "0.5rem",
+                  backgroundColor: "var(--background)",
+                  color: "var(--text-color)",
+                  fontSize: "1rem",
+                  width: "100%",
+                  opacity: 0.7,
                 }}
               />
             </div>
-            
+
             {/* Languages */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <label style={{
-                fontSize: '1rem',
-                fontWeight: '500'
-              }}>Languages (comma separated)</label>
-              <input 
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem",
+              }}
+            >
+              <label
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: "500",
+                }}
+              >
+                Languages (comma separated)
+              </label>
+              <input
                 type="text"
-                value={formData.languages.join(', ')}
-                onChange={(e) => handleInputChange('languages', e.target.value.split(',').map(lang => lang.trim()).filter(lang => lang))}
+                value={formData.languages.join(", ")}
+                onChange={(e) =>
+                  handleInputChange(
+                    "languages",
+                    e.target.value
+                      .split(",")
+                      .map((lang) => lang.trim())
+                      .filter((lang) => lang)
+                  )
+                }
                 placeholder="English, Spanish, French..."
                 style={{
-                  padding: '0.875rem 1rem',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '0.5rem',
-                  backgroundColor: 'var(--background)',
-                  color: 'var(--text-color)',
-                  fontSize: '1rem',
-                  width: '100%'
+                  padding: "0.875rem 1rem",
+                  border: "1px solid var(--border-color)",
+                  borderRadius: "0.5rem",
+                  backgroundColor: "var(--background)",
+                  color: "var(--text-color)",
+                  fontSize: "1rem",
+                  width: "100%",
                 }}
               />
             </div>
           </div>
 
           {/* Address Section */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '600', margin: 0 }}>Business Address</h3>
-            
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+          >
+            <h3 style={{ fontSize: "1.1rem", fontWeight: "600", margin: 0 }}>
+              Business Address
+            </h3>
+
             {/* Street Address */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <label style={{
-                fontSize: '1rem',
-                fontWeight: '500'
-              }}>Street Address *</label>
-              <input 
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem",
+              }}
+            >
+              <label
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: "500",
+                }}
+              >
+                Street Address *
+              </label>
+              <input
                 type="text"
                 value={formData.businessAddress.street}
-                onChange={(e) => handleAddressChange('street', e.target.value)}
+                onChange={(e) => handleAddressChange("street", e.target.value)}
                 required
                 placeholder="123 Service Street"
                 style={{
-                  padding: '0.875rem 1rem',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '0.5rem',
-                  backgroundColor: 'var(--background)',
-                  color: 'var(--text-color)',
-                  fontSize: '1rem',
-                  width: '100%'
+                  padding: "0.875rem 1rem",
+                  border: "1px solid var(--border-color)",
+                  borderRadius: "0.5rem",
+                  backgroundColor: "var(--background)",
+                  color: "var(--text-color)",
+                  fontSize: "1rem",
+                  width: "100%",
                 }}
               />
             </div>
 
             {/* City, State, Pincode Grid */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))',
-              gap: '1.5rem'
-            }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <label style={{
-                  fontSize: '1rem',
-                  fontWeight: '500'
-                }}>City *</label>
-                <input 
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(min(200px, 100%), 1fr))",
+                gap: "1.5rem",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.75rem",
+                }}
+              >
+                <label
+                  style={{
+                    fontSize: "1rem",
+                    fontWeight: "500",
+                  }}
+                >
+                  City *
+                </label>
+                <input
                   type="text"
                   value={formData.businessAddress.city}
-                  onChange={(e) => handleAddressChange('city', e.target.value)}
+                  onChange={(e) => handleAddressChange("city", e.target.value)}
                   required
                   placeholder="Business City"
                   style={{
-                    padding: '0.875rem 1rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '0.5rem',
-                    backgroundColor: 'var(--background)',
-                    color: 'var(--text-color)',
-                    fontSize: '1rem',
-                    width: '100%'
+                    padding: "0.875rem 1rem",
+                    border: "1px solid var(--border-color)",
+                    borderRadius: "0.5rem",
+                    backgroundColor: "var(--background)",
+                    color: "var(--text-color)",
+                    fontSize: "1rem",
+                    width: "100%",
                   }}
                 />
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <label style={{
-                  fontSize: '1rem',
-                  fontWeight: '500'
-                }}>State *</label>
-                <input 
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.75rem",
+                }}
+              >
+                <label
+                  style={{
+                    fontSize: "1rem",
+                    fontWeight: "500",
+                  }}
+                >
+                  State *
+                </label>
+                <input
                   type="text"
                   value={formData.businessAddress.state}
-                  onChange={(e) => handleAddressChange('state', e.target.value)}
+                  onChange={(e) => handleAddressChange("state", e.target.value)}
                   required
                   placeholder="State"
                   style={{
-                    padding: '0.875rem 1rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '0.5rem',
-                    backgroundColor: 'var(--background)',
-                    color: 'var(--text-color)',
-                    fontSize: '1rem',
-                    width: '100%'
+                    padding: "0.875rem 1rem",
+                    border: "1px solid var(--border-color)",
+                    borderRadius: "0.5rem",
+                    backgroundColor: "var(--background)",
+                    color: "var(--text-color)",
+                    fontSize: "1rem",
+                    width: "100%",
                   }}
                 />
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <label style={{
-                  fontSize: '1rem',
-                  fontWeight: '500'
-                }}>Pin Code *</label>
-                <input 
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.75rem",
+                }}
+              >
+                <label
+                  style={{
+                    fontSize: "1rem",
+                    fontWeight: "500",
+                  }}
+                >
+                  Pin Code *
+                </label>
+                <input
                   type="text"
                   value={formData.businessAddress.pinCode}
-                  onChange={(e) => handleAddressChange('pinCode', e.target.value)}
+                  onChange={(e) =>
+                    handleAddressChange("pinCode", e.target.value)
+                  }
                   required
                   placeholder="12345"
                   style={{
-                    padding: '0.875rem 1rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '0.5rem',
-                    backgroundColor: 'var(--background)',
-                    color: 'var(--text-color)',
-                    fontSize: '1rem',
-                    width: '100%'
+                    padding: "0.875rem 1rem",
+                    border: "1px solid var(--border-color)",
+                    borderRadius: "0.5rem",
+                    backgroundColor: "var(--background)",
+                    color: "var(--text-color)",
+                    fontSize: "1rem",
+                    width: "100%",
                   }}
                 />
               </div>
@@ -815,28 +1036,46 @@ const ServiceProviderProfile = () => {
       </div>
 
       {/* Services Offered */}
-      <div style={{
-        backgroundColor: 'var(--card-bg)',
-        border: '1px solid var(--border-color)',
-        borderRadius: '0.75rem',
-        overflow: 'hidden'
-      }}>
-        <div style={{
-          padding: '1.75rem',
-          borderBottom: '1px solid var(--border-color)'
-        }}>
-          <h2 style={{
-            fontSize: '1.25rem',
-            fontWeight: '600',
-            margin: 0
-          }}>Services Offered</h2>
+      <div
+        style={{
+          backgroundColor: "var(--card-bg)",
+          border: "1px solid var(--border-color)",
+          borderRadius: "0.75rem",
+          overflow: "hidden",
+          backdropFilter: "blur(10px)",
+        }}
+      >
+        <div
+          style={{
+            padding: "1.75rem",
+            borderBottom: "1px solid var(--border-color)",
+          }}
+        >
+          <h2
+            style={{
+              fontSize: "1.25rem",
+              fontWeight: "600",
+              margin: 0,
+            }}
+          >
+            Services Offered
+          </h2>
         </div>
-        <div style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '0.75rem'
-          }}>
+        <div
+          style={{
+            padding: "1.75rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1.5rem",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "0.75rem",
+            }}
+          >
             {services.map((service, index) => (
               <ServiceTag
                 key={index}
@@ -846,12 +1085,15 @@ const ServiceProviderProfile = () => {
             ))}
           </div>
 
-          <div style={{ 
-            display: 'flex', 
-            gap: '0.75rem',
-            flexDirection: 'row',
-            alignItems: 'center'
-          }} className="add-service-container">
+          <div
+            style={{
+              display: "flex",
+              gap: "0.75rem",
+              flexDirection: "row",
+              alignItems: "center",
+            }}
+            className="add-service-container"
+          >
             <input
               type="text"
               placeholder="Add a service (e.g., Plumbing Repair, Electrical Work)..."
@@ -860,44 +1102,38 @@ const ServiceProviderProfile = () => {
               onKeyPress={handleKeyPress}
               style={{
                 flex: 1,
-                padding: '0.875rem 1rem',
-                border: '1px solid var(--border-color)',
-                borderRadius: '0.5rem',
-                backgroundColor: 'var(--background)',
-                color: 'var(--text-color)',
-                fontSize: '1rem',
-                minWidth: '200px'
+                padding: "0.875rem 1rem",
+                border: "1px solid var(--border-color)",
+                borderRadius: "0.5rem",
+                backgroundColor: "var(--background)",
+                color: "var(--text-color)",
+                fontSize: "1rem",
+                minWidth: "200px",
               }}
             />
-            <button 
+            <button
               onClick={addService}
               disabled={!newService.trim()}
+              className="btn-primary add-service-button"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                padding: '0.875rem 1.5rem',
-                backgroundColor: newService.trim() ? 'var(--accent-color)' : 'var(--border-color)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.5rem',
-                cursor: newService.trim() ? 'pointer' : 'not-allowed',
-                fontWeight: '600',
-                fontSize: '1rem',
-                whiteSpace: 'nowrap',
-                transition: 'transform 0.2s',
-                opacity: newService.trim() ? 1 : 0.7
-              }}
-              onMouseEnter={(e) => {
-                if (newService.trim()) {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (newService.trim()) {
-                  e.currentTarget.style.transform = 'scale(1)';
-                }
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.5rem",
+                padding: "0.875rem 1.5rem",
+                background: newService.trim()
+                  ? "var(--btn-bg)"
+                  : "var(--border-color)",
+                color: "white",
+                border: "none",
+                borderRadius: "0.5rem",
+                cursor: newService.trim() ? "pointer" : "not-allowed",
+                fontWeight: "600",
+                fontSize: "1rem",
+                whiteSpace: "nowrap",
+                transition: "all 0.3s ease",
+                opacity: newService.trim() ? 1 : 0.7,
+                boxShadow: newService.trim() ? "var(--btn-hover)" : "none",
               }}
             >
               <Plus size={20} />
@@ -908,28 +1144,47 @@ const ServiceProviderProfile = () => {
       </div>
 
       {/* Business Images */}
-      <div style={{
-        backgroundColor: 'var(--card-bg)',
-        border: '1px solid var(--border-color)',
-        borderRadius: '0.75rem',
-        overflow: 'hidden'
-      }}>
-        <div style={{
-          padding: '1.75rem',
-          borderBottom: '1px solid var(--border-color)'
-        }}>
-          <h2 style={{
-            fontSize: '1.25rem',
-            fontWeight: '600',
-            margin: 0
-          }}>Business Images ({businessImages.length}/10)</h2>
+      <div
+        style={{
+          backgroundColor: "var(--card-bg)",
+          border: "1px solid var(--border-color)",
+          borderRadius: "0.75rem",
+          overflow: "hidden",
+          backdropFilter: "blur(10px)",
+        }}
+      >
+        <div
+          style={{
+            padding: "1.75rem",
+            borderBottom: "1px solid var(--border-color)",
+          }}
+        >
+          <h2
+            style={{
+              fontSize: "1.25rem",
+              fontWeight: "600",
+              margin: 0,
+            }}
+          >
+            Business Images ({businessImages.length}/10)
+          </h2>
         </div>
-        <div style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(min(180px, 100%), 1fr))',
-            gap: '1.5rem'
-          }}>
+        <div
+          style={{
+            padding: "1.75rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1.5rem",
+          }}
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(auto-fill, minmax(min(180px, 100%), 1fr))",
+              gap: "1.5rem",
+            }}
+          >
             {businessImages.map((image, index) => (
               <ImageUpload
                 key={index}
@@ -939,77 +1194,93 @@ const ServiceProviderProfile = () => {
                 onView={handleImageClick}
               />
             ))}
-            
+
             {businessImages.length < 10 && (
               <label
                 style={{
-                  aspectRatio: '1',
-                  border: '2px dashed var(--border-color)',
-                  borderRadius: '0.75rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'transparent',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  padding: '1rem'
+                  aspectRatio: "1",
+                  border: "2px dashed var(--border-color)",
+                  borderRadius: "0.75rem",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "transparent",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  padding: "1rem",
                 }}
-                className="add-image-btn"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--hover-bg)';
-                  e.currentTarget.style.borderColor = 'var(--accent-color)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.borderColor = 'var(--border-color)';
-                }}
+                className="add-image-btn hover-glow"
               >
                 <input
                   type="file"
                   multiple
                   accept="image/*"
                   onChange={handleImageUpload}
-                  style={{ display: 'none' }}
+                  style={{ display: "none" }}
                 />
-                <Plus size={40} style={{ opacity: 0.5, marginBottom: '0.75rem' }} />
-                <span style={{ fontSize: '1rem', opacity: 0.8 }}>Add Image</span>
+                <Plus
+                  size={40}
+                  style={{ opacity: 0.5, marginBottom: "0.75rem" }}
+                />
+                <span style={{ fontSize: "1rem", opacity: 0.8 }}>
+                  Add Image
+                </span>
               </label>
             )}
           </div>
-          <p style={{
-            fontSize: '0.9375rem',
-            opacity: 0.8,
-            margin: 0,
-            lineHeight: '1.5'
-          }}>
-            Upload up to 10 images of your business, equipment, or previous work. Recommended size: 800x800px. Max 5MB per image.
+          <p
+            style={{
+              fontSize: "0.9375rem",
+              opacity: 0.8,
+              margin: 0,
+              lineHeight: "1.5",
+            }}
+          >
+            Upload up to 10 images of your business, equipment, or previous
+            work. Recommended size: 800x800px. Max 5MB per image.
           </p>
         </div>
       </div>
 
       {/* Working Hours */}
-      <div style={{
-        backgroundColor: 'var(--card-bg)',
-        border: '1px solid var(--border-color)',
-        borderRadius: '0.75rem',
-        overflow: 'hidden'
-      }}>
-        <div style={{
-          padding: '1.75rem',
-          borderBottom: '1px solid var(--border-color)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem'
-        }}>
+      <div
+        style={{
+          backgroundColor: "var(--card-bg)",
+          border: "1px solid var(--border-color)",
+          borderRadius: "0.75rem",
+          overflow: "hidden",
+          backdropFilter: "blur(10px)",
+        }}
+      >
+        <div
+          style={{
+            padding: "1.75rem",
+            borderBottom: "1px solid var(--border-color)",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+          }}
+        >
           <Clock size={24} />
-          <h2 style={{
-            fontSize: '1.25rem',
-            fontWeight: '600',
-            margin: 0
-          }}>Working Hours</h2>
+          <h2
+            style={{
+              fontSize: "1.25rem",
+              fontWeight: "600",
+              margin: 0,
+            }}
+          >
+            Working Hours
+          </h2>
         </div>
-        <div style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div
+          style={{
+            padding: "1.75rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem",
+          }}
+        >
           {daysOfWeek.map((day) => (
             <WorkingHoursRow
               key={day}
@@ -1022,109 +1293,179 @@ const ServiceProviderProfile = () => {
       </div>
 
       {/* Pricing */}
-      <div style={{
-        backgroundColor: 'var(--card-bg)',
-        border: '1px solid var(--border-color)',
-        borderRadius: '0.75rem',
-        overflow: 'hidden'
-      }}>
-        <div style={{
-          padding: '1.75rem',
-          borderBottom: '1px solid var(--border-color)'
-        }}>
-          <h2 style={{
-            fontSize: '1.25rem',
-            fontWeight: '600',
-            margin: 0
-          }}>Pricing Information</h2>
+      <div
+        style={{
+          backgroundColor: "var(--card-bg)",
+          border: "1px solid var(--border-color)",
+          borderRadius: "0.75rem",
+          overflow: "hidden",
+          backdropFilter: "blur(10px)",
+        }}
+      >
+        <div
+          style={{
+            padding: "1.75rem",
+            borderBottom: "1px solid var(--border-color)",
+          }}
+        >
+          <h2
+            style={{
+              fontSize: "1.25rem",
+              fontWeight: "600",
+              margin: 0,
+            }}
+          >
+            Pricing Information
+          </h2>
         </div>
-        <div style={{ 
-          padding: '1.75rem', 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: '1.5rem' 
-        }}>
-          <div style={{ 
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))',
-            gap: '2rem'
-          }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <label style={{
-                fontSize: '1rem',
-                fontWeight: '500'
-              }}>Starting Price *</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <span style={{ opacity: 0.8, fontSize: '1.125rem' }}>$</span>
-                <input 
-                  type="number" 
+        <div
+          style={{
+            padding: "1.75rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1.5rem",
+          }}
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(min(300px, 100%), 1fr))",
+              gap: "2rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem",
+              }}
+            >
+              <label
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: "500",
+                }}
+              >
+                Starting Price *
+              </label>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.75rem",
+                  flexWrap: "wrap",
+                }}
+              >
+                <span style={{ opacity: 0.8, fontSize: "1.125rem" }}>$</span>
+                <input
+                  type="number"
                   value={formData.startingPrice}
-                  onChange={(e) => handleInputChange('startingPrice', parseFloat(e.target.value) || 0)}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "startingPrice",
+                      parseFloat(e.target.value) || 0
+                    )
+                  }
                   min="0"
                   step="0.01"
                   required
                   style={{
-                    width: '10rem',
-                    padding: '0.875rem 1rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '0.5rem',
-                    backgroundColor: 'var(--background)',
-                    color: 'var(--text-color)',
-                    fontSize: '1rem'
+                    width: "10rem",
+                    padding: "0.875rem 1rem",
+                    border: "1px solid var(--border-color)",
+                    borderRadius: "0.5rem",
+                    backgroundColor: "var(--background)",
+                    color: "var(--text-color)",
+                    fontSize: "1rem",
                   }}
                 />
-                <span style={{ fontSize: '1rem', opacity: 0.8 }}>per service</span>
+                <span style={{ fontSize: "1rem", opacity: 0.8 }}>
+                  per service
+                </span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <label style={{
-                fontSize: '1rem',
-                fontWeight: '500'
-              }}>Emergency Service Fee</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <span style={{ opacity: 0.8, fontSize: '1.125rem' }}>$</span>
-                <input 
-                  type="number" 
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem",
+              }}
+            >
+              <label
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: "500",
+                }}
+              >
+                Emergency Service Fee
+              </label>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.75rem",
+                  flexWrap: "wrap",
+                }}
+              >
+                <span style={{ opacity: 0.8, fontSize: "1.125rem" }}>$</span>
+                <input
+                  type="number"
                   value={formData.emergencyCharge}
-                  onChange={(e) => handleInputChange('emergencyCharge', parseFloat(e.target.value) || 0)}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "emergencyCharge",
+                      parseFloat(e.target.value) || 0
+                    )
+                  }
                   min="0"
                   step="0.01"
                   style={{
-                    width: '10rem',
-                    padding: '0.875rem 1rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '0.5rem',
-                    backgroundColor: 'var(--background)',
-                    color: 'var(--text-color)',
-                    fontSize: '1rem'
+                    width: "10rem",
+                    padding: "0.875rem 1rem",
+                    border: "1px solid var(--border-color)",
+                    borderRadius: "0.5rem",
+                    backgroundColor: "var(--background)",
+                    color: "var(--text-color)",
+                    fontSize: "1rem",
                   }}
                 />
-                <span style={{ fontSize: '1rem', opacity: 0.8 }}>additional</span>
+                <span style={{ fontSize: "1rem", opacity: 0.8 }}>
+                  additional
+                </span>
               </div>
             </div>
           </div>
 
           {/* Extra Charge Note */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <label style={{
-              fontSize: '1rem',
-              fontWeight: '500'
-            }}>Extra Charge Notes</label>
-            <textarea 
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+          >
+            <label
+              style={{
+                fontSize: "1rem",
+                fontWeight: "500",
+              }}
+            >
+              Extra Charge Notes
+            </label>
+            <textarea
               rows={2}
               value={formData.extraChargeNote}
-              onChange={(e) => handleInputChange('extraChargeNote', e.target.value)}
+              onChange={(e) =>
+                handleInputChange("extraChargeNote", e.target.value)
+              }
               placeholder="Additional charges for materials, travel, or special circumstances..."
               style={{
-                padding: '0.875rem 1rem',
-                border: '1px solid var(--border-color)',
-                borderRadius: '0.5rem',
-                backgroundColor: 'var(--background)',
-                color: 'var(--text-color)',
-                resize: 'vertical',
-                fontSize: '1rem',
-                width: '100%'
+                padding: "0.875rem 1rem",
+                border: "1px solid var(--border-color)",
+                borderRadius: "0.5rem",
+                backgroundColor: "var(--background)",
+                color: "var(--text-color)",
+                resize: "vertical",
+                fontSize: "1rem",
+                width: "100%",
               }}
             />
           </div>
@@ -1132,44 +1473,34 @@ const ServiceProviderProfile = () => {
       </div>
 
       {/* Save Button at Bottom */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'flex-end',
-        padding: '1.5rem 0'
-      }}>
-        <button 
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          padding: "1.5rem 0",
+        }}
+      >
+        <button
           onClick={handleSave}
           disabled={saving}
+          className="btn-primary bottom-save-button"
           style={{
-            padding: '1rem 2rem',
-            backgroundColor: 'var(--accent-color)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '0.5rem',
-            cursor: saving ? 'not-allowed' : 'pointer',
-            fontWeight: '600',
-            fontSize: '1.125rem',
-            transition: 'all 0.2s',
-            minWidth: '12rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.75rem',
-            opacity: saving ? 0.7 : 1
-          }}
-          onMouseEnter={(e) => {
-            if (!saving) {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 10px 20px rgba(0, 0, 0, 0.1)';
-              e.currentTarget.style.backgroundColor = 'var(--accent-color-dark)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!saving) {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-              e.currentTarget.style.backgroundColor = 'var(--accent-color)';
-            }
+            padding: "1rem 2rem",
+            background: "var(--btn-bg)",
+            color: "white",
+            border: "none",
+            borderRadius: "0.5rem",
+            cursor: saving ? "not-allowed" : "pointer",
+            fontWeight: "600",
+            fontSize: "1.125rem",
+            transition: "all 0.3s ease",
+            minWidth: "12rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "0.75rem",
+            opacity: saving ? 0.7 : 1,
+            boxShadow: "var(--btn-hover)",
           }}
         >
           {saving ? (
@@ -1193,74 +1524,93 @@ const ServiceProviderProfile = () => {
             flex-direction: column !important;
             align-items: stretch !important;
           }
-          
+
           .responsive-header button {
             width: 100%;
             margin-top: 1rem;
           }
-          
+
           .add-service-container {
             flex-direction: column !important;
             align-items: stretch !important;
           }
-          
+
           .working-hours-row {
             flex-direction: column;
             align-items: flex-start;
             gap: 1rem;
           }
-          
+
           .working-hours-row > div:first-child {
             width: 100%;
           }
-          
+
           .working-hours-row button {
             width: 100%;
           }
         }
-        
+
         @media (max-width: 480px) {
           div[style*="gridTemplateColumns"] {
             grid-template-columns: 1fr !important;
           }
-          
+
           .working-hours-row > div:nth-child(2) {
             flex-direction: column;
             align-items: stretch;
           }
-          
+
           .working-hours-row input[type="time"] {
             width: 100% !important;
           }
         }
-        
+
+        /* Image upload styles */
         .image-upload:hover .delete-btn {
           opacity: 1 !important;
+          transform: scale(1.1);
         }
-        
-        .image-upload {
-          cursor: pointer;
+
+        .image-upload:hover {
+          box-shadow: 0 0 30px var(--glow-color);
         }
-        
+
         .add-image-btn:hover {
           transform: scale(1.02);
+          border-color: var(--accent-color) !important;
+          background-color: var(--accent-fade) !important;
         }
-        
-        input, textarea, button {
-          font-family: inherit;
+
+        /* Working hours row hover */
+        .working-hours-row:hover {
+          background-color: var(--card-bg) !important;
         }
-        
-        input:focus, textarea:focus, button:focus {
+
+        /* General focus styles */
+        input:focus,
+        textarea:focus,
+        button:focus {
           outline: 2px solid var(--accent-color);
           outline-offset: 2px;
         }
-        
-        button:active:not(:disabled) {
-          transform: scale(0.98);
-        }
-        
-        input:disabled, textarea:disabled {
+
+        button:disabled {
           cursor: not-allowed;
+          opacity: 0.7;
+        }
+
+        /* Animate-spin class for loader */
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
         }
       `}</style>
     </div>
