@@ -73,14 +73,35 @@ const updateProviderProfile = async (req, res) => {
     // Check if provider exists or create new one
     let provider = await ServiceProvider.findOne({ userId: req.user.id });
 
-    // Geocode the address to get coordinates
-    let coordinates = { type: 'Point', coordinates: [0, 0] };
-    if (businessAddress) {
+    // Handle coordinates - only geocode if not already provided
+    let coordinates = null;
+    
+    // If coordinates are already provided in the request (from frontend), use them directly
+    if (businessAddress && businessAddress.coordinates && businessAddress.coordinates.coordinates) {
+      coordinates = {
+        type: 'Point',
+        coordinates: businessAddress.coordinates.coordinates
+      };
+      console.log('Using provided coordinates:', coordinates);
+    } 
+    // If provider exists and has valid coordinates, keep them
+    else if (provider && provider.businessAddress && provider.businessAddress.coordinates && 
+             Array.isArray(provider.businessAddress.coordinates)) {
+      coordinates = {
+        type: 'Point',
+        coordinates: provider.businessAddress.coordinates
+      };
+      console.log('Keeping existing coordinates:', coordinates);
+    }
+    // Only geocode if creating new profile AND no coordinates provided
+    else if (businessAddress && !provider && businessAddress.city && businessAddress.state && businessAddress.pinCode) {
       try {
         coordinates = await geocodingService.getCoordinatesFromAddress(businessAddress);
         console.log('Geocoded coordinates:', coordinates);
       } catch (geocodeError) {
-        console.warn('Geocoding failed, using default coordinates:', geocodeError);
+        console.warn('Geocoding failed during initial profile creation:', geocodeError.message);
+        // Allow profile creation with default [0,0] - don't block signup
+        coordinates = { type: 'Point', coordinates: [0, 0] };
       }
     }
 

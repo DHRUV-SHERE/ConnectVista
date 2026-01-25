@@ -3,13 +3,13 @@ import api from './api';
 const profileService = {
   // Get provider profile
   getProviderProfile: async () => {
-    const response = await api.get('/profile/provider');
+    const response = await api.get('/api/profile/provider');
     return response.data;
   },
 
   // Update provider profile
   updateProviderProfile: async (profileData) => {
-    const response = await api.put('/profile/provider', profileData);
+    const response = await api.put('/api/profile/provider', profileData);
     return response.data;
   },
 
@@ -20,13 +20,13 @@ const profileService = {
       formData.append('images', image);
     });
     
-    const response = await api.post('/profile/provider/images', formData);
+    const response = await api.post('/api/profile/provider/images', formData);
     return response.data;
   },
 
   // Delete business image
   deleteBusinessImage: async (imageIndex) => {
-    const response = await api.delete(`/profile/provider/images/${imageIndex}`);
+    const response = await api.delete(`/api/profile/provider/images/${imageIndex}`);
     return response.data;
   }
 };

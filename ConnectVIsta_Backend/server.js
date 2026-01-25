@@ -17,6 +17,7 @@ const authRoutes = require('./src/routes/authRoutes');
 const verificationRoutes = require('./src/routes/verificationRoutes');
 const providerprofileRoutes = require('./src/routes/providerProfileRoutes'); // Add this import
 const seekerProfileRoutes = require('./src/routes/seekerProfileRoutes'); // Add this import
+const serviceRoutes = require('./src/routes/serviceRoutes'); // Add service routes
 const authController = require('./src/controllers/authController');
 const auth = require('./src/middleware/auth');
 
@@ -57,6 +58,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/verification', verificationRoutes);
 app.use('/api/profile', providerprofileRoutes); // Add this line to register profile routes
 app.use('/api/seeker', seekerProfileRoutes); // Add this line to register seeker profile routes
+app.use('/api/services', serviceRoutes); // Add service routes
 app.get('/api/auth/profile', auth(), authController.getProfile);
 
 // Health check

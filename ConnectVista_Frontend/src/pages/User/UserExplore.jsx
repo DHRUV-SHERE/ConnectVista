@@ -1,6 +1,6 @@
-"use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import BookingModal from "./UserBookingModel";
+import SimpleMapExplore from "../../components/User/SimpleMapExplore";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -18,284 +18,100 @@ import {
   Heart,
   Share2,
 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { serviceAPI, getCurrentLocation } from '../../services/serviceAPI';
 
 const UserExplore = () => {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedProviderForBooking, setSelectedProviderForBooking] = useState(null);
   const [viewMode, setViewMode] = useState("list");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [sortBy, setSortBy] = useState("distance");
+  const [sortBy, setSortBy] = useState("rating");
   const [searchQuery, setSearchQuery] = useState("");
   const [locationQuery, setLocationQuery] = useState("");
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [favorites, setFavorites] = useState(new Set());
+  const [providers, setProviders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [userLocation, setUserLocation] = useState(null);
+  const [searchParams] = useSearchParams();
+  const serviceId = searchParams.get('serviceId');
+  const serviceName = searchParams.get('serviceName');
 
-  const providers = [
-    {
-      id: 1,
-      name: "QuickFix Plumbing",
-      businessName: "QuickFix Plumbing Solutions",
-      category: "Plumbing",
-      rating: 4.8,
-      reviews: 156,
-      price: "$$",
-      distance: "0.5 mi",
-      description:
-        "Professional plumbing services with 24/7 emergency support. Specialized in leak detection, pipe repair, and installation services.",
-      verified: true,
-      email: "contact@quickfixplumbing.com",
-      phone: "+1 (555) 123-4567",
-      experience: "8 years",
-      specialization: "Residential & Commercial Plumbing",
-      address: "123 Main Street, Downtown",
-      city: "New York",
-      state: "NY",
-      pinCode: "10001",
-      serviceArea: "10 miles radius",
-      responseTime: "Within 2 hours",
-      languages: ["English", "Spanish"],
-      certifications: ["Licensed Plumber", "Insurance Certified"],
-      services: [
-        "Leak Repair",
-        "Pipe Installation",
-        "Drain Cleaning",
-        "Water Heater",
-      ],
-      availability: "24/7 Emergency Service",
-      images: ["/plumbing1.jpg", "/plumbing2.jpg"],
-      joinedDate: "2022-03-15",
-    },
-    {
-      id: 2,
-      name: "Bright Spark Electric",
-      businessName: "Bright Spark Electrical Services",
-      category: "Electrical",
-      rating: 4.9,
-      reviews: 203,
-      price: "$$$",
-      distance: "1.2 mi",
-      description:
-        "Licensed electricians for residential and commercial work. Expert in wiring, panel upgrades, and electrical repairs.",
-      verified: true,
-      email: "info@brightspark.com",
-      phone: "+1 (555) 987-6543",
-      experience: "12 years",
-      specialization: "Electrical Systems & Safety",
-      address: "456 Electric Ave",
-      city: "New York",
-      state: "NY",
-      pinCode: "10002",
-      serviceArea: "15 miles radius",
-      responseTime: "Same day",
-      languages: ["English"],
-      certifications: ["Master Electrician", "Safety Certified"],
-      services: [
-        "Wiring",
-        "Panel Upgrades",
-        "Lighting Installation",
-        "Safety Inspection",
-      ],
-      availability: "Mon-Sun: 7 AM - 9 PM",
-      images: ["/electrical1.jpg", "/electrical2.jpg"],
-      joinedDate: "2021-08-22",
-    },
-    {
-      id: 3,
-      name: "Clean Sweep Co.",
-      businessName: "Clean Sweep Professional Cleaning",
-      category: "Cleaning",
-      rating: 4.7,
-      reviews: 89,
-      price: "$",
-      distance: "0.8 mi",
-      description:
-        "Eco-friendly cleaning services for homes and offices. Using sustainable products for a healthier environment.",
-      verified: true,
-      email: "hello@cleansweep.com",
-      phone: "+1 (555) 456-7890",
-      experience: "5 years",
-      specialization: "Eco-Friendly Cleaning",
-      address: "789 Clean Street",
-      city: "New York",
-      state: "NY",
-      pinCode: "10003",
-      serviceArea: "20 miles radius",
-      responseTime: "Next day",
-      languages: ["English", "French"],
-      certifications: ["Green Cleaning Certified"],
-      services: [
-        "Deep Cleaning",
-        "Office Cleaning",
-        "Move-in/Move-out",
-        "Carpet Cleaning",
-      ],
-      availability: "Mon-Fri: 8 AM - 6 PM",
-      images: ["/cleaning1.jpg", "/cleaning2.jpg"],
-      joinedDate: "2023-01-10",
-    },
-    {
-      id: 4,
-      name: "Math Masters Tutoring",
-      businessName: "Math Masters Education Center",
-      category: "Tutoring",
-      rating: 5.0,
-      reviews: 67,
-      price: "$$",
-      distance: "1.5 mi",
-      description:
-        "Expert tutors for math, science, and test prep. Personalized learning approach for all age groups.",
-      verified: true,
-      email: "learn@mathmasters.com",
-      phone: "+1 (555) 234-5678",
-      experience: "6 years",
-      specialization: "STEM Education",
-      address: "321 Education Blvd",
-      city: "New York",
-      state: "NY",
-      pinCode: "10004",
-      serviceArea: "Online & 25 miles radius",
-      responseTime: "Within 24 hours",
-      languages: ["English", "Mandarin"],
-      certifications: ["Teaching License", "STEM Certified"],
-      services: [
-        "Math Tutoring",
-        "Science Classes",
-        "Test Preparation",
-        "Homework Help",
-      ],
-      availability: "Flexible hours",
-      images: ["/tutoring1.jpg", "/tutoring2.jpg"],
-      joinedDate: "2022-11-05",
-    },
-    {
-      id: 5,
-      name: "Style Studio Salon",
-      businessName: "Style Studio Beauty Salon",
-      category: "Salon",
-      rating: 4.6,
-      reviews: 234,
-      price: "$$",
-      distance: "2.1 mi",
-      description:
-        "Full-service salon with experienced stylists. Modern techniques and premium products for best results.",
-      verified: false,
-      email: "book@stylestudio.com",
-      phone: "+1 (555) 345-6789",
-      experience: "4 years",
-      specialization: "Hair & Beauty",
-      address: "654 Beauty Lane",
-      city: "New York",
-      state: "NY",
-      pinCode: "10005",
-      serviceArea: "5 miles radius",
-      responseTime: "2-4 hours",
-      languages: ["English", "Spanish", "Italian"],
-      certifications: ["Beauty License"],
-      services: ["Hair Styling", "Spa Treatments", "Makeup", "Nail Care"],
-      availability: "Tue-Sun: 9 AM - 8 PM",
-      images: ["/salon1.jpg", "/salon2.jpg"],
-      joinedDate: "2023-06-18",
-    },
-    {
-      id: 6,
-      name: "HandyPro Services",
-      businessName: "HandyPro Home Solutions",
-      category: "Home Repair",
-      rating: 4.8,
-      reviews: 178,
-      price: "$$",
-      distance: "1.8 mi",
-      description:
-        "General repairs and home maintenance specialists. Quick and reliable service for all home needs.",
-      verified: true,
-      email: "service@handypro.com",
-      phone: "+1 (555) 876-5432",
-      experience: "10 years",
-      specialization: "Home Maintenance & Repair",
-      address: "987 Repair Road",
-      city: "New York",
-      state: "NY",
-      pinCode: "10006",
-      serviceArea: "30 miles radius",
-      responseTime: "Same day",
-      languages: ["English"],
-      certifications: ["General Contractor", "Safety Certified"],
-      services: [
-        "Furniture Assembly",
-        "Painting",
-        "Minor Repairs",
-        "Installation",
-      ],
-      availability: "Mon-Sat: 7 AM - 7 PM",
-      images: ["/repair1.jpg", "/repair2.jpg"],
-      joinedDate: "2021-12-03",
-    },
-  ];
+  // Get user location on component mount
+  useEffect(() => {
+    const getUserLocation = async () => {
+      try {
+        const location = await getCurrentLocation();
+        setUserLocation(location);
+      } catch (error) {
+        console.log('Could not get user location:', error);
+      }
+    };
+    
+    // Add delay to prevent simultaneous calls
+    const timeoutId = setTimeout(getUserLocation, 50);
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  // Fetch providers for the selected service with location support
+  useEffect(() => {
+    const fetchProviders = async () => {
+      if (!serviceId) return;
+      
+      try {
+        setLoading(true);
+        
+        // Get user location for distance-based sorting
+        let location = userLocation;
+        if (!location) {
+          try {
+            location = await getCurrentLocation();
+            setUserLocation(location);
+          } catch (locationError) {
+            console.log('Could not get user location:', locationError);
+          }
+        }
+        
+        const options = {
+          city: locationQuery,
+          sortBy: sortBy
+        };
+        
+        // Add location for distance sorting
+        if (location && sortBy === 'distance') {
+          options.lat = location.lat;
+          options.lng = location.lng;
+        }
+        
+        const response = await serviceAPI.getProvidersByService(serviceId, options);
+        setProviders(response.data || []);
+      } catch (error) {
+        console.error('Error fetching providers:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    // Add delay to prevent rate limiting
+    const timeoutId = setTimeout(fetchProviders, 150);
+    return () => clearTimeout(timeoutId);
+  }, [serviceId, locationQuery, sortBy, userLocation]);
 
   const filteredProviders = useMemo(() => {
     let filtered = providers;
 
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter(
-        (provider) =>
-          provider.category.toLowerCase() === selectedCategory.toLowerCase()
-      );
-    }
-
     if (searchQuery) {
       filtered = filtered.filter(
         (provider) =>
-          provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          provider.businessName
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          provider.description
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          provider.specialization
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase())
+          provider.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          provider.businessName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          provider.description?.toLowerCase().includes(searchQuery.toLowerCase())
       );
-    }
-
-    if (locationQuery) {
-      filtered = filtered.filter(
-        (provider) =>
-          provider.city.toLowerCase().includes(locationQuery.toLowerCase()) ||
-          provider.address.toLowerCase().includes(locationQuery.toLowerCase())
-      );
-    }
-
-    switch (sortBy) {
-      case "rating":
-        filtered.sort((a, b) => b.rating - a.rating);
-        break;
-      case "reviews":
-        filtered.sort((a, b) => b.reviews - a.reviews);
-        break;
-      case "price-low":
-        const priceOrder = { $: 1, $$: 2, $$$: 3, $$$$: 4 };
-        filtered.sort((a, b) => priceOrder[a.price] - priceOrder[b.price]);
-        break;
-      case "price-high":
-        const priceOrderHigh = { $: 1, $$: 2, $$$: 3, $$$$: 4 };
-        filtered.sort(
-          (a, b) => priceOrderHigh[b.price] - priceOrderHigh[a.price]
-        );
-        break;
-      case "experience":
-        filtered.sort(
-          (a, b) => parseInt(b.experience) - parseInt(a.experience)
-        );
-        break;
-      default: // distance
-        filtered.sort(
-          (a, b) => parseFloat(a.distance) - parseFloat(b.distance)
-        );
     }
 
     return filtered;
-  }, [selectedCategory, sortBy, searchQuery, locationQuery]);
+  }, [providers, searchQuery]);
 
   const toggleFavorite = (providerId) => {
     const newFavorites = new Set(favorites);
@@ -322,7 +138,42 @@ const UserExplore = () => {
   };
 
   const ProviderProfile = ({ provider, onClose }) => {
-    const isFavorite = favorites.has(provider.id);
+    const [profileData, setProfileData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const isFavorite = favorites.has(provider._id);
+
+    useEffect(() => {
+      const fetchProviderProfile = async () => {
+        try {
+          const response = await serviceAPI.getProviderProfile(provider._id);
+          setProfileData(response.data);
+        } catch (error) {
+          console.error('Error fetching provider profile:', error);
+          setProfileData(provider); // Fallback to basic provider data
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchProviderProfile();
+    }, [provider._id]);
+
+    if (loading) {
+      return (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 sm:p-4"
+          onClick={onClose}
+        >
+          <div className="bg-white rounded-xl p-8 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
+        </motion.div>
+      );
+    }
+
+    const profile = profileData || provider;
 
     return (
       <motion.div
@@ -361,10 +212,10 @@ const UserExplore = () => {
                 className="text-xl sm:text-2xl font-bold"
                 style={{ color: "var(--text-color)" }}
               >
-                {provider.businessName}
+                {profile.businessName || profile.name}
               </h2>
               <p className="text-sm sm:text-base" style={{ color: "var(--text-color)", opacity: 0.7 }}>
-                {provider.category} Services
+                {profile.category || 'Service Provider'}
               </p>
             </div>
           </div>
@@ -380,7 +231,7 @@ const UserExplore = () => {
                     About
                   </h3>
                   <p className="text-sm sm:text-base" style={{ color: "var(--text-color)", opacity: 0.8 }}>
-                    {provider.description}
+                    {profile.description || 'Professional service provider with years of experience.'}
                   </p>
                 </div>
 
@@ -392,7 +243,7 @@ const UserExplore = () => {
                     Services Offered
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    {provider.services.map((service, index) => (
+                    {(profile.services || []).map((service, index) => (
                       <span
                         key={index}
                         className="px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium"
@@ -401,7 +252,7 @@ const UserExplore = () => {
                           color: "var(--accent-dark)",
                         }}
                       >
-                        {service}
+                        {service.service?.name || service}
                       </span>
                     ))}
                   </div>
@@ -415,7 +266,7 @@ const UserExplore = () => {
                     Specialization
                   </h3>
                   <p className="text-sm sm:text-base" style={{ color: "var(--text-color)", opacity: 0.8 }}>
-                    {provider.specialization}
+                    {profile.specialization || 'Specialized in providing quality services.'}
                   </p>
                 </div>
               </div>
@@ -440,14 +291,14 @@ const UserExplore = () => {
                       style={{ color: "var(--text-color)", opacity: 0.8 }}
                     >
                       <Phone className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span>{provider.phone}</span>
+                      <span>{profile.userId?.phone || profile.phone || 'Contact via platform'}</span>
                     </div>
                     <div
                       className="flex items-center gap-2 text-xs sm:text-sm"
                       style={{ color: "var(--text-color)", opacity: 0.8 }}
                     >
                       <Mail className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span>{provider.email}</span>
+                      <span>{profile.userId?.email || profile.email || 'Contact via platform'}</span>
                     </div>
                     <div
                       className="flex items-center gap-2 text-xs sm:text-sm"
@@ -455,8 +306,8 @@ const UserExplore = () => {
                     >
                       <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
                       <span className="break-words">
-                        {provider.address}, {provider.city}, {provider.state}{" "}
-                        {provider.pinCode}
+                        {profile.businessAddress?.street}, {profile.businessAddress?.city}, {profile.businessAddress?.state}{" "}
+                        {profile.businessAddress?.pinCode}
                       </span>
                     </div>
                   </div>
@@ -481,7 +332,7 @@ const UserExplore = () => {
                       style={{ color: "var(--text-color)" }}
                     >
                       <span>Experience:</span>
-                      <span className="font-medium">{provider.experience}</span>
+                      <span className="font-medium">{profile.experienceYears || 0} years</span>
                     </div>
                     <div
                       className="flex justify-between"
@@ -489,7 +340,7 @@ const UserExplore = () => {
                     >
                       <span>Response Time:</span>
                       <span className="font-medium">
-                        {provider.responseTime}
+                        {profile.responseTime || 'Within 24 hours'}
                       </span>
                     </div>
                     <div
@@ -498,7 +349,7 @@ const UserExplore = () => {
                     >
                       <span>Service Area:</span>
                       <span className="font-medium">
-                        {provider.serviceArea}
+                        {profile.businessAddress?.city || 'Local area'}
                       </span>
                     </div>
                     <div
@@ -507,7 +358,7 @@ const UserExplore = () => {
                     >
                       <span>Availability:</span>
                       <span className="font-medium">
-                        {provider.availability}
+                        {profile.isAvailable ? 'Available' : 'Busy'}
                       </span>
                     </div>
                   </div>
@@ -524,7 +375,7 @@ const UserExplore = () => {
                   Certifications
                 </h3>
                 <div className="space-y-2">
-                  {provider.certifications.map((cert, index) => (
+                  {(profile.certifications || ['Professional Certification']).map((cert, index) => (
                     <div key={index} className="flex items-center gap-2">
                       <Award
                         className="h-4 w-4"
@@ -548,7 +399,7 @@ const UserExplore = () => {
                   Languages
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {provider.languages.map((lang, index) => (
+                  {(profile.languages || ['English']).map((lang, index) => (
                     <span
                       key={index}
                       className="px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm"
@@ -575,13 +426,13 @@ const UserExplore = () => {
                   background: "var(--btn-bg)",
                   color: "white",
                 }}
-                onClick={() => handleBookService(provider)}
+                onClick={() => handleBookService(profile)}
               >
                 Book Service
               </button>
               <div className="flex gap-3 justify-center sm:justify-start">
                 <button
-                  onClick={() => toggleFavorite(provider.id)}
+                  onClick={() => toggleFavorite(profile._id)}
                   className="p-3 rounded-xl transition-colors"
                   style={{
                     backgroundColor: isFavorite
@@ -714,7 +565,7 @@ const UserExplore = () => {
                   border: "1px solid var(--border-color)",
                 }}
               >
-                <option value="distance">Distance</option>
+                <option value="distance">Nearest First</option>
                 <option value="rating">Highest Rated</option>
                 <option value="reviews">Most Reviews</option>
                 <option value="experience">Most Experienced</option>
@@ -766,21 +617,30 @@ const UserExplore = () => {
 
       <section className="py-6 sm:py-8 container mx-auto px-3 sm:px-4">
         <div className="mb-4 sm:mb-6">
+          <h1 className="text-2xl font-bold mb-2" style={{ color: "var(--text-color)" }}>
+            {serviceName || 'Service Providers'}
+          </h1>
           <p className="text-sm sm:text-base" style={{ color: "var(--text-color)", opacity: 0.7 }}>
-            Found{" "}
-            <span
-              className="font-semibold"
-              style={{ color: "var(--text-color)" }}
-            >
-              {filteredProviders.length}
-            </span>{" "}
-            service providers
-            {locationQuery && ` in ${locationQuery}`}
+            {loading ? 'Loading...' : (
+              <>Found{" "}
+              <span
+                className="font-semibold"
+                style={{ color: "var(--text-color)" }}
+              >
+                {filteredProviders.length}
+              </span>{" "}
+              service providers
+              {locationQuery && ` in ${locationQuery}`}</>
+            )}
           </p>
         </div>
 
         <AnimatePresence>
-          {viewMode === "list" ? (
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          ) : viewMode === "list" ? (
             <motion.div
               key="list"
               initial={{ opacity: 0 }}
@@ -788,10 +648,10 @@ const UserExplore = () => {
               className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6"
             >
               {filteredProviders.map((provider) => {
-                const isFavorite = favorites.has(provider.id);
+                const isFavorite = favorites.has(provider._id);
                 return (
                   <motion.div
-                    key={provider.id}
+                    key={provider._id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border"
@@ -808,9 +668,9 @@ const UserExplore = () => {
                               className="text-lg sm:text-xl font-semibold"
                               style={{ color: "var(--text-color)" }}
                             >
-                              {provider.businessName}
+                              {provider.businessName || provider.name}
                             </h3>
-                            {provider.verified && (
+                            {provider.isVerified && (
                               <span
                                 className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
                                 style={{
@@ -827,7 +687,7 @@ const UserExplore = () => {
                             className="text-xs sm:text-sm"
                             style={{ color: "var(--text-color)", opacity: 0.7 }}
                           >
-                            {provider.category} • {provider.specialization}
+                            {provider.experienceYears} years experience
                           </p>
                         </div>
                         <div className="text-right">
@@ -836,9 +696,9 @@ const UserExplore = () => {
                             style={{ color: "var(--text-color)" }}
                           >
                             <Star className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 fill-current" />
-                            {provider.rating}
+                            {provider.rating?.average || 0}
                             <span style={{ opacity: 0.7 }}>
-                              ({provider.reviews})
+                              ({provider.rating?.count || 0})
                             </span>
                           </div>
                           <div
@@ -846,7 +706,12 @@ const UserExplore = () => {
                             style={{ color: "var(--text-color)", opacity: 0.7 }}
                           >
                             <MapPin className="h-3 w-3" />
-                            {provider.distance}
+                            {provider.businessAddress?.city}
+                            {provider.distance && (
+                              <span className="ml-2 px-2 py-1 rounded-full bg-blue-100 text-blue-800 text-xs">
+                                {provider.distance < 1 ? `${Math.round(provider.distance * 1000)}m` : `${provider.distance.toFixed(1)}km`}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -868,20 +733,20 @@ const UserExplore = () => {
                         >
                           <div className="flex items-center gap-1">
                             <DollarSign className="h-3 w-3 sm:h-4 sm:w-4" />
-                            <span>{provider.price}</span>
+                            <span>₹{provider.serviceDetails?.minPrice || provider.startingPrice}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-                            <span>{provider.experience} exp</span>
+                            <span>{provider.experienceYears} years exp</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Award className="h-3 w-3 sm:h-4 sm:w-4" />
-                            <span>{provider.responseTime}</span>
+                            <span>{provider.totalJobsCompleted} jobs</span>
                           </div>
                         </div>
                         <div className="flex gap-2 self-end sm:self-auto">
                           <button
-                            onClick={() => toggleFavorite(provider.id)}
+                            onClick={() => toggleFavorite(provider._id)}
                             className="p-2 rounded-xl transition-colors"
                             style={{
                               backgroundColor: isFavorite
@@ -928,37 +793,11 @@ const UserExplore = () => {
               })}
             </motion.div>
           ) : (
-            <motion.div
-              key="map"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="rounded-xl sm:rounded-2xl flex items-center justify-center"
-              style={{
-                height: "400px sm:600px",
-                backgroundColor: "var(--card-bg)",
-                border: "1px solid var(--border-color)",
-              }}
-            >
-              <div className="text-center space-y-2 sm:space-y-3 p-4">
-                <Map className="h-12 w-12 sm:h-16 sm:w-16 mx-auto" style={{ opacity: 0.3 }} />
-                <p className="text-base sm:text-lg" style={{ color: "var(--text-color)" }}>
-                  Interactive Map View
-                </p>
-                <p className="text-xs sm:text-sm" style={{ color: "var(--text-color)", opacity: 0.7 }}>
-                  See service providers in your area on the map
-                </p>
-                <button
-                  onClick={() => setViewMode("list")}
-                  className="px-4 sm:px-6 py-2 rounded-xl font-medium transition-colors text-xs sm:text-sm"
-                  style={{
-                    background: "var(--btn-bg)",
-                    color: "white",
-                  }}
-                >
-                  Switch to List View
-                </button>
-              </div>
-            </motion.div>
+            <SimpleMapExplore 
+              providers={filteredProviders}
+              userLocation={userLocation}
+              onProviderClick={setSelectedProvider}
+            />
           )}
         </AnimatePresence>
 

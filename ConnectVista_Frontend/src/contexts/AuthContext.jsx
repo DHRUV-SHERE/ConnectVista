@@ -35,19 +35,20 @@ export const AuthProvider = ({ children }) => {
             setUser(response.data.user);
             setProfile(response.data.profile);
             localStorage.setItem("user", JSON.stringify(response.data.user));
-          } else {
-            // If profile fetch fails but token exists, user might be logged out
+          }
+        } catch (err) {
+          console.error("Auth check failed:", err);
+          // Only clear auth on 401 errors
+          if (err.response?.status === 401) {
             localStorage.removeItem("accessToken");
             localStorage.removeItem("user");
             setUser(null);
             setProfile(null);
+          } else {
+            // Keep user logged in on other errors
+            const parsedUser = JSON.parse(storedUser);
+            setUser(parsedUser);
           }
-        } catch (err) {
-          console.error("Auth check failed:", err);
-          localStorage.removeItem("accessToken");
-          localStorage.removeItem("user");
-          setUser(null);
-          setProfile(null);
         }
       }
       setLoading(false);

@@ -1,525 +1,13 @@
-"use client";
-import { useState, useMemo, useEffect, Suspense } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import SimpleMapServices from "../../components/User/SimpleMapServices";
 import { 
   Search, Filter, Grid3X3, List, Star, MapPin, Clock, 
   Heart, Share2, ChevronRight, Droplets, Zap, Sparkles, 
-  BookOpen, Scissors, Hammer, Code, Calendar, Map, Users, Navigation
+  BookOpen, Scissors, Hammer, Code, Calendar, Map as MapIcon, Users, Navigation
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-// Custom SVG icons as base64 encoded strings
-const CUSTOM_ICONS = {
-  // Blue service marker SVG (person icon)
-  serviceIcon: `data:image/svg+xml;base64,${btoa(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#0EA5E9" width="24" height="24">
-      <circle cx="12" cy="8" r="4" fill="#0EA5E9"/>
-      <path d="M12 14c-3.31 0-6 2.69-6 6v2h12v-2c0-3.31-2.69-6-6-6z" fill="#0EA5E9"/>
-    </svg>
-  `)}`,
-  
-  // Red user location marker SVG (location pin)
-  userLocationIcon: `data:image/svg+xml;base64,${btoa(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF3B30" width="24" height="24">
-      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z" fill="#FF3B30"/>
-    </svg>
-  `)}`,
-  
-  // Green available service provider SVG (checkmark in circle)
-  availableProviderIcon: `data:image/svg+xml;base64,${btoa(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#4CAF50" width="20" height="20">
-      <circle cx="12" cy="12" r="10" fill="#4CAF50"/>
-      <path d="M10 14.59l6.3-6.3a1 1 0 011.4 1.42l-7 7a1 1 0 01-1.4 0l-3-3a1 1 0 011.4-1.42l2.3 2.3z" fill="white"/>
-    </svg>
-  `)}`,
-  
-  // Yellow busy service provider SVG (clock in circle)
-  busyProviderIcon: `data:image/svg+xml;base64,${btoa(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FFC107" width="20" height="20">
-      <circle cx="12" cy="12" r="10" fill="#FFC107"/>
-      <path d="M12 6v6l4 2" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
-    </svg>
-  `)}`
-};
-
-// Dynamic import for Leaflet to avoid SSR issues
-const LazyMap = ({ viewMode, filteredServices, userLocation, handleServiceClick, favorites, setFavorites, setViewMode, getCategoryIcon }) => {
-  if (viewMode !== "map") return null;
-  
-  return (
-    <Suspense fallback={
-      <div className="h-[500px] w-full flex items-center justify-center bg-gray-50 rounded-2xl">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    }>
-      <MapContent 
-        filteredServices={filteredServices}
-        userLocation={userLocation}
-        handleServiceClick={handleServiceClick}
-        favorites={favorites}
-        setFavorites={setFavorites}
-        setViewMode={setViewMode}
-        getCategoryIcon={getCategoryIcon}
-      />
-    </Suspense>
-  );
-};
-
-// Separate component for the map to avoid importing Leaflet unless needed
-const MapContent = ({ filteredServices, userLocation, handleServiceClick, favorites, setFavorites, setViewMode, getCategoryIcon }) => {
-  const [MapContainer, setMapContainer] = useState(null);
-  const [TileLayer, setTileLayer] = useState(null);
-  const [Marker, setMarker] = useState(null);
-  const [Popup, setPopup] = useState(null);
-  const [L, setL] = useState(null);
-  const [isLeafletLoaded, setIsLeafletLoaded] = useState(false);
-
-  useEffect(() => {
-    // Dynamically import Leaflet only on client side
-    const loadLeaflet = async () => {
-      try {
-        const leaflet = await import("leaflet");
-        const { MapContainer: MC, TileLayer: TL, Marker: M, Popup: P } = await import("react-leaflet");
-        
-        // Fix for Leaflet default marker icons - Remove default icons completely
-        delete leaflet.Icon.Default.prototype._getIconUrl;
-        leaflet.Icon.Default.mergeOptions({
-          iconRetinaUrl: "",
-          iconUrl: "",
-          shadowUrl: "",
-          iconSize: [0, 0],
-          iconAnchor: [0, 0]
-        });
-
-        setL(leaflet);
-        setMapContainer(() => MC);
-        setTileLayer(() => TL);
-        setMarker(() => M);
-        setPopup(() => P);
-        setIsLeafletLoaded(true);
-      } catch (error) {
-        console.error("Error loading Leaflet:", error);
-      }
-    };
-
-    loadLeaflet();
-  }, []);
-
-  // Create custom SVG icons
-  const createCustomIcons = (leaflet) => {
-    if (!leaflet) return null;
-    
-    // User Location Icon (Red)
-    const userLocationIcon = new leaflet.Icon({
-      iconUrl: CUSTOM_ICONS.userLocationIcon,
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
-      popupAnchor: [0, -32],
-      className: 'custom-user-marker'
-    });
-
-    // Service Icon (Blue)
-    const serviceIcon = new leaflet.Icon({
-      iconUrl: CUSTOM_ICONS.serviceIcon,
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
-      popupAnchor: [0, -32],
-      className: 'custom-service-marker'
-    });
-
-    // Available Provider Icon (Small Green)
-    const availableProviderIcon = new leaflet.Icon({
-      iconUrl: CUSTOM_ICONS.availableProviderIcon,
-      iconSize: [20, 20],
-      iconAnchor: [10, 10],
-      className: 'custom-available-marker'
-    });
-
-    // Busy Provider Icon (Small Yellow)
-    const busyProviderIcon = new leaflet.Icon({
-      iconUrl: CUSTOM_ICONS.busyProviderIcon,
-      iconSize: [20, 20],
-      iconAnchor: [10, 10],
-      className: 'custom-busy-marker'
-    });
-
-    return {
-      userLocationIcon,
-      serviceIcon,
-      availableProviderIcon,
-      busyProviderIcon
-    };
-  };
-
-  if (!isLeafletLoaded || !MapContainer || !TileLayer || !Marker || !Popup || !L) {
-    return (
-      <div className="h-[500px] w-full flex items-center justify-center bg-gray-50 rounded-2xl">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        <span className="ml-3 text-gray-600">Loading map...</span>
-      </div>
-    );
-  }
-
-  const icons = createCustomIcons(L);
-
-  return (
-    <div className="rounded-2xl overflow-hidden border" style={{ borderColor: 'var(--border-color)' }}>
-      <div className="p-4" style={{ backgroundColor: 'var(--card-bg)' }}>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold" style={{ color: 'var(--text-color)' }}>
-            <MapPin className="inline h-5 w-5 mr-2" />
-            Service Providers Map
-          </h3>
-          <button
-            onClick={() => setViewMode("grid")}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors hover:opacity-80"
-            style={{
-              backgroundColor: 'var(--accent-color)',
-              color: 'white'
-            }}
-          >
-            <Grid3X3 className="h-4 w-4" />
-            Back to Grid
-          </button>
-        </div>
-        
-        <div className="text-sm mb-4 flex items-center gap-4" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
-          <span>
-            <Users className="inline h-4 w-4 mr-1" />
-            Showing {filteredServices.length} services
-          </span>
-          <span>
-            <Navigation className="inline h-4 w-4 mr-1" />
-            {filteredServices.reduce((sum, s) => sum + s.providerCoordinates.length, 0)} providers
-          </span>
-        </div>
-      </div>
-      
-      <div className="h-[500px] w-full relative">
-        <MapContainer
-          center={[userLocation.lat, userLocation.lng]}
-          zoom={13}
-          style={{ height: "100%", width: "100%" }}
-          className="z-0"
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          
-          {/* User location marker */}
-          <Marker position={[userLocation.lat, userLocation.lng]} icon={icons.userLocationIcon}>
-            <Popup>
-              <div className="p-2">
-                <h4 className="font-semibold flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                  Your Location
-                </h4>
-                <p className="text-sm text-gray-600 mt-1">You are here</p>
-              </div>
-            </Popup>
-          </Marker>
-          
-          {/* Service markers */}
-          {filteredServices.map((service) => (
-            <Marker
-              key={service.id}
-              position={[service.coordinates.lat, service.coordinates.lng]}
-              icon={icons.serviceIcon}
-            >
-              <Popup>
-                <div className="p-3 max-w-xs">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: 'var(--accent-fade)' }}
-                      >
-                        {getCategoryIcon(service.category)}
-                      </div>
-                      <h4 className="font-bold text-lg">{service.title}</h4>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const newFavorites = new Set(favorites);
-                        if (favorites.has(service.id)) {
-                          newFavorites.delete(service.id);
-                        } else {
-                          newFavorites.add(service.id);
-                        }
-                        setFavorites(newFavorites);
-                      }}
-                      className={`p-1 rounded-full ${favorites.has(service.id) ? "text-red-500" : "text-gray-400"}`}
-                    >
-                      <Heart className={`h-5 w-5 ${favorites.has(service.id) ? "fill-current" : ""}`} />
-                    </button>
-                  </div>
-                  
-                  <p className="text-sm text-gray-600 mb-3">{service.description}</p>
-                  
-                  <div className="space-y-2 mb-3">
-                    <div className="flex items-center gap-2">
-                      <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                      <span className="text-sm font-medium">{service.rating}</span>
-                      <span className="text-xs text-gray-500">({service.reviews} reviews)</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-gray-500" />
-                      <span>{service.location}</span>
-                    </div>
-                    
-                    <div className="text-sm font-medium" style={{ color: 'var(--accent-color)' }}>
-                      {service.price}
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {service.tags.slice(0, 3).map((tag, index) => (
-                      <span
-                        key={index}
-                        className="inline-block px-2 py-1 text-xs rounded-full"
-                        style={{
-                          backgroundColor: 'var(--accent-fade)',
-                          color: 'var(--accent-dark)'
-                        }}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                  
-                  {/* Individual Providers */}
-                  <div className="mb-3">
-                    <h5 className="text-sm font-semibold mb-2">Providers in this area:</h5>
-                    <div className="space-y-1 max-h-40 overflow-y-auto">
-                      {service.providerCoordinates.map((provider, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                          <span className="text-xs font-medium">{provider.name}</span>
-                          <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                            <span className="text-xs text-gray-600">Available</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleServiceClick(service)}
-                      className="flex-1 px-3 py-2 text-sm rounded-lg font-medium transition-colors hover:opacity-90"
-                      style={{
-                        background: 'var(--accent-color)',
-                        color: 'white'
-                      }}
-                    >
-                      View Details
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        // Open directions in Google Maps
-                        const url = `https://www.google.com/maps/dir/?api=1&destination=${service.coordinates.lat},${service.coordinates.lng}`;
-                        window.open(url, '_blank');
-                      }}
-                      className="px-3 py-2 text-sm rounded-lg font-medium transition-colors border hover:opacity-90"
-                      style={{
-                        borderColor: 'var(--accent-color)',
-                        color: 'var(--accent-color)'
-                      }}
-                    >
-                      <Navigation className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
-          
-          {/* Individual Provider Markers (small dots) */}
-          {filteredServices.map((service) =>
-            service.providerCoordinates.map((provider, idx) => (
-              <Marker
-                key={`${service.id}-${idx}`}
-                position={[provider.lat, provider.lng]}
-                icon={Math.random() > 0.3 ? icons.availableProviderIcon : icons.busyProviderIcon}
-              >
-                <Popup>
-                  <div className="p-2">
-                    <h5 className="font-semibold text-sm">{provider.name}</h5>
-                    <p className="text-xs text-gray-600">{service.title}</p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Star className="h-3 w-3 text-yellow-400 fill-current" />
-                      <span className="text-xs font-medium">{service.rating}</span>
-                    </div>
-                  </div>
-                </Popup>
-              </Marker>
-            ))
-          )}
-        </MapContainer>
-        
-        {/* Map Controls */}
-        <div className="absolute bottom-4 right-4 flex flex-col gap-2">
-          <button
-            onClick={() => {
-              if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                  (position) => {
-                    const { latitude, longitude } = position.coords;
-                    setUserLocation({ lat: latitude, lng: longitude });
-                  },
-                  (error) => console.log("Geolocation error:", error)
-                );
-              }
-            }}
-            className="p-3 rounded-full shadow-lg transition-all hover:shadow-xl flex items-center justify-center"
-            style={{
-              backgroundColor: 'var(--card-bg)',
-              color: 'var(--text-color)',
-              border: '1px solid var(--border-color)'
-            }}
-            title="Center on my location"
-          >
-            <Navigation className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => setViewMode("grid")}
-            className="p-3 rounded-full shadow-lg transition-all hover:shadow-xl flex items-center justify-center"
-            style={{
-              backgroundColor: 'var(--card-bg)',
-              color: 'var(--text-color)',
-              border: '1px solid var(--border-color)'
-            }}
-            title="Switch to grid view"
-          >
-            <Grid3X3 className="h-5 w-5" />
-          </button>
-        </div>
-        
-        {/* Map Legend */}
-        <div className="absolute top-4 left-4 p-3 rounded-lg shadow-lg max-w-xs"
-          style={{
-            backgroundColor: 'var(--card-bg)',
-            color: 'var(--text-color)',
-            border: '1px solid var(--border-color)'
-          }}
-        >
-          <h5 className="font-medium text-sm mb-2 flex items-center gap-2">
-            <MapPin className="h-4 w-4" />
-            Map Legend
-          </h5>
-          <div className="space-y-2 text-xs">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 flex items-center justify-center">
-                <img src={CUSTOM_ICONS.userLocationIcon} alt="Your location" className="w-4 h-4" />
-              </div>
-              <span>Your Location</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 flex items-center justify-center">
-                <img src={CUSTOM_ICONS.serviceIcon} alt="Service provider" className="w-4 h-4" />
-              </div>
-              <span>Service Center</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 flex items-center justify-center">
-                <img src={CUSTOM_ICONS.availableProviderIcon} alt="Available" className="w-3 h-3" />
-              </div>
-              <span>Available Provider</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 flex items-center justify-center">
-                <img src={CUSTOM_ICONS.busyProviderIcon} alt="Busy" className="w-3 h-3" />
-              </div>
-              <span>Busy Provider</span>
-            </div>
-          </div>
-        </div>
-        
-        {/* Zoom Controls */}
-        <div className="absolute top-4 right-4 flex flex-col gap-1">
-          <button
-            onClick={() => {
-              const map = document.querySelector('.leaflet-container');
-              if (map) {
-                // You would need to get the Leaflet map instance here
-                // For now, this is a placeholder
-                console.log('Zoom in');
-              }
-            }}
-            className="w-8 h-8 flex items-center justify-center rounded-t-lg border"
-            style={{
-              backgroundColor: 'var(--card-bg)',
-              borderColor: 'var(--border-color)',
-              color: 'var(--text-color)'
-            }}
-          >
-            +
-          </button>
-          <button
-            onClick={() => {
-              console.log('Zoom out');
-            }}
-            className="w-8 h-8 flex items-center justify-center rounded-b-lg border"
-            style={{
-              backgroundColor: 'var(--card-bg)',
-              borderColor: 'var(--border-color)',
-              color: 'var(--text-color)'
-            }}
-          >
-            −
-          </button>
-        </div>
-      </div>
-      
-      {/* Services List in Map View */}
-      <div className="p-4" style={{ backgroundColor: 'var(--card-bg)', borderTop: '1px solid var(--border-color)' }}>
-        <h4 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-color)' }}>
-          <Users className="h-4 w-4" />
-          Nearby Services ({filteredServices.length})
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filteredServices.slice(0, 3).map((service) => (
-            <div
-              key={service.id}
-              className="p-3 rounded-lg border cursor-pointer hover:shadow transition-all group"
-              style={{
-                backgroundColor: 'var(--background)',
-                borderColor: 'var(--border-color)'
-              }}
-              onClick={() => handleServiceClick(service)}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: 'var(--accent-fade)' }}
-                >
-                  {getCategoryIcon(service.category)}
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-medium text-sm truncate group-hover:text-blue-600 transition-colors">
-                    {service.title}
-                  </h4>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Star className="h-3 w-3 text-yellow-400 fill-current" />
-                    <span className="text-xs">{service.rating}</span>
-                    <span className="text-xs text-gray-500">•</span>
-                    <span className="text-xs text-gray-500">{service.providerCount} providers</span>
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
+import { serviceAPI, getCurrentLocation } from '../../services/serviceAPI';
 
 const UserServices = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -527,35 +15,93 @@ const UserServices = () => {
   const [viewMode, setViewMode] = useState("grid");
   const [sortBy, setSortBy] = useState("popular");
   const [favorites, setFavorites] = useState(new Set());
-  const [userLocation, setUserLocation] = useState({ lat: 20.5937, lng: 78.9629 }); // Default: India center
+  const [userLocation, setUserLocation] = useState({ lat: 20.5937, lng: 78.9629 });
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Get user's location on component mount
+  // Fetch services from API with location (with throttling)
   useEffect(() => {
-    if (navigator.geolocation && viewMode === "map") {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setUserLocation({ lat: latitude, lng: longitude });
-        },
-        (error) => {
+    const fetchServicesWithLocation = async () => {
+      try {
+        setLoading(true);
+        
+        // Get user location first
+        let location = userLocation;
+        try {
+          location = await getCurrentLocation();
+          setUserLocation(location);
+        } catch (locationError) {
+          console.log('Could not get user location, using default:', locationError);
+        }
+        
+        // Fetch basic services first
+        const response = await serviceAPI.getServices();
+        setServices(response.data || []);
+      } catch (error) {
+        console.error('Error fetching services:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    // Add delay to prevent rate limiting
+    const timeoutId = setTimeout(fetchServicesWithLocation, 100);
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  // Get user's location on component mount and when map view is selected
+  useEffect(() => {
+    const updateLocation = async () => {
+      if (navigator.geolocation && viewMode === "map" && !userLocation) {
+        try {
+          const location = await getCurrentLocation();
+          setUserLocation(location);
+        } catch (error) {
           console.log("Geolocation error:", error);
         }
-      );
-    }
-  }, [viewMode]);
+      }
+    };
+    
+    // Add delay to prevent multiple simultaneous calls
+    const timeoutId = setTimeout(updateLocation, 200);
+    return () => clearTimeout(timeoutId);
+  }, [viewMode, userLocation]);
 
-  const serviceCategories = [
-    { id: "all", name: "All Services", icon: "🔧", count: 28, lucideIcon: <Sparkles className="h-5 w-5" /> },
-    { id: "plumbing", name: "Plumbing", icon: "🚿", count: 12, lucideIcon: <Droplets className="h-5 w-5" /> },
-    { id: "electrical", name: "Electrical", icon: "⚡", count: 8, lucideIcon: <Zap className="h-5 w-5" /> },
-    { id: "cleaning", name: "Cleaning", icon: "🧹", count: 6, lucideIcon: <Sparkles className="h-5 w-5" /> },
-    { id: "tutoring", name: "Tutoring", icon: "📚", count: 4, lucideIcon: <BookOpen className="h-5 w-5" /> },
-    { id: "beauty", name: "Beauty & Salon", icon: "💅", count: 5, lucideIcon: <Scissors className="h-5 w-5" /> },
-    { id: "repair", name: "Home Repair", icon: "🔨", count: 3, lucideIcon: <Hammer className="h-5 w-5" /> },
-    { id: "web", name: "Web Development", icon: "💻", count: 4, lucideIcon: <Code className="h-5 w-5" /> },
-    { id: "events", name: "Events", icon: "🎉", count: 3, lucideIcon: <Calendar className="h-5 w-5" /> },
-  ];
+  const serviceCategories = useMemo(() => {
+    if (!services.length) return [];
+    
+    // Get unique categories from services
+    const categoryMap = new Map();
+    categoryMap.set('all', { id: 'all', name: 'All Services', count: services.length, lucideIcon: <Sparkles className="h-5 w-5" /> });
+    
+    services.forEach(service => {
+      const category = service.category?.toLowerCase() || 'other';
+      if (categoryMap.has(category)) {
+        categoryMap.get(category).count++;
+      } else {
+        const categoryConfig = {
+          plumbing: { name: 'Plumbing', lucideIcon: <Droplets className="h-5 w-5" /> },
+          electrical: { name: 'Electrical', lucideIcon: <Zap className="h-5 w-5" /> },
+          cleaning: { name: 'Cleaning', lucideIcon: <Sparkles className="h-5 w-5" /> },
+          tutoring: { name: 'Tutoring', lucideIcon: <BookOpen className="h-5 w-5" /> },
+          beauty: { name: 'Beauty & Salon', lucideIcon: <Scissors className="h-5 w-5" /> },
+          repair: { name: 'Home Repair', lucideIcon: <Hammer className="h-5 w-5" /> },
+          web: { name: 'Web Development', lucideIcon: <Code className="h-5 w-5" /> },
+          events: { name: 'Events', lucideIcon: <Calendar className="h-5 w-5" /> },
+        };
+        
+        categoryMap.set(category, {
+          id: category,
+          name: categoryConfig[category]?.name || category.charAt(0).toUpperCase() + category.slice(1),
+          count: 1,
+          lucideIcon: categoryConfig[category]?.lucideIcon || <Sparkles className="h-5 w-5" />
+        });
+      }
+    });
+    
+    return Array.from(categoryMap.values());
+  }, [services]);
 
   // Get category icon with fallback
   const getCategoryIcon = (categoryId) => {
@@ -563,228 +109,46 @@ const UserServices = () => {
     return category?.lucideIcon || <Sparkles className="h-5 w-5" />;
   };
 
-  // Add mock coordinates for demo purposes
-  const allServices = [
-    {
-      id: 1,
-      title: 'Plumbing Services',
-      description: 'Expert plumbers for leaks, installations, and repairs with 24/7 emergency service',
-      image: '/icons/plumbing.png',
-      category: 'plumbing',
-      rating: 4.8,
-      reviews: 1247,
-      price: 'Starts at ₹499',
-      featured: true,
-      tags: ['Emergency', 'Installation', 'Repair'],
-      deliveryTime: 'Within 2 hours',
-      location: 'All over city',
-      providerCount: 156,
-      popularServices: ['Leak Repair', 'Pipe Installation', 'Drain Cleaning'],
-      coordinates: { lat: 28.6139, lng: 77.2090 }, // Delhi
-      providerCoordinates: [
-        { lat: 28.6139, lng: 77.2090, name: 'Plumbing Experts' },
-        { lat: 28.6145, lng: 77.2100, name: 'Quick Fix Plumbers' },
-        { lat: 28.6125, lng: 77.2080, name: 'Emergency Plumbing Co.' }
-      ]
-    },
-    {
-      id: 2,
-      title: 'Electrical Services',
-      description: 'Licensed electricians for wiring, installations, and electrical repairs',
-      image: '/icons/electrical.png',
-      category: 'electrical',
-      rating: 4.7,
-      reviews: 892,
-      price: 'Starts at ₹299',
-      featured: true,
-      tags: ['Wiring', 'Safety', 'Installation'],
-      deliveryTime: 'Same day',
-      location: 'Urban areas',
-      providerCount: 89,
-      popularServices: ['Wiring', 'Panel Upgrades', 'Lighting'],
-      coordinates: { lat: 28.6130, lng: 77.2085 }, // Near Delhi
-      providerCoordinates: [
-        { lat: 28.6130, lng: 77.2085, name: 'Safe Electric' },
-        { lat: 28.6140, lng: 77.2075, name: 'Power Solutions' }
-      ]
-    },
-    {
-      id: 3,
-      title: 'Home Cleaning',
-      description: 'Professional deep cleaning for homes, offices with eco-friendly products',
-      image: '/icons/cleaning.png',
-      category: 'cleaning',
-      rating: 4.9,
-      reviews: 2156,
-      price: 'Starts at ₹799',
-      featured: false,
-      tags: ['Deep Clean', 'Eco-friendly'],
-      deliveryTime: 'Next day',
-      location: 'City wide',
-      providerCount: 203,
-      popularServices: ['Deep Cleaning', 'Office Cleaning', 'Carpet Cleaning'],
-      coordinates: { lat: 28.6145, lng: 77.2095 },
-      providerCoordinates: [
-        { lat: 28.6145, lng: 77.2095, name: 'Clean & Green' },
-        { lat: 28.6150, lng: 77.2105, name: 'Sparkle Clean' }
-      ]
-    },
-    {
-      id: 4,
-      title: 'Private Tutoring',
-      description: 'Qualified tutors for all subjects, competitive exams, and skill development',
-      image: '/icons/tutoring.png',
-      category: 'tutoring',
-      rating: 4.6,
-      reviews: 567,
-      price: 'Starts at ₹299/hr',
-      featured: true,
-      tags: ['Academic', 'Competitive'],
-      deliveryTime: 'Flexible',
-      location: 'Online & Offline',
-      providerCount: 67,
-      popularServices: ['Math', 'Science', 'Test Prep'],
-      coordinates: { lat: 28.6150, lng: 77.2100 },
-      providerCoordinates: [
-        { lat: 28.6150, lng: 77.2100, name: 'Bright Minds Tutoring' }
-      ]
-    },
-    {
-      id: 5,
-      title: 'Salon & Beauty',
-      description: 'Professional hair styling, spa treatments, and beauty services at home',
-      image: '/icons/salon.png',
-      category: 'beauty',
-      rating: 4.8,
-      reviews: 1789,
-      price: 'Starts at ₹399',
-      featured: false,
-      tags: ['At Home', 'Premium'],
-      deliveryTime: '2-4 hours',
-      location: 'At your doorstep',
-      providerCount: 234,
-      popularServices: ['Hair Styling', 'Spa', 'Makeup'],
-      coordinates: { lat: 28.6155, lng: 77.2110 },
-      providerCoordinates: [
-        { lat: 28.6155, lng: 77.2110, name: 'Glamour Salon' },
-        { lat: 28.6160, lng: 77.2120, name: 'Beauty Express' }
-      ]
-    },
-    {
-      id: 6,
-      title: 'Home Repair & Maintenance',
-      description: 'Skilled handyman services for all types of home repairs and maintenance',
-      image: '/icons/repair.png',
-      category: 'repair',
-      rating: 4.5,
-      reviews: 634,
-      price: 'Starts at ₹199',
-      featured: false,
-      tags: ['Maintenance', 'Quick Fix'],
-      deliveryTime: 'Same day',
-      location: 'All areas',
-      providerCount: 178,
-      popularServices: ['Furniture Assembly', 'Painting', 'Minor Repairs'],
-      coordinates: { lat: 28.6160, lng: 77.2090 },
-      providerCoordinates: [
-        { lat: 28.6160, lng: 77.2090, name: 'Fix It All' },
-        { lat: 28.6170, lng: 77.2080, name: 'Mr. Handyman' }
-      ]
-    },
-    {
-      id: 7,
-      title: 'Web Development',
-      description: 'Professional website development and digital solutions for businesses',
-      image: '/icons/webdev.png',
-      category: 'web',
-      rating: 4.7,
-      reviews: 423,
-      price: 'Starts at ₹5,999',
-      featured: true,
-      tags: ['Custom', 'Responsive'],
-      deliveryTime: '7-14 days',
-      location: 'Remote',
-      providerCount: 45,
-      popularServices: ['Website Development', 'E-commerce', 'Custom Solutions'],
-      coordinates: { lat: 28.6140, lng: 77.2120 },
-      providerCoordinates: [
-        { lat: 28.6140, lng: 77.2120, name: 'Web Wizards' }
-      ]
-    },
-    {
-      id: 8,
-      title: 'Event Planning',
-      description: 'Complete event management services for weddings, corporate events, and parties',
-      image: '/icons/events.png',
-      category: 'events',
-      rating: 4.9,
-      reviews: 298,
-      price: 'Custom Quote',
-      featured: false,
-      tags: ['Weddings', 'Corporate'],
-      deliveryTime: 'As required',
-      location: 'Pan India',
-      providerCount: 32,
-      popularServices: ['Wedding Planning', 'Corporate Events', 'Party Planning'],
-      coordinates: { lat: 28.6170, lng: 77.2100 },
-      providerCoordinates: [
-        { lat: 28.6170, lng: 77.2100, name: 'Dream Events' }
-      ]
-    },
-  ];
-
   // Filter services
   const filteredServices = useMemo(() => {
-    let filtered = allServices;
+    let filtered = services;
     
     // Filter by category
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(service => 
-        service.category.toLowerCase() === selectedCategory.toLowerCase()
+        service.category?.toLowerCase() === selectedCategory.toLowerCase()
       );
     }
     
     // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(service =>
-        service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        service.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+        service.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.description?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
     
     // Sort services
     switch (sortBy) {
       case 'rating':
-        filtered.sort((a, b) => b.rating - a.rating);
-        break;
-      case 'reviews':
-        filtered.sort((a, b) => b.reviews - a.reviews);
+        filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
         break;
       case 'price-low':
-        filtered.sort((a, b) => {
-          const priceA = parseInt(a.price.replace(/\D/g, ''));
-          const priceB = parseInt(b.price.replace(/\D/g, ''));
-          return priceA - priceB;
-        });
+        filtered.sort((a, b) => (a.minPrice || 0) - (b.minPrice || 0));
         break;
       case 'price-high':
-        filtered.sort((a, b) => {
-          const priceA = parseInt(a.price.replace(/\D/g, ''));
-          const priceB = parseInt(b.price.replace(/\D/g, ''));
-          return priceB - priceA;
-        });
+        filtered.sort((a, b) => (b.maxPrice || 0) - (a.maxPrice || 0));
         break;
       default: // popular
-        filtered.sort((a, b) => b.reviews - a.reviews);
+        filtered.sort((a, b) => (b.providerCount || 0) - (a.providerCount || 0));
     }
     
     return filtered;
-  }, [searchQuery, selectedCategory, sortBy]);
+  }, [services, searchQuery, selectedCategory, sortBy]);
 
-  // Navigate to explore page with category filter
+  // Navigate to explore page with service ID
   const handleServiceClick = (service) => {
-    navigate(`/explore?category=${service.category}&service=${encodeURIComponent(service.title)}`);
+    navigate(`/user/explore?serviceId=${service._id}&serviceName=${encodeURIComponent(service.name)}`);
   };
 
   // ServiceCard Component
@@ -849,19 +213,8 @@ const UserServices = () => {
                         className="text-xl font-semibold truncate"
                         style={{ color: 'var(--text-color)' }}
                       >
-                        {service.title}
+                        {service.name}
                       </h3>
-                      {service.featured && (
-                        <span 
-                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                          style={{
-                            backgroundColor: 'var(--accent-fade)',
-                            color: 'var(--accent-dark)'
-                          }}
-                        >
-                          Featured
-                        </span>
-                      )}
                     </div>
                     <p 
                       className="mt-2 line-clamp-2"
@@ -887,56 +240,17 @@ const UserServices = () => {
                   </div>
                 </div>
 
-                {/* Rating and Info */}
+                {/* Footer with Provider Count and Price */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-4 gap-4">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                      <span className="text-sm font-medium" style={{ color: 'var(--text-color)' }}>
-                        {service.rating}
-                      </span>
-                      <span className="text-sm" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
-                        ({service.reviews} reviews)
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
-                      <Clock className="h-4 w-4" />
-                      <span className="text-sm">{service.deliveryTime}</span>
-                    </div>
-                    <div className="flex items-center gap-1" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
-                      <MapPin className="h-4 w-4" />
-                      <span className="text-sm">{service.location}</span>
-                    </div>
-                  </div>
                   <div className="text-right">
                     <div className="text-lg font-bold" style={{ color: 'var(--text-color)' }}>
-                      {service.price}
+                      ₹{service.minPrice || 0} - ₹{service.maxPrice || 0}
                     </div>
-                    <div className="text-sm" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
-                      {service.providerCount} providers
+                    <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
+                      <Users className="h-3 w-3" />
+                      {service.providerCount || 0} providers
                     </div>
                   </div>
-                </div>
-
-                {/* Tags and Popular Services */}
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {service.tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                      style={{
-                        backgroundColor: 'var(--accent-fade)',
-                        color: 'var(--accent-dark)'
-                      }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                <div className="mt-2">
-                  <p className="text-sm" style={{ color: 'var(--text-color)', opacity: 0.6 }}>
-                    Popular: {service.popularServices.join(', ')}
-                  </p>
                 </div>
               </div>
             </div>
@@ -994,7 +308,11 @@ const UserServices = () => {
               </div>
               <div className="flex gap-1">
                 <button
-                  onClick={toggleFavorite}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleFavorite(e);
+                  }}
                   className={`p-2 rounded-full transition-all duration-200 ${
                     isFavorite 
                       ? "text-red-500" 
@@ -1016,19 +334,8 @@ const UserServices = () => {
                   className="text-lg font-semibold truncate flex-1"
                   style={{ color: 'var(--text-color)' }}
                 >
-                  {service.title}
+                  {service.name}
                 </h3>
-                {service.featured && (
-                  <span 
-                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium shrink-0"
-                    style={{
-                      backgroundColor: 'var(--accent-fade)',
-                      color: 'var(--accent-dark)'
-                    }}
-                  >
-                    Featured
-                  </span>
-                )}
               </div>
               <p 
                 className="text-sm line-clamp-3 mb-3"
@@ -1038,79 +345,18 @@ const UserServices = () => {
               </p>
             </div>
 
-            {/* Tags */}
-            <div className="flex flex-wrap gap-1 mb-4">
-              {service.tags.slice(0, 2).map((tag, index) => (
-                <span
-                  key={index}
-                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                  style={{
-                    backgroundColor: 'var(--accent-fade)',
-                    color: 'var(--accent-dark)'
-                  }}
-                >
-                  {tag}
-                </span>
-              ))}
-              {service.tags.length > 2 && (
-                <span 
-                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                  style={{
-                    backgroundColor: 'var(--card-bg)',
-                    color: 'var(--text-color)',
-                    opacity: 0.7
-                  }}
-                >
-                  +{service.tags.length - 2}
-                </span>
-              )}
-            </div>
-
-            {/* Footer with Rating and Price */}
+            {/* Footer with Provider Count and Price */}
             <div className="mt-auto">
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    <span className="text-sm font-medium" style={{ color: 'var(--text-color)' }}>
-                      {service.rating}
-                    </span>
-                  </div>
-                  <span className="text-sm" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
-                    ({service.reviews})
-                  </span>
-                </div>
                 <div className="text-right">
                   <div className="text-lg font-bold" style={{ color: 'var(--text-color)' }}>
-                    {service.price}
+                    ₹{service.minPrice || 0} - ₹{service.maxPrice || 0}
                   </div>
                   <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
-                    <Clock className="h-3 w-3" />
-                    {service.deliveryTime}
+                    <Users className="h-3 w-3" />
+                    {service.providerCount || 0} providers
                   </div>
                 </div>
-              </div>
-              
-              {/* Provider Count and Map Button */}
-              <div className="pt-4 border-t flex justify-between items-center" style={{ borderColor: 'var(--border-color)' }}>
-                <p className="text-sm" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
-                  {service.providerCount} providers
-                </p>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setViewMode("map");
-                  }}
-                  className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors hover:opacity-80"
-                  style={{
-                    backgroundColor: 'var(--accent-fade)',
-                    color: 'var(--accent-color)'
-                  }}
-                >
-                  <Map className="h-3 w-3" />
-                  View on Map
-                </button>
               </div>
             </div>
           </div>
@@ -1309,7 +555,7 @@ const UserServices = () => {
                    serviceCategories.find(c => c.id === selectedCategory)?.name}
                 </h2>
                 <p style={{ color: 'var(--text-color)', opacity: 0.7 }} className="mt-1 text-sm sm:text-base">
-                  Showing {filteredServices.length} services • {filteredServices.reduce((sum, s) => sum + s.providerCount, 0)} providers available
+                  Showing {filteredServices.length} services • {filteredServices.reduce((sum, s) => sum + (s.providerCount || 0), 0)} providers available
                 </p>
               </div>
               <div className="flex gap-2 self-end sm:self-auto">
@@ -1356,31 +602,24 @@ const UserServices = () => {
                     border: '1px solid var(--border-color)'
                   }}
                 >
-                  <Map className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <MapIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                 </button>
               </div>
             </div>
 
             {/* Services Grid/List/Map */}
             <AnimatePresence>
-              {viewMode === "map" ? (
-                <motion.div
-                  key="map"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <LazyMap 
-                    viewMode={viewMode}
-                    filteredServices={filteredServices}
-                    userLocation={userLocation}
-                    handleServiceClick={handleServiceClick}
-                    favorites={favorites}
-                    setFavorites={setFavorites}
-                    setViewMode={setViewMode}
-                    getCategoryIcon={getCategoryIcon}
-                  />
-                </motion.div>
+              {loading ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+              ) : viewMode === "map" ? (
+                <SimpleMapServices 
+                  services={filteredServices}
+                  userLocation={userLocation}
+                  onServiceClick={handleServiceClick}
+                  setViewMode={setViewMode}
+                />
               ) : filteredServices.length > 0 ? (
                 <motion.div
                   key={viewMode}
@@ -1401,7 +640,7 @@ const UserServices = () => {
                 >
                   {filteredServices.map((service) => (
                     <motion.div
-                      key={service.id}
+                      key={service._id}
                       variants={{
                         hidden: { y: 20, opacity: 0 },
                         visible: { y: 0, opacity: 1 }

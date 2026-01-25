@@ -4,6 +4,7 @@ const ServiceProvider = require('../models/ServiceProvider');
 const Token = require('../models/Token');
 const { generateTokens, verifyRefreshToken } = require('../utils/jwtUtils');
 const bcrypt = require('bcryptjs');
+const geocodingService = require('../services/geocodingService');
 
 const signup = async (req, res) => {
   try {
@@ -54,17 +55,40 @@ if (role === 'seeker') {
     profileImage: profileData.profileImage || 'default-avatar.png'
   });
 } else if (role === 'provider') {
+      // Geocode the address during initial registration
+      let coordinates = { type: 'Point', coordinates: [0, 0] };
+      
+      if (profileData.street && profileData.city && profileData.state && profileData.pinCode) {
+        try {
+          const addressParts = {
+            street: profileData.street,
+            city: profileData.city,
+            state: profileData.state,
+            pinCode: profileData.pinCode
+          };
+          coordinates = await geocodingService.getCoordinatesFromAddress(addressParts);
+          console.log('Geocoded coordinates during signup:', coordinates);
+        } catch (geocodeError) {
+          console.warn('Geocoding failed during signup, using default coordinates:', geocodeError.message);
+          // Continue with default coordinates - don't fail signup
+        }
+      } else {
+        console.warn('Incomplete address for geocoding during signup');
+      }
+
       profile = await ServiceProvider.create({
         userId: user._id,
         name: profileData.name,
         businessName: profileData.businessName,
         description: profileData.description,
+        category: profileData.category || 'other',
         experienceYears: profileData.experienceYears || 0,
         businessAddress: {
           street: profileData.street,
           city: profileData.city,
           state: profileData.state,
-          pinCode: profileData.pinCode
+          pinCode: profileData.pinCode,
+          coordinates: coordinates
         },
         languages: profileData.languages || [],
         startingPrice: profileData.startingPrice,
@@ -365,8 +389,20 @@ const getProfile = async (req, res) => {
         // Create a basic provider profile if it doesn't exist
         profile = await ServiceProvider.create({
           userId: user._id,
+          name: user.name || 'Provider',
           businessName: user.name || 'My Business',
-          verificationStatus: 'not-submitted',
+          businessAddress: {
+            street: 'Not provided',
+            city: 'Not provided', 
+            state: 'Not provided',
+            pinCode: '000000',
+            coordinates: {
+              type: 'Point',
+              coordinates: [0, 0]
+            }
+          },
+          startingPrice: 100,
+          verificationStatus: 'pending',
           isVerified: false
         });
       }
@@ -374,12 +410,19 @@ const getProfile = async (req, res) => {
 
     // If user is seeker, get seeker profile
     if (user.role === 'seeker') {
-      profile = await ServiceSeeker.findOne({ userId: user._id });
+      profile = await ServiceSeeker.findOne({ user: user._id });
 
       if (!profile) {
         profile = await ServiceSeeker.create({
-          userId: user._id,
-          fullName: user.name || 'User'
+          user: user._id,
+          name: user.name || 'User',
+          gender: 'other',
+          address: {
+            street: 'Not provided',
+            city: 'Not provided',
+            state: 'Not provided',
+            pinCode: '000000'
+          }
         });
       }
     }

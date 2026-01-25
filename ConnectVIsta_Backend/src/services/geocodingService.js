@@ -71,10 +71,25 @@ class GeocodingService {
 
   async getCoordinatesFromAddress(addressParts) {
     try {
-      const { street, city, state, pinCode } = addressParts;
-      const addressString = `${street}, ${city}, ${state} ${pinCode}, India`;
+      // Build full address string from all provided parts
+      const addressPartsArray = [];
+      
+      if (addressParts.street) addressPartsArray.push(addressParts.street);
+      if (addressParts.city) addressPartsArray.push(addressParts.city);
+      if (addressParts.state) addressPartsArray.push(addressParts.state);
+      if (addressParts.pinCode) addressPartsArray.push(addressParts.pinCode);
+      addressPartsArray.push('India'); // Always include country
+
+      const addressString = addressPartsArray.join(', ');
+      
+      console.log(`Geocoding full address: ${addressString}`);
       
       const result = await this.geocodeAddress(addressString);
+      
+      // Validate the geocoding result
+      this.validateGeocodeResult(result, addressString);
+      
+      console.log(`Geocoded result: lat=${result.latitude}, lng=${result.longitude}`);
       
       return {
         type: 'Point',
@@ -82,11 +97,39 @@ class GeocodingService {
       };
     } catch (error) {
       console.error('Failed to get coordinates:', error);
-      // Return default coordinates (center of India)
-      return {
-        type: 'Point',
-        coordinates: [78.9629, 20.5937] // Default: center of India
-      };
+      throw new Error(`Failed to geocode address: ${error.message}`);
+    }
+  }
+
+  validateGeocodeResult(result, addressString) {
+    // Check if lat/lng exist
+    if (!result || !result.latitude || !result.longitude) {
+      throw new Error('Invalid geocode response: missing latitude or longitude');
+    }
+
+    // Check for valid coordinate ranges
+    if (result.latitude < -90 || result.latitude > 90) {
+      throw new Error('Invalid latitude value');
+    }
+    if (result.longitude < -180 || result.longitude > 180) {
+      throw new Error('Invalid longitude value');
+    }
+
+    // If we have access to result types, check for country-level results
+    // This applies when the geocoder returns a country instead of a specific address
+    if (result.types && Array.isArray(result.types) && result.types.includes('country')) {
+      throw new Error('Address too vague: geocoder returned country-level result. Please provide a more specific address.');
+    }
+
+    // Additional check: if coordinates point to center of India (default fallback indicator)
+    // India's center is approximately [78.9629, 20.5937]
+    const INDIA_CENTER_LNG = 78.9629;
+    const INDIA_CENTER_LAT = 20.5937;
+    const TOLERANCE = 0.5; // Allow some tolerance
+
+    if (Math.abs(result.longitude - INDIA_CENTER_LNG) < TOLERANCE && 
+        Math.abs(result.latitude - INDIA_CENTER_LAT) < TOLERANCE) {
+      throw new Error('Geocoder returned default India coordinates. Please provide a more specific address.');
     }
   }
 
