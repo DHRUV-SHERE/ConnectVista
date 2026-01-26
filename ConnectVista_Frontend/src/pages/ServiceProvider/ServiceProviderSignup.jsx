@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -19,11 +19,13 @@ import {
   Home,
   FileText,
   DollarSign,
-  AlertCircle
+  AlertCircle,
+  Wrench
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import resources from "../../resources";
 import toast from "react-hot-toast";
+import serviceCategoriesData from "../../data/services.json";
 
 export default function ServiceProviderSignup() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -41,14 +43,19 @@ export default function ServiceProviderSignup() {
 
     // Step 2: Professional Details
     password: "",
-    confirmPassword: "",
     description: "",
     experienceYears: "",
     startingPrice: "",
     emergencyCharge: "",
     extraChargeNote: "",
 
-    // Step 3: Location
+    // Step 3: Service Selection
+    selectedServices: [],
+    selectedSubServices: {},
+    customService: "",
+    hasCustomService: false,
+
+    // Step 4: Location
     street: "",
     city: "",
     state: "",
@@ -59,19 +66,10 @@ export default function ServiceProviderSignup() {
   const [isLoading, setIsLoading] = useState(false);
   const [customLanguage, setCustomLanguage] = useState("");
 
-  const serviceCategories = [
-    "Home Services",
-    "Beauty & Wellness",
-    "Professional Services",
-    "Education & Tutoring",
-    "Healthcare",
-    "Automotive",
-    "Event Services",
-    "Technology & IT",
-    "Cleaning Services",
-    "Repair & Maintenance",
-    "Other",
-  ];
+  // Get service categories from JSON data
+  const serviceCategories = useMemo(() => {
+    return serviceCategoriesData?.serviceCategories || [];
+  }, []);
 
   const languages = ["English", "Hindi", "Spanish", "French", "German", "Chinese", "Arabic"];
 
@@ -96,6 +94,14 @@ export default function ServiceProviderSignup() {
         else if (formData.startingPrice < 0) newErrors.startingPrice = "Price cannot be negative";
         break;
       case 3:
+        if (formData.selectedServices.length === 0 && !formData.hasCustomService) {
+          newErrors.services = "Please select at least one service category";
+        }
+        if (formData.hasCustomService && !formData.customService.trim()) {
+          newErrors.customService = "Please describe your custom service";
+        }
+        break;
+      case 4:
         if (!formData.street.trim()) newErrors.street = "Street address is required";
         if (!formData.city.trim()) newErrors.city = "City is required";
         if (!formData.state.trim()) newErrors.state = "State is required";
@@ -111,7 +117,7 @@ export default function ServiceProviderSignup() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (currentStep < 3) {
+    if (currentStep < 4) {
       if (validateStep(currentStep)) {
         setCurrentStep(currentStep + 1);
       }
@@ -140,7 +146,10 @@ export default function ServiceProviderSignup() {
         city: formData.city,
         state: formData.state,
         pinCode: formData.pinCode,
-        languages: formData.languages
+        languages: formData.languages,
+        selectedServices: formData.selectedServices,
+        selectedSubServices: formData.selectedSubServices,
+        customService: formData.hasCustomService ? formData.customService : null
       };
 
       const response = await signupProvider(signupData);
@@ -178,6 +187,54 @@ export default function ServiceProviderSignup() {
     }
   };
 
+  const handleServiceToggle = (serviceId) => {
+    setFormData(prev => {
+      const isSelected = prev.selectedServices.includes(serviceId);
+      const newSelectedServices = isSelected
+        ? prev.selectedServices.filter(id => id !== serviceId)
+        : [...prev.selectedServices, serviceId];
+      
+      // Remove sub-services if service is deselected
+      const newSelectedSubServices = { ...prev.selectedSubServices };
+      if (isSelected) {
+        delete newSelectedSubServices[serviceId];
+      }
+      
+      return {
+        ...prev,
+        selectedServices: newSelectedServices,
+        selectedSubServices: newSelectedSubServices
+      };
+    });
+    if (errors.services) setErrors(prev => ({ ...prev, services: '' }));
+  };
+
+  const handleSubServiceToggle = (serviceId, subService) => {
+    setFormData(prev => {
+      const currentSubServices = prev.selectedSubServices[serviceId] || [];
+      const isSelected = currentSubServices.includes(subService);
+      
+      return {
+        ...prev,
+        selectedSubServices: {
+          ...prev.selectedSubServices,
+          [serviceId]: isSelected
+            ? currentSubServices.filter(sub => sub !== subService)
+            : [...currentSubServices, subService]
+        }
+      };
+    });
+  };
+
+  const handleCustomServiceToggle = () => {
+    setFormData(prev => ({
+      ...prev,
+      hasCustomService: !prev.hasCustomService,
+      customService: !prev.hasCustomService ? prev.customService : ''
+    }));
+    if (errors.services) setErrors(prev => ({ ...prev, services: '' }));
+    if (errors.customService) setErrors(prev => ({ ...prev, customService: '' }));
+  };
   const handleLanguageToggle = (language) => {
     setFormData(prev => {
       if (prev.languages.includes(language)) {
@@ -223,7 +280,8 @@ export default function ServiceProviderSignup() {
   const steps = [
     { number: 1, title: "Business Info" },
     { number: 2, title: "Professional Details" },
-    { number: 3, title: "Location" },
+    { number: 3, title: "Service Selection" },
+    { number: 4, title: "Location" },
   ];
 
   return (
@@ -361,7 +419,7 @@ export default function ServiceProviderSignup() {
               </div>
 
               <p className="mt-4 text-sm text-gray-600">
-                Step {currentStep} of 3: {steps[currentStep - 1]?.title}
+                Step {currentStep} of 4: {steps[currentStep - 1]?.title}
               </p>
             </div>
           </motion.div>
@@ -610,8 +668,111 @@ export default function ServiceProviderSignup() {
                 </div>
               )}
 
-              {/* Step 3: Location Information */}
+              {/* Step 3: Service Selection */}
               {currentStep === 3 && (
+                <div className="space-y-4">
+                  <div className="relative">
+                    <label className="block text-sm font-medium text-gray-700 mb-4">
+                      Select Your Service Categories *
+                    </label>
+                    
+                    <div className="space-y-3 max-h-64 overflow-y-auto border border-gray-300 rounded-xl p-4">
+                      {serviceCategories.map(category => {
+                        const isSelected = formData.selectedServices.includes(category.id);
+                        return (
+                          <div key={category.id} className="space-y-2">
+                            <label className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleServiceToggle(category.id)}
+                                className="mt-1 h-4 w-4 text-[var(--accent-color)] border-gray-300 rounded focus:ring-[var(--accent-color)]"
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <Wrench className="h-4 w-4 text-gray-500" />
+                                  <span className="font-medium text-gray-900">{category.name}</span>
+                                </div>
+                                <p className="text-sm text-gray-600 mt-1">
+                                  {category.subServices.length} sub-services available
+                                </p>
+                              </div>
+                            </label>
+                            
+                            {/* Sub-services */}
+                            {isSelected && (
+                              <div className="ml-7 pl-4 border-l-2 border-gray-200 space-y-1">
+                                <p className="text-xs font-medium text-gray-600 mb-2">
+                                  Optional sub-services:
+                                </p>
+                                <div className="grid grid-cols-1 gap-1 max-h-32 overflow-y-auto">
+                                  {category.subServices.slice(0, 8).map(subService => (
+                                    <label key={subService} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                      <input
+                                        type="checkbox"
+                                        checked={(formData.selectedSubServices[category.id] || []).includes(subService)}
+                                        onChange={() => handleSubServiceToggle(category.id, subService)}
+                                        className="h-3 w-3 text-[var(--accent-color)] border-gray-300 rounded focus:ring-[var(--accent-color)]"
+                                      />
+                                      <span className="text-gray-700">{subService}</span>
+                                    </label>
+                                  ))}
+                                  {category.subServices.length > 8 && (
+                                    <p className="text-xs text-gray-500 italic">
+                                      +{category.subServices.length - 8} more available
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {errors.services && <p className="mt-1 text-sm text-red-600">{errors.services}</p>}
+                  </div>
+
+                  {/* Custom Service Option */}
+                  <div className="mt-6">
+                    <label className="flex items-start gap-3 p-4 border border-gray-300 rounded-xl hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.hasCustomService}
+                        onChange={handleCustomServiceToggle}
+                        className="mt-1 h-4 w-4 text-[var(--accent-color)] border-gray-300 rounded focus:ring-[var(--accent-color)]"
+                      />
+                      <div className="flex-1">
+                        <span className="font-medium text-gray-900">Other (Not listed)</span>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Describe a custom service not available in the list above
+                        </p>
+                      </div>
+                    </label>
+                    
+                    {formData.hasCustomService && (
+                      <div className="mt-3">
+                        <textarea
+                          value={formData.customService}
+                          onChange={(e) => setFormData(prev => ({ ...prev, customService: e.target.value }))}
+                          className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-[var(--accent-color)] transition-all duration-200 resize-none ${
+                            errors.customService ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                          rows={3}
+                          placeholder="Describe your custom service in detail..."
+                        />
+                        {errors.customService && <p className="mt-1 text-sm text-red-600">{errors.customService}</p>}
+                        <p className="mt-1 text-xs text-gray-500">
+                          This will be submitted as a pending service request for admin approval
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 4: Location Information */}
+              {currentStep === 4 && (
                 <div className="space-y-4">
                   <div className="relative">
                     <label htmlFor="street" className="block text-sm font-medium text-gray-700 mb-2">
@@ -776,7 +937,7 @@ export default function ServiceProviderSignup() {
                       }}
                       className="w-6 h-6 border-2 border-white border-t-transparent rounded-full"
                     />
-                  ) : currentStep === 3 ? (
+                  ) : currentStep === 4 ? (
                     <>
                       <Check className="h-5 w-5 mr-2" />
                       Complete Registration

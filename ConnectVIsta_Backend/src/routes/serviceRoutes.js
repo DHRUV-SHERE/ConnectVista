@@ -1,25 +1,24 @@
 const express = require('express');
-const { getServices, createService, getAllServices, addProviderService, getProvidersByService, getProviderProfile } = require('../controllers/serviceController');
+const {
+  getCategories,
+  getSubServices,
+  getProviderService,
+  saveProviderService,
+  deleteProviderService
+} = require('../controllers/serviceController');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
 
-// Get services with active providers (for user service page)
-router.get('/', getServices);
+// Get all active categories (with optional provider counts)
+router.get('/categories', getCategories);
 
-// Get all services (for provider dropdown)
-router.get('/all', getAllServices);
+// Get sub-services by category
+router.get('/categories/:categoryId/sub-services', getSubServices);
 
-// Create new service (for providers)
-router.post('/', auth(['provider']), createService);
-
-// Add provider service (for providers to offer services)
-router.post('/provider', auth(['provider']), addProviderService);
-
-// Get providers by service
-router.get('/:serviceId/providers', getProvidersByService);
-
-// Get provider profile details
-router.get('/provider/:providerId', getProviderProfile);
+// Provider service management routes (protected)
+router.get('/provider/service', auth(['provider']), getProviderService);
+router.post('/provider/service', auth(['provider']), saveProviderService);
+router.delete('/provider/service', auth(['provider']), deleteProviderService);
 
 module.exports = router;

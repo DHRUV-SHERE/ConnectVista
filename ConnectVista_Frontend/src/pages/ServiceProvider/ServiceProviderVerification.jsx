@@ -105,7 +105,7 @@ export default function ProviderVerification() {
   const fetchVerificationStatus = async () => {
     try {
       console.log("Fetching verification status...");
-      const response = await api.get("/verification/status");
+      const response = await api.get("/api/verification/status");
       console.log("API Response:", response.data);
       
       if (response.data.success) {
@@ -260,7 +260,7 @@ export default function ProviderVerification() {
         }
       });
 
-      const response = await api.post("/verification/upload", formData, {
+      const response = await api.post("/api/verification/upload", formData, {
         onUploadProgress: (progressEvent) => {
           const progress = Math.round(
             (progressEvent.loaded * 100) / progressEvent.total
@@ -304,7 +304,7 @@ export default function ProviderVerification() {
       return;
 
     try {
-      const response = await api.delete(`/verification/document/${documentId}`);
+      const response = await api.delete(`/api/verification/document/${documentId}`);
       if (response.data.success) {
         toast.success("Document deleted successfully");
         // Reset loaded status to fetch fresh data

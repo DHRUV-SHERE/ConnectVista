@@ -7,15 +7,36 @@ const providerServiceSchema = new mongoose.Schema({
     required: true
   },
 
-  serviceId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Service',
-    required: true
+  mainService: {
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    serviceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Service'
+    }
   },
 
-  specialization: {
-    type: String,
-    trim: true
+  subServices: [{
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    serviceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Service'
+    }
+  }],
+
+  customService: {
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending'
+    }
   },
 
   minPrice: {
@@ -29,7 +50,6 @@ const providerServiceSchema = new mongoose.Schema({
     min: [0, 'Price cannot be negative']
   },
 
-  // Pricing type
   pricingType: {
     type: String,
     enum: ['hourly', 'fixed', 'square-feet', 'project'],
@@ -41,7 +61,6 @@ const providerServiceSchema = new mongoose.Schema({
     default: true
   },
 
-  // Timestamps
   createdAt: {
     type: Date,
     default: Date.now
@@ -53,8 +72,9 @@ const providerServiceSchema = new mongoose.Schema({
   }
 });
 
-// Compound index to ensure unique provider-service combination
-providerServiceSchema.index({ providerId: 1, serviceId: 1 }, { unique: true });
+providerServiceSchema.index({ providerId: 1 }, { unique: true });
+providerServiceSchema.index({ 'mainService.name': 1 });
+providerServiceSchema.index({ isAvailable: 1 });
 
 const ProviderService = mongoose.model('ProviderService', providerServiceSchema);
 module.exports = ProviderService;

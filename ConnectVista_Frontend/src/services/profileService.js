@@ -13,6 +13,12 @@ const profileService = {
     return response.data;
   },
 
+  // Update provider services
+  updateProviderServices: async (serviceData) => {
+    const response = await api.put('/api/profile/provider/services', serviceData);
+    return response.data;
+  },
+
   // Upload business images
   uploadBusinessImages: async (images) => {
     const formData = new FormData();

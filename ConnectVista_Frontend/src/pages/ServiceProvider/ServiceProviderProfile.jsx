@@ -1,8 +1,10 @@
 "use client";
 import { useState, useEffect, useCallback, memo } from "react";
-import { Upload, Plus, X, Clock, Save, Loader2 } from "lucide-react";
+import { Upload, Plus, X, Clock, Save, Loader2, Wrench, Check, AlertCircle } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
+import { Link } from "react-router-dom";
 import profileService from "../../services/profileService";
+import { serviceAPI } from "../../services/serviceAPI";
 import toast from "react-hot-toast";
 import resources from "../../resources";
 
@@ -248,7 +250,7 @@ const ServiceProviderProfile = () => {
     },
   });
 
-  const [services, setServices] = useState([]);
+  const [services, setServices] = useState(null);
   const [newService, setNewService] = useState("");
   const [businessImages, setBusinessImages] = useState([]);
   const [newImages, setNewImages] = useState([]);
@@ -268,14 +270,16 @@ const ServiceProviderProfile = () => {
     const loadProfile = async () => {
       try {
         setLoading(true);
-        const response = await profileService.getProviderProfile();
+        const [profileResponse, serviceResponse] = await Promise.all([
+          profileService.getProviderProfile(),
+          serviceAPI.getProviderService()
+        ]);
 
-        if (response.success && response.data) {
+        if (profileResponse.success && profileResponse.data) {
           const {
             provider,
-            services: providerServices,
             schedule,
-          } = response.data;
+          } = profileResponse.data;
 
           // Set form data
           setFormData({
@@ -292,7 +296,7 @@ const ServiceProviderProfile = () => {
             startingPrice: provider.startingPrice || 0,
             emergencyCharge: provider.emergencyCharge || 0,
             extraChargeNote: provider.extraChargeNote || "",
-            services: providerServices || [],
+            services: [],
             schedule: schedule || {
               responseTime: "within-2-hours",
               serviceAreaRadius: 10,
@@ -337,17 +341,15 @@ const ServiceProviderProfile = () => {
             },
           });
 
-          // Set services
-          setServices(
-            providerServices
-              .map((ps) => ps.serviceId?.name || ps.name)
-              .filter(Boolean)
-          );
-
           // Set business images
           if (provider.businessImages) {
             setBusinessImages(provider.businessImages);
           }
+        }
+
+        // Set services from ProviderService
+        if (serviceResponse.success && serviceResponse.data) {
+          setServices(serviceResponse.data);
         }
       } catch (error) {
         console.error("Failed to load profile:", error);
@@ -397,19 +399,10 @@ const ServiceProviderProfile = () => {
     try {
       setSaving(true);
 
-      // Prepare services data
-      const servicesData = services.map((service) => ({
-        name: service,
-        category: "General", // You can enhance this
-        minPrice: formData.startingPrice,
-        maxPrice: formData.startingPrice * 2,
-        pricingType: "fixed",
-      }));
-
-      // Prepare update data
+      // Prepare update data without services (services are managed separately)
       const updateData = {
         ...formData,
-        services: servicesData,
+        services: [] // Remove services from profile update
       };
 
       // Update profile
@@ -1049,6 +1042,11 @@ const ServiceProviderProfile = () => {
           style={{
             padding: "1.75rem",
             borderBottom: "1px solid var(--border-color)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "1rem"
           }}
         >
           <h2
@@ -1060,6 +1058,28 @@ const ServiceProviderProfile = () => {
           >
             Services Offered
           </h2>
+          <Link
+            to="/service-provider/services"
+            className="btn-primary"
+            style={{
+              padding: "0.75rem 1.5rem",
+              background: "var(--btn-bg)",
+              color: "white",
+              border: "none",
+              borderRadius: "0.5rem",
+              textDecoration: "none",
+              fontWeight: "600",
+              fontSize: "0.875rem",
+              transition: "all 0.3s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              boxShadow: "var(--btn-hover)",
+            }}
+          >
+            <Wrench size={16} />
+            Manage Services
+          </Link>
         </div>
         <div
           style={{
@@ -1069,77 +1089,55 @@ const ServiceProviderProfile = () => {
             gap: "1.5rem",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "0.75rem",
-            }}
-          >
-            {services.map((service, index) => (
-              <ServiceTag
-                key={index}
-                service={service}
-                onRemove={() => removeService(index)}
-              />
-            ))}
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              gap: "0.75rem",
-              flexDirection: "row",
-              alignItems: "center",
-            }}
-            className="add-service-container"
-          >
-            <input
-              type="text"
-              placeholder="Add a service (e.g., Plumbing Repair, Electrical Work)..."
-              value={newService}
-              onChange={(e) => setNewService(e.target.value)}
-              onKeyPress={handleKeyPress}
-              style={{
-                flex: 1,
-                padding: "0.875rem 1rem",
-                border: "1px solid var(--border-color)",
-                borderRadius: "0.5rem",
-                backgroundColor: "var(--background)",
-                color: "var(--text-color)",
-                fontSize: "1rem",
-                minWidth: "200px",
-              }}
-            />
-            <button
-              onClick={addService}
-              disabled={!newService.trim()}
-              className="btn-primary add-service-button"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "0.5rem",
-                padding: "0.875rem 1.5rem",
-                background: newService.trim()
-                  ? "var(--btn-bg)"
-                  : "var(--border-color)",
-                color: "white",
-                border: "none",
-                borderRadius: "0.5rem",
-                cursor: newService.trim() ? "pointer" : "not-allowed",
-                fontWeight: "600",
-                fontSize: "1rem",
-                whiteSpace: "nowrap",
-                transition: "all 0.3s ease",
-                opacity: newService.trim() ? 1 : 0.7,
-                boxShadow: newService.trim() ? "var(--btn-hover)" : "none",
-              }}
-            >
-              <Plus size={20} />
-              Add Service
-            </button>
-          </div>
+          {services ? (
+            <div className="space-y-4">
+              {/* Main Service */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Wrench className="h-5 w-5 text-blue-600" />
+                  <h3 className="font-semibold text-blue-900">Primary Service</h3>
+                </div>
+                <p className="text-blue-800 font-medium">{services.mainService?.name}</p>
+              </div>
+              
+              {/* Sub Services */}
+              {services.subServices && services.subServices.length > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Check className="h-5 w-5 text-green-600" />
+                    <h3 className="font-semibold text-green-900">Specializations</h3>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {services.subServices.map((subService, index) => (
+                      <span key={index} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                        {subService.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Custom Service */}
+              {services.mainService?.name === 'other' && services.customService && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <AlertCircle className="h-5 w-5 text-amber-600" />
+                    <h3 className="font-semibold text-amber-900">Custom Service</h3>
+                    <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs font-medium">
+                      {services.customService.status === 'pending' ? 'Pending Approval' : services.customService.status}
+                    </span>
+                  </div>
+                  <p className="text-amber-800">{services.customService.name}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Wrench className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 mb-4">No services configured yet</p>
+              <p className="text-sm text-gray-500">Click "Manage Services" to add your services</p>
+            </div>
+          )}
         </div>
       </div>
 

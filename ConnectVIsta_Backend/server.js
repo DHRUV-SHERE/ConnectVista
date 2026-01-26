@@ -58,7 +58,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/verification', verificationRoutes);
 app.use('/api/profile', providerprofileRoutes); // Add this line to register profile routes
 app.use('/api/seeker', seekerProfileRoutes); // Add this line to register seeker profile routes
-app.use('/api/services', serviceRoutes); // Add service routes
+app.use('/api/service-catalog', serviceRoutes); // Mount service routes at /api/service-catalog
 app.get('/api/auth/profile', auth(), authController.getProfile);
 
 // Health check

@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   getProviderProfile,
   updateProviderProfile,
+  updateProviderServices,
   uploadBusinessImages,
   deleteBusinessImage,
   getNearbyProviders
@@ -17,6 +18,9 @@ router.get('/provider', auth(['provider']), getProviderProfile);
 
 // Update provider profile
 router.put('/provider', auth(['provider']), updateProviderProfile);
+
+// Update provider services
+router.put('/provider/services', auth(['provider']), updateProviderServices);
 
 // Upload business images - use the Cloudinary middleware
 router.post('/provider/images', 

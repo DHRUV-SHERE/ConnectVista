@@ -1,7 +1,10 @@
 const User = require('./User');
+const Token = require('./Token');
 const ServiceSeeker = require('./ServiceSeeker');
 const ServiceProvider = require('./ServiceProvider');
 const Service = require('./Service');
+const ServiceCategory = require('./ServiceCategory');
+const SubService = require('./SubService');
 const ProviderService = require('./ProviderService');
 const ProviderPortfolio = require('./ProviderPortfolio');
 const ProviderSchedule = require('./ProviderSchedule');
@@ -16,9 +19,12 @@ const ProviderSettings = require('./ProviderSettings');
 
 module.exports = {
   User,
+  Token,
   ServiceSeeker,
   ServiceProvider,
   Service,
+  ServiceCategory,
+  SubService,
   ProviderService,
   ProviderPortfolio,
   ProviderSchedule,
@@ -31,3 +37,4 @@ module.exports = {
   ProviderSubscription,
   ProviderSettings
 };
+

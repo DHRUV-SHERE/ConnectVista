@@ -85,7 +85,7 @@ const UserExplore = () => {
         }
         
         const response = await serviceAPI.getProvidersByService(serviceId, options);
-        setProviders(response.data || []);
+        setProviders(response.data?.data || response.data || []);
       } catch (error) {
         console.error('Error fetching providers:', error);
       } finally {

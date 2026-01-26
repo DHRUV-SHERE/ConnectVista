@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const ServiceSeeker = require('../models/ServiceSeeker');
 const ServiceProvider = require('../models/ServiceProvider');
+const Service = require('../models/Service');
 const Token = require('../models/Token');
 const { generateTokens, verifyRefreshToken } = require('../utils/jwtUtils');
 const bcrypt = require('bcryptjs');
@@ -76,12 +77,12 @@ if (role === 'seeker') {
         console.warn('Incomplete address for geocoding during signup');
       }
 
-      profile = await ServiceProvider.create({
+      // Build provider data object
+      const providerData = {
         userId: user._id,
         name: profileData.name,
         businessName: profileData.businessName,
         description: profileData.description,
-        category: profileData.category || 'other',
         experienceYears: profileData.experienceYears || 0,
         businessAddress: {
           street: profileData.street,
@@ -94,7 +95,74 @@ if (role === 'seeker') {
         startingPrice: profileData.startingPrice,
         emergencyCharge: profileData.emergencyCharge || 0,
         extraChargeNote: profileData.extraChargeNote
-      });
+      };
+
+      // Handle service selection
+      if (profileData.service) {
+        providerData.service = {
+          name: profileData.service.name || '',
+          category: profileData.service.category || '',
+          serviceId: profileData.service.serviceId || null
+        };
+      }
+
+      // Handle subServices
+      if (profileData.subServices && Array.isArray(profileData.subServices)) {
+        providerData.subServices = profileData.subServices.map(sub => ({
+          name: sub.name || sub,
+          serviceId: sub.serviceId || null
+        }));
+      }
+
+      // Handle custom service (when service not available in list)
+      if (profileData.customService && profileData.customService.isCustom) {
+        providerData.customService = {
+          isCustom: true,
+          customCategory: profileData.customService.customCategory || '',
+          customSubServices: profileData.customService.customSubServices || []
+        };
+
+        // Create the custom service in the Service collection
+        if (profileData.customService.customCategory) {
+          try {
+            // Check if service already exists
+            let customServiceDoc = await Service.findOne({
+              name: profileData.customService.customCategory,
+              category: 'other'
+            });
+
+            if (!customServiceDoc) {
+              customServiceDoc = await Service.create({
+                name: profileData.customService.customCategory,
+                category: 'other',
+                description: `Custom service category: ${profileData.customService.customCategory}`,
+                subServices: profileData.customService.customSubServices || []
+              });
+            }
+
+            // Update provider's service reference
+            providerData.service = {
+              name: profileData.customService.customCategory,
+              category: 'other',
+              serviceId: customServiceDoc._id
+            };
+
+            console.log('Custom service created:', customServiceDoc._id);
+          } catch (customServiceError) {
+            console.error('Error creating custom service:', customServiceError);
+            // Continue without creating custom service - don't fail signup
+          }
+        }
+      } else {
+        providerData.customService = {
+          isCustom: false,
+          customCategory: '',
+          customSubServices: []
+        };
+      }
+
+      profile = await ServiceProvider.create(providerData);
+      console.log('Provider profile created with service:', profile.service);
     }
 
     console.log('Profile created:', profile ? profile._id : 'none');

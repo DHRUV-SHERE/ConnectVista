@@ -27,8 +27,7 @@ const getProviderProfile = async (req, res) => {
     }
 
     // Find provider services
-    const providerServices = await ProviderService.find({ providerId: provider._id })
-      .populate('serviceId', 'name category');
+    const providerService = await ProviderService.findOne({ providerId: provider._id });
 
     // Find provider schedule
     const providerSchedule = await ProviderSchedule.findOne({ providerId: provider._id });
@@ -37,7 +36,7 @@ const getProviderProfile = async (req, res) => {
       success: true,
       data: {
         provider,
-        services: providerServices,
+        services: providerService ? [providerService] : [],
         schedule: providerSchedule
       }
     });
@@ -66,6 +65,9 @@ const updateProviderProfile = async (req, res) => {
       startingPrice,
       emergencyCharge,
       extraChargeNote,
+      service,
+      subServices,
+      customService,
       services,
       schedule
     } = req.body;
@@ -152,6 +154,32 @@ const updateProviderProfile = async (req, res) => {
       }
     }
 
+    // Handle service selection update
+    if (service) {
+      provider.service = {
+        name: service.name || '',
+        category: service.category || '',
+        serviceId: service.serviceId || null
+      };
+    }
+
+    // Handle subServices update
+    if (subServices && Array.isArray(subServices)) {
+      provider.subServices = subServices.map(sub => ({
+        name: sub.name || sub,
+        serviceId: sub.serviceId || null
+      }));
+    }
+
+    // Handle custom service update
+    if (customService) {
+      provider.customService = {
+        isCustom: customService.isCustom || false,
+        customCategory: customService.customCategory || '',
+        customSubServices: customService.customSubServices || []
+      };
+    }
+
     await provider.save();
     console.log('Provider profile saved:', provider);
 
@@ -162,7 +190,7 @@ const updateProviderProfile = async (req, res) => {
 
       // Add new services
       const servicePromises = services.map(async (service) => {
-        if (!service.name || service.name.trim() === '') return null;
+        if (!service || !service.name || typeof service.name !== 'string' || service.name.trim() === '') return null;
 
         // Find existing service with similar name (case-insensitive)
         let serviceDoc = await Service.findOne({
@@ -418,7 +446,73 @@ const deleteBusinessImage = async (req, res) => {
 };
 
 
-// Add new endpoint to get nearby providers for seekers
+// Update provider services only
+const updateProviderServices = async (req, res) => {
+  try {
+    console.log('=== UPDATE PROVIDER SERVICES ===');
+    console.log('User ID:', req.user.id);
+    console.log('Service data:', req.body);
+
+    const {
+      categoryKey,
+      subServiceKeys,
+      customServiceName
+    } = req.body;
+
+    // Find provider
+    let provider = await ServiceProvider.findOne({ userId: req.user.id });
+    
+    if (!provider) {
+      return res.status(404).json({
+        success: false,
+        message: 'Provider profile not found'
+      });
+    }
+
+    if (!categoryKey) {
+      return res.status(400).json({
+        success: false,
+        message: 'Category selection is required'
+      });
+    }
+
+    // Clear existing provider service
+    await ProviderService.deleteOne({ providerId: provider._id });
+
+    // Create new provider service
+    const providerServiceData = {
+      providerId: provider._id,
+      categoryKey,
+      subServiceKeys: subServiceKeys || [],
+      customServiceName: categoryKey === 'other' ? customServiceName : null,
+      minPrice: provider.startingPrice || 50,
+      maxPrice: (provider.startingPrice || 50) * 2,
+      pricingType: 'fixed',
+      isAvailable: true,
+      isApproved: categoryKey !== 'other' // Auto-approve non-other services
+    };
+
+    const newService = await ProviderService.create(providerServiceData);
+
+    res.json({
+      success: true,
+      message: categoryKey === 'other' 
+        ? 'Custom service saved successfully'
+        : 'Services updated successfully',
+      data: {
+        service: newService
+      }
+    });
+
+  } catch (error) {
+    console.error('Update provider services error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update services',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
 const getNearbyProviders = async (req, res) => {
   try {
     console.log('=== GET NEARBY PROVIDERS ===');
@@ -556,6 +650,7 @@ const getNearbyProviders = async (req, res) => {
 module.exports = {
   getProviderProfile,
   updateProviderProfile,
+  updateProviderServices,
   uploadBusinessImages,
   deleteBusinessImage,
   getNearbyProviders

@@ -29,6 +29,7 @@ import UserProfile from "./pages/User/UserProfile";
 import UserNotification from "./pages/User/UserNotification";
 import ServiceProviderDashboard from "./pages/ServiceProvider/ServiceProviderDashboard";
 import ServiceProviderProfile from "./pages/ServiceProvider/ServiceProviderProfile";
+import ServiceManagement from "./pages/ServiceProvider/ServiceManagement";
 import ServiceProviderNotification from "./pages/ServiceProvider/ServiceProviderNotification";
 import ServiceProviderBookings from "./pages/ServiceProvider/ServiceProviderBookings";
 import ServiceProviderReviews from "./pages/ServiceProvider/ServiceProviderReviews";
@@ -84,6 +85,7 @@ function App() {
               <Route index element={<ServiceProviderDashboard />} />
               <Route path="dashboard" element={<ServiceProviderDashboard />} />
               <Route path="profile" element={<ServiceProviderProfile />} />
+              <Route path="services" element={<ServiceManagement />} />
               <Route path="bookings" element={<ServiceProviderBookings />} />
               <Route path="reviews" element={<ServiceProviderReviews />} />
               <Route path="notifications" element={<ServiceProviderNotification />} />
