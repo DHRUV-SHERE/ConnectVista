@@ -1355,7 +1355,7 @@ const ServiceProviderProfile = () => {
                   flexWrap: "wrap",
                 }}
               >
-                <span style={{ opacity: 0.8, fontSize: "1.125rem" }}>$</span>
+                <span style={{ opacity: 0.8, fontSize: "1.125rem" }}>₹</span>
                 <input
                   type="number"
                   value={formData.startingPrice}
@@ -1407,7 +1407,7 @@ const ServiceProviderProfile = () => {
                   flexWrap: "wrap",
                 }}
               >
-                <span style={{ opacity: 0.8, fontSize: "1.125rem" }}>$</span>
+                <span style={{ opacity: 0.8, fontSize: "1.125rem" }}>₹</span>
                 <input
                   type="number"
                   value={formData.emergencyCharge}

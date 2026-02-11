@@ -1,6 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useAuth } from "../../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { 
   User, 
   Mail, 
@@ -20,36 +23,37 @@ import {
 
 const UserProfile = () => {
   const [activeTab, setActiveTab] = useState("overview");
+  const { user, profile, logout } = useAuth();
+  const navigate = useNavigate();
   
-  // Mock user data
   const userData = {
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+1 (555) 123-4567",
-    address: "123 Main Street, New York, NY 10001",
-    memberSince: "January 2023",
+    name: user?.name || profile?.name || "User",
+    email: user?.email || "N/A",
+    phone: user?.phone || profile?.user?.phone || "N/A",
+    address: profile?.address ? 
+      `${profile.address.street}, ${profile.address.city}, ${profile.address.state} ${profile.address.pinCode}` : 
+      "No address provided",
+    memberSince: user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : "N/A",
     accountType: "Service Seeker",
     rating: 4.8,
     totalBookings: 24,
     completedServices: 18,
     upcomingBookings: 2,
     favoriteCategories: ["Plumbing", "Electrical", "Home Cleaning"],
-    recentActivity: [
-      { id: 1, type: "booking", service: "Plumbing Repair", date: "2024-01-15", status: "completed" },
-      { id: 2, type: "booking", service: "Electrical Wiring", date: "2024-01-10", status: "upcoming" },
-      { id: 3, type: "review", service: "Home Cleaning", date: "2024-01-05", rating: 5 },
-    ],
-    accountSettings: {
-      notifications: true,
-      emailUpdates: true,
-      smsAlerts: false,
-      privacyMode: false
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success('Logged out successfully');
+      navigate('/login');
+    } catch (error) {
+      toast.error('Failed to logout');
     }
   };
 
   const tabs = [
     { id: "overview", label: "Overview", icon: <User className="h-4 w-4" /> },
-    { id: "bookings", label: "My Bookings", icon: <BookOpen className="h-4 w-4" /> },
     { id: "favorites", label: "Favorites", icon: <Star className="h-4 w-4" /> },
     { id: "settings", label: "Settings", icon: <Settings className="h-4 w-4" /> },
   ];
@@ -160,10 +164,10 @@ const UserProfile = () => {
                 
                 {/* Logout Button */}
                 <button
-                  className="w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 text-left hover:opacity-90 mt-6"
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 text-left hover:bg-red-50 mt-6"
                   style={{
-                    backgroundColor: 'var(--card-bg)',
-                    color: 'var(--text-color)',
+                    color: '#dc2626',
                     border: '1px solid var(--border-color)'
                   }}
                 >
@@ -288,65 +292,6 @@ const UserProfile = () => {
               </motion.div>
             )}
 
-            {activeTab === "bookings" && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-4"
-              >
-                <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--text-color)' }}>
-                  My Bookings
-                </h2>
-                
-                {[1, 2, 3].map((booking) => (
-                  <div 
-                    key={booking}
-                    className="rounded-2xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl"
-                    style={{
-                      backgroundColor: 'var(--card-bg)',
-                      border: '1px solid var(--border-color)'
-                    }}
-                  >
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                      <div>
-                        <h3 className="text-lg font-semibold" style={{ color: 'var(--text-color)' }}>
-                          Plumbing Service - Leak Repair
-                        </h3>
-                        <div className="flex items-center gap-4 mt-2">
-                          <div className="flex items-center gap-1" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
-                            <Calendar className="h-4 w-4" />
-                            <span className="text-sm">Jan 15, 2024</span>
-                          </div>
-                          <div className="flex items-center gap-1" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
-                            <Clock className="h-4 w-4" />
-                            <span className="text-sm">10:00 AM</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="px-3 py-1 rounded-full text-xs font-medium"
-                          style={{
-                            backgroundColor: booking === 2 ? 'var(--accent-fade)' : 'var(--card-bg)',
-                            color: booking === 2 ? 'var(--accent-dark)' : 'var(--text-color)',
-                            border: '1px solid var(--border-color)'
-                          }}
-                        >
-                          {booking === 2 ? 'Upcoming' : 'Completed'}
-                        </span>
-                        <button 
-                          className="flex items-center gap-1 text-sm font-medium"
-                          style={{ color: 'var(--accent-color)' }}
-                        >
-                          Details
-                          <ChevronRight className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </motion.div>
-            )}
-
             {activeTab === "favorites" && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -357,54 +302,17 @@ const UserProfile = () => {
                   Favorite Providers
                 </h2>
                 
-                {[1, 2, 3].map((fav) => (
-                  <div 
-                    key={fav}
-                    className="rounded-2xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl"
-                    style={{
-                      backgroundColor: 'var(--card-bg)',
-                      border: '1px solid var(--border-color)'
-                    }}
+                <div className="text-center py-12">
+                  <Star className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--text-color)', opacity: 0.3 }} />
+                  <p style={{ color: 'var(--text-color)', opacity: 0.7 }}>No favorite providers yet</p>
+                  <button
+                    onClick={() => navigate('/user/services')}
+                    className="mt-4 px-6 py-2 rounded-xl font-medium"
+                    style={{ backgroundColor: 'var(--accent-color)', color: 'white' }}
                   >
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <div className="flex items-start gap-4">
-                        <div 
-                          className="w-12 h-12 rounded-xl flex items-center justify-center"
-                          style={{
-                            background: 'var(--accent-color)',
-                            opacity: 0.1
-                          }}
-                        >
-                          <div style={{ color: 'var(--accent-color)' }}>
-                            <User className="h-6 w-6" />
-                          </div>
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-semibold" style={{ color: 'var(--text-color)' }}>
-                            QuickFix Plumbing Solutions
-                          </h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                            <span style={{ color: 'var(--text-color)', opacity: 0.7 }}>4.8 (156 reviews)</span>
-                            <span className="text-sm" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
-                              • Plumbing
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <button 
-                        className="px-4 py-2 rounded-xl font-medium transition-colors"
-                        style={{
-                          backgroundColor: 'var(--card-bg)',
-                          color: 'var(--text-color)',
-                          border: '1px solid var(--border-color)'
-                        }}
-                      >
-                        Book Now
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                    Browse Services
+                  </button>
+                </div>
               </motion.div>
             )}
 
@@ -418,7 +326,7 @@ const UserProfile = () => {
                   Account Settings
                 </h2>
                 
-                {/* Notification Settings */}
+                {/* Account Settings */}
                 <div 
                   className="rounded-2xl shadow-lg p-6"
                   style={{
@@ -428,32 +336,29 @@ const UserProfile = () => {
                 >
                   <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-color)' }}>
                     <Settings className="inline h-5 w-5 mr-2" />
-                    Notification Preferences
+                    Preferences
                   </h3>
-                  <div className="space-y-4">
-                    {[
-                      { label: "Push Notifications", value: userData.accountSettings.notifications },
-                      { label: "Email Updates", value: userData.accountSettings.emailUpdates },
-                      { label: "SMS Alerts", value: userData.accountSettings.smsAlerts },
-                      { label: "Privacy Mode", value: userData.accountSettings.privacyMode },
-                    ].map((setting, index) => (
-                      <div key={index} className="flex items-center justify-between">
-                        <span style={{ color: 'var(--text-color)' }}>{setting.label}</span>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input 
-                            type="checkbox" 
-                            className="sr-only peer" 
-                            defaultChecked={setting.value}
-                          />
-                          <div 
-                            className="w-11 h-6 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"
-                            style={{
-                              background: setting.value ? 'var(--accent-color)' : 'var(--border-color)'
-                            }}
-                          />
-                        </label>
-                      </div>
-                    ))}
+                  <div className="space-y-3">
+                    <button 
+                      className="w-full p-3 rounded-xl text-left transition-all hover:opacity-90"
+                      style={{
+                        backgroundColor: 'var(--card-bg)',
+                        color: 'var(--text-color)',
+                        border: '1px solid var(--border-color)'
+                      }}
+                    >
+                      Edit Profile
+                    </button>
+                    <button 
+                      className="w-full p-3 rounded-xl text-left transition-all hover:opacity-90"
+                      style={{
+                        backgroundColor: 'var(--card-bg)',
+                        color: 'var(--text-color)',
+                        border: '1px solid var(--border-color)'
+                      }}
+                    >
+                      Notification Settings
+                    </button>
                   </div>
                 </div>
 
@@ -508,35 +413,23 @@ const UserProfile = () => {
                   className="rounded-2xl shadow-lg p-6 border-2"
                   style={{
                     backgroundColor: 'var(--card-bg)',
-                    borderColor: 'var(--accent-color)',
+                    borderColor: '#dc2626',
                     borderStyle: 'dashed'
                   }}
                 >
-                  <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--accent-color)' }}>
+                  <h3 className="text-lg font-semibold mb-4" style={{ color: '#dc2626' }}>
                     Danger Zone
                   </h3>
-                  <div className="space-y-3">
-                    <button 
-                      className="w-full p-3 rounded-xl text-left transition-all hover:opacity-90"
-                      style={{
-                        backgroundColor: 'var(--card-bg)',
-                        color: '#dc2626',
-                        border: '1px solid #dc2626'
-                      }}
-                    >
-                      Deactivate Account
-                    </button>
-                    <button 
-                      className="w-full p-3 rounded-xl text-left transition-all hover:opacity-90"
-                      style={{
-                        backgroundColor: 'var(--card-bg)',
-                        color: '#dc2626',
-                        border: '1px solid #dc2626'
-                      }}
-                    >
-                      Delete Account Permanently
-                    </button>
-                  </div>
+                  <button 
+                    className="w-full p-3 rounded-xl text-left transition-all hover:opacity-90"
+                    style={{
+                      backgroundColor: 'var(--card-bg)',
+                      color: '#dc2626',
+                      border: '1px solid #dc2626'
+                    }}
+                  >
+                    Delete Account
+                  </button>
                 </div>
               </motion.div>
             )}

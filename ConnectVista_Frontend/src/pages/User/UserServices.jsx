@@ -20,12 +20,12 @@ const UserServices = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Fetch services from API with location (with throttling)
+  // Fetch services from API with price ranges
   useEffect(() => {
-    const fetchServicesWithLocation = async () => {
+    const fetchServicesWithPriceRanges = async () => {
       try {
         setLoading(true);
-        
+
         // Get user location first
         let location = userLocation;
         try {
@@ -34,19 +34,36 @@ const UserServices = () => {
         } catch (locationError) {
           console.log('Could not get user location, using default:', locationError);
         }
-        
-        // Fetch basic services first
-        const response = await serviceAPI.getServices();
-        setServices(response.data || []);
+
+        // Fetch services with aggregated price ranges
+        const response = await serviceAPI.getSeekerServices();
+        if (response.success) {
+          // Transform the data to include price info
+          const transformedServices = (response.data || []).map(service => ({
+            _id: service.id,
+            id: service.id,
+            name: service.name,
+            description: service.description,
+            category: service.id, // Use id as category for filtering
+            icon: service.icon,
+            minPrice: service.priceRange?.min || 0,
+            maxPrice: service.priceRange?.max || 0,
+            priceFormatted: service.priceRange?.formatted || 'Prices vary',
+            providerCount: service.providerCount || 0,
+            subServices: service.subServices || [],
+            subServicesCount: service.subServicesCount || 0
+          }));
+          setServices(transformedServices);
+        }
       } catch (error) {
         console.error('Error fetching services:', error);
       } finally {
         setLoading(false);
       }
     };
-    
+
     // Add delay to prevent rate limiting
-    const timeoutId = setTimeout(fetchServicesWithLocation, 100);
+    const timeoutId = setTimeout(fetchServicesWithPriceRanges, 100);
     return () => clearTimeout(timeoutId);
   }, []);
 
@@ -146,9 +163,9 @@ const UserServices = () => {
     return filtered;
   }, [services, searchQuery, selectedCategory, sortBy]);
 
-  // Navigate to explore page with service ID
+  // Navigate to explore page with category ID
   const handleServiceClick = (service) => {
-    navigate(`/user/explore?serviceId=${service._id}&serviceName=${encodeURIComponent(service.name)}`);
+    navigate(`/user/explore?categoryId=${service.id}&serviceName=${encodeURIComponent(service.name)}`);
   };
 
   // ServiceCard Component
@@ -242,22 +259,27 @@ const UserServices = () => {
 
                 {/* Footer with Provider Count and Price */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-4 gap-4">
-                  <div className="text-right">
-                    <div className="text-lg font-bold" style={{ color: 'var(--text-color)' }}>
-                      ₹{service.minPrice || 0} - ₹{service.maxPrice || 0}
+                  <div>
+                    <div className="text-sm font-semibold" style={{ color: 'var(--accent-color)' }}>
+                      {service.priceFormatted || `₹${service.minPrice || 0} - ₹${service.maxPrice || 0}`}
                     </div>
-                    <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
+                    <div className="flex items-center gap-1 text-xs mt-1" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
                       <Users className="h-3 w-3" />
-                      {service.providerCount || 0} providers
+                      {service.providerCount || 0} providers available
                     </div>
                   </div>
+                  {service.subServicesCount > 0 && (
+                    <div className="text-xs" style={{ color: 'var(--text-color)', opacity: 0.6 }}>
+                      {service.subServicesCount} sub-services
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-            
+
             {/* Explore Button */}
             <div className="flex justify-end mt-4">
-              <button 
+              <button
                 className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors"
                 style={{
                   background: 'var(--accent-color)',
@@ -347,15 +369,20 @@ const UserServices = () => {
 
             {/* Footer with Provider Count and Price */}
             <div className="mt-auto">
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-right">
-                  <div className="text-lg font-bold" style={{ color: 'var(--text-color)' }}>
-                    ₹{service.minPrice || 0} - ₹{service.maxPrice || 0}
-                  </div>
+              <div className="flex flex-col gap-2 mb-3">
+                <div className="text-sm font-semibold" style={{ color: 'var(--accent-color)' }}>
+                  {service.priceFormatted || `₹${service.minPrice || 0} - ₹${service.maxPrice || 0}`}
+                </div>
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
                     <Users className="h-3 w-3" />
                     {service.providerCount || 0} providers
                   </div>
+                  {service.subServicesCount > 0 && (
+                    <div className="text-xs" style={{ color: 'var(--text-color)', opacity: 0.6 }}>
+                      {service.subServicesCount} services
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

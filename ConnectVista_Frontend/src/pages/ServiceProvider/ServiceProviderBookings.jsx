@@ -1,203 +1,152 @@
-import { useState, useMemo, useCallback } from 'react';
-import { Calendar, Clock, MapPin, Phone, Mail, CheckCircle, XCircle, CalendarClock, MessageCircle, DollarSign, Search, Filter, Download, Eye, MoreVertical } from 'lucide-react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { Calendar, Clock, MapPin, Phone, Mail, CheckCircle, XCircle, CalendarClock, MessageCircle, DollarSign, Search, Filter, Download, Eye, MoreVertical, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { serviceAPI } from '../../services/serviceAPI';
+import { useSocket } from '../../contexts/SocketContext';
 
 const ServiceProviderBookings = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [bookings, setBookings] = useState([]);
+  const [stats, setStats] = useState({
+    total: 0,
+    pending: 0,
+    accepted: 0,
+    confirmed: 0,
+    completed: 0,
+    cancelled: 0,
+    totalRevenue: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const { subscribe } = useSocket();
 
-  // More realistic bookings data
-  const bookings = [
-    {
-      id: 1001,
-      bookingId: 'BK-2024-001',
-      customer: {
-        name: 'John Smith',
-        email: 'john.smith@example.com',
-        phone: '+1 (555) 123-4567',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John'
-      },
-      service: {
-        name: 'Emergency Pipe Repair',
-        category: 'Plumbing',
-        duration: 2,
-        priority: 'urgent'
-      },
-      date: '2024-01-20',
-      time: '10:00 AM',
-      address: '123 Main Street, Apartment 4B, New York, NY 10001',
-      coordinates: '40.7128° N, 74.0060° W',
-      status: 'pending',
-      price: 250,
-      paymentStatus: 'pending',
-      notes: 'Kitchen sink pipe burst, water leaking everywhere. Need immediate attention.',
-      createdAt: '2024-01-18 14:30:00',
-      updatedAt: '2024-01-18 14:30:00'
-    },
-    {
-      id: 1002,
-      bookingId: 'BK-2024-002',
-      customer: {
-        name: 'Sarah Johnson',
-        email: 'sarah.j@example.com',
-        phone: '+1 (555) 234-5678',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah'
-      },
-      service: {
-        name: 'Complete Bathroom Plumbing',
-        category: 'Installation',
-        duration: 4,
-        priority: 'standard'
-      },
-      date: '2024-01-21',
-      time: '2:00 PM',
-      address: '456 Oak Avenue, Los Angeles, CA 90001',
-      coordinates: '34.0522° N, 118.2437° W',
-      status: 'confirmed',
-      price: 850,
-      paymentStatus: 'paid',
-      notes: 'Installing new pipes, sink, and shower in master bathroom renovation.',
-      createdAt: '2024-01-19 09:15:00',
-      updatedAt: '2024-01-19 16:45:00'
-    },
-    {
-      id: 1003,
-      bookingId: 'BK-2024-003',
-      customer: {
-        name: 'Michael Rodriguez',
-        email: 'mike.r@example.com',
-        phone: '+1 (555) 345-6789',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Michael'
-      },
-      service: {
-        name: 'Drain Cleaning Service',
-        category: 'Maintenance',
-        duration: 1,
-        priority: 'standard'
-      },
-      date: '2024-01-18',
-      time: '9:00 AM',
-      address: '789 Pine Road, Chicago, IL 60601',
-      coordinates: '41.8781° N, 87.6298° W',
-      status: 'completed',
-      price: 120,
-      paymentStatus: 'paid',
-      notes: 'Main bathroom drain completely clogged, water not draining.',
-      createdAt: '2024-01-17 11:20:00',
-      updatedAt: '2024-01-18 17:30:00'
-    },
-    {
-      id: 1004,
-      bookingId: 'BK-2024-004',
-      customer: {
-        name: 'Emily Chen',
-        email: 'emily.chen@example.com',
-        phone: '+1 (555) 456-7890',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emily'
-      },
-      service: {
-        name: 'Water Heater Installation',
-        category: 'Installation',
-        duration: 3,
-        priority: 'standard'
-      },
-      date: '2024-01-22',
-      time: '11:00 AM',
-      address: '321 Elm Street, Miami, FL 33101',
-      coordinates: '25.7617° N, 80.1918° W',
-      status: 'pending',
-      price: 650,
-      paymentStatus: 'pending',
-      notes: 'Replacing old water heater with new energy-efficient model.',
-      createdAt: '2024-01-19 16:45:00',
-      updatedAt: '2024-01-19 16:45:00'
-    },
-    {
-      id: 1005,
-      bookingId: 'BK-2024-005',
-      customer: {
-        name: 'David Wilson',
-        email: 'david.w@example.com',
-        phone: '+1 (555) 567-8901',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=David'
-      },
-      service: {
-        name: 'Leak Detection & Repair',
-        category: 'Repair',
-        duration: 2,
-        priority: 'urgent'
-      },
-      date: '2024-01-19',
-      time: '3:30 PM',
-      address: '654 Maple Drive, Seattle, WA 98101',
-      coordinates: '47.6062° N, 122.3321° W',
-      status: 'cancelled',
-      price: 180,
-      paymentStatus: 'refunded',
-      notes: 'Customer cancelled due to emergency trip.',
-      createdAt: '2024-01-18 10:10:00',
-      updatedAt: '2024-01-19 08:30:00'
+  // Fetch bookings
+  const fetchBookings = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await serviceAPI.getProviderBookings({
+        status: activeTab === 'all' ? undefined : activeTab,
+        page,
+        limit: 10
+      });
+
+      if (response.success) {
+        setBookings(response.data.bookings || []);
+        setStats(response.data.stats || stats);
+        setPagination(response.data.pagination);
+      }
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+      toast.error('Failed to load bookings');
+    } finally {
+      setLoading(false);
     }
-  ];
+  }, [activeTab, page]);
 
-  // Calculate statistics
-  const stats = useMemo(() => [
-    { 
-      label: 'Total Bookings', 
-      value: bookings.length, 
+  // Initial fetch
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
+
+  // Subscribe to real-time booking events
+  useEffect(() => {
+    const unsubscribeNew = subscribe('booking:new', (data) => {
+      toast.success(`New booking request from ${data.booking?.seekerName || 'a customer'}!`, {
+        duration: 5000,
+        icon: '📅'
+      });
+      fetchBookings();
+    });
+
+    const unsubscribeCancelled = subscribe('booking:cancelled', (data) => {
+      toast('A booking has been cancelled', { icon: 'ℹ️' });
+      fetchBookings();
+    });
+
+    return () => {
+      unsubscribeNew();
+      unsubscribeCancelled();
+    };
+  }, [subscribe, fetchBookings]);
+
+  // Calculate display stats
+  const displayStats = useMemo(() => [
+    {
+      label: 'Total Bookings',
+      value: stats.total,
       color: 'var(--accent-color)',
-      icon: Calendar 
+      icon: Calendar
     },
-    { 
-      label: 'Pending Review', 
-      value: bookings.filter((b) => b.status === 'pending').length, 
+    {
+      label: 'Pending Review',
+      value: stats.pending,
       color: 'var(--accent-color)',
-      icon: Clock 
+      icon: Clock
     },
-    { 
-      label: 'Confirmed Today', 
-      value: bookings.filter((b) => b.status === 'confirmed').length, 
+    {
+      label: 'Accepted',
+      value: stats.accepted + (stats.confirmed || 0),
       color: '#3b82f6',
-      icon: CheckCircle 
+      icon: CheckCircle
     },
-    { 
-      label: 'Revenue This Month', 
-      value: `$${bookings
-        .filter((b) => b.status === 'completed' || b.status === 'confirmed')
-        .reduce((sum, b) => sum + b.price, 0)}`, 
+    {
+      label: 'Total Revenue',
+      value: `₹${stats.totalRevenue || 0}`,
       color: '#10b981',
-      icon: DollarSign 
+      icon: DollarSign
     },
-  ], []);
+  ], [stats]);
 
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending':
-        return { 
-          background: 'var(--accent-color)', 
+        return {
+          background: 'var(--accent-color)',
           color: 'var(--accent-color)',
           text: 'Pending Review'
         };
+      case 'accepted':
+        return {
+          background: '#3b82f6',
+          color: '#3b82f6',
+          text: 'Accepted'
+        };
       case 'confirmed':
-        return { 
-          background: '#3b82f6', 
+        return {
+          background: '#3b82f6',
           color: '#3b82f6',
           text: 'Confirmed'
         };
+      case 'in-progress':
+        return {
+          background: '#8b5cf6',
+          color: '#8b5cf6',
+          text: 'In Progress'
+        };
       case 'completed':
-        return { 
-          background: '#10b981', 
+        return {
+          background: '#10b981',
           color: '#10b981',
           text: 'Completed'
         };
       case 'cancelled':
-        return { 
-          background: '#ef4444', 
+        return {
+          background: '#ef4444',
           color: '#ef4444',
           text: 'Cancelled'
         };
+      case 'rejected':
+        return {
+          background: '#ef4444',
+          color: '#ef4444',
+          text: 'Rejected'
+        };
       default:
-        return { 
-          background: 'var(--border-color)', 
+        return {
+          background: 'var(--border-color)',
           color: 'var(--text-color)',
           text: 'Unknown'
         };
@@ -217,32 +166,70 @@ const ServiceProviderBookings = () => {
     }
   };
 
-  const handleAccept = useCallback((id) => {
-    if (window.confirm('Are you sure you want to accept this booking?')) {
-      alert('Booking accepted! The customer has been notified.');
-    }
-  }, []);
+  const handleAccept = useCallback(async (id) => {
+    if (!window.confirm('Are you sure you want to accept this booking?')) return;
 
-  const handleReject = useCallback((id) => {
+    try {
+      setActionLoading(id);
+      const response = await serviceAPI.acceptBooking(id);
+
+      if (response.success) {
+        toast.success('Booking accepted! Customer has been notified.');
+        fetchBookings();
+      } else {
+        toast.error(response.message || 'Failed to accept booking');
+      }
+    } catch (error) {
+      console.error('Accept booking error:', error);
+      toast.error(error.response?.data?.message || 'Failed to accept booking');
+    } finally {
+      setActionLoading(null);
+    }
+  }, [fetchBookings]);
+
+  const handleReject = useCallback(async (id) => {
     const reason = window.prompt('Please provide a reason for rejection:');
-    if (reason) {
-      alert(`Booking rejected. Reason: ${reason}`);
-    }
-  }, []);
+    if (reason === null) return;
 
-  const handleReschedule = useCallback((id) => {
-    const newDate = window.prompt('Enter new date (YYYY-MM-DD):');
-    const newTime = window.prompt('Enter new time (HH:MM AM/PM):');
-    if (newDate && newTime) {
-      alert(`Reschedule request sent for ${newDate} at ${newTime}`);
-    }
-  }, []);
+    try {
+      setActionLoading(id);
+      const response = await serviceAPI.rejectBooking(id, reason);
 
-  const handleMarkAsCompleted = useCallback((id) => {
-    if (window.confirm('Mark this booking as completed?')) {
-      alert('Booking marked as completed!');
+      if (response.success) {
+        toast.success('Booking rejected. Customer has been notified.');
+        fetchBookings();
+      } else {
+        toast.error(response.message || 'Failed to reject booking');
+      }
+    } catch (error) {
+      console.error('Reject booking error:', error);
+      toast.error(error.response?.data?.message || 'Failed to reject booking');
+    } finally {
+      setActionLoading(null);
     }
-  }, []);
+  }, [fetchBookings]);
+
+  const handleCancel = useCallback(async (id) => {
+    const reason = window.prompt('Please provide a reason for cancellation:');
+    if (reason === null) return;
+
+    try {
+      setActionLoading(id);
+      const response = await serviceAPI.cancelBooking(id, reason);
+
+      if (response.success) {
+        toast.success('Booking cancelled.');
+        fetchBookings();
+      } else {
+        toast.error(response.message || 'Failed to cancel booking');
+      }
+    } catch (error) {
+      console.error('Cancel booking error:', error);
+      toast.error(error.response?.data?.message || 'Failed to cancel booking');
+    } finally {
+      setActionLoading(null);
+    }
+  }, [fetchBookings]);
 
   const handleContactCustomer = useCallback((phone, email) => {
     const choice = window.confirm('Contact customer:\n\nOK for Call\nCancel for Email');
@@ -253,39 +240,51 @@ const ServiceProviderBookings = () => {
     }
   }, []);
 
-  // Filter bookings based on active tab and search
+  // Format date
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  // Format time
+  const formatTime = (timeString) => {
+    if (!timeString) return '';
+    const [hours, minutes] = timeString.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+
+  // Filter bookings based on search
   const filteredBookings = useMemo(() => {
-    let result = bookings;
-    
-    if (activeTab !== 'all') {
-      result = result.filter((booking) => booking.status === activeTab);
-    }
-    
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter((booking) => 
-        booking.customer.name.toLowerCase().includes(query) ||
-        booking.service.name.toLowerCase().includes(query) ||
-        booking.bookingId.toLowerCase().includes(query) ||
-        booking.customer.email.toLowerCase().includes(query)
-      );
-    }
-    
-    return result;
-  }, [activeTab, searchQuery]);
+    if (!searchQuery) return bookings;
+
+    const query = searchQuery.toLowerCase();
+    return bookings.filter((booking) =>
+      booking.seekerId?.name?.toLowerCase().includes(query) ||
+      booking.seekerId?.user?.email?.toLowerCase().includes(query) ||
+      booking._id?.toLowerCase().includes(query)
+    );
+  }, [bookings, searchQuery]);
 
   const tabs = [
     { value: 'all', label: 'All Bookings' },
     { value: 'pending', label: 'Pending' },
-    { value: 'confirmed', label: 'Confirmed' },
+    { value: 'accepted', label: 'Accepted' },
     { value: 'completed', label: 'Completed' },
     { value: 'cancelled', label: 'Cancelled' },
   ];
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
       gap: '1.5rem',
       backgroundColor: 'var(--background)',
       color: 'var(--text-color)',
@@ -302,91 +301,26 @@ const ServiceProviderBookings = () => {
           gap: '0.5rem',
           marginBottom: '1.5rem'
         }}>
-          <h1 style={{
-            fontSize: 'clamp(1.5rem, 4vw, 2rem)',
-            fontWeight: 'bold',
-            margin: 0
-          }}>Bookings Management</h1>
-          <p style={{
-            color: 'var(--text-color)',
-            opacity: 0.8,
-            fontSize: 'clamp(0.875rem, 2vw, 1.125rem)',
-            margin: 0
-          }}>Manage your service requests and appointments</p>
-        </div>
-
-        {/* Search and Filters */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem',
-          marginBottom: '1.5rem'
-        }}>
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-            width: '100%'
-          }}>
-            {/* Search Bar */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              backgroundColor: 'var(--card-bg)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '0.75rem',
-              padding: '0.75rem 1rem',
-              width: '100%',
-              boxSizing: 'border-box'
-            }}>
-              <Search size={20} style={{ opacity: 0.5, flexShrink: 0 }} />
-              <input
-                type="text"
-                placeholder="Search by customer name, service, or booking ID..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  flex: 1,
-                  border: 'none',
-                  background: 'transparent',
-                  color: 'var(--text-color)',
-                  fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                  outline: 'none',
-                  minWidth: '0'
-                }}
-              />
-            </div>
-            
-            {/* Action Buttons */}
-            <div style={{
-              display: 'flex',
-              gap: '0.75rem',
-              flexWrap: 'wrap'
-            }}>
-              <button style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem 1.25rem',
-                backgroundColor: 'var(--card-bg)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '0.75rem',
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h1 style={{
+                fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+                fontWeight: 'bold',
+                margin: 0
+              }}>Bookings Management</h1>
+              <p style={{
                 color: 'var(--text-color)',
-                fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                flex: '1 1 auto',
-                minWidth: '120px'
-              }}>
-                <Filter size={18} />
-                Filter
-              </button>
-              <button style={{
+                opacity: 0.8,
+                fontSize: 'clamp(0.875rem, 2vw, 1.125rem)',
+                margin: 0
+              }}>Manage your service requests and appointments</p>
+            </div>
+            <button
+              onClick={fetchBookings}
+              disabled={loading}
+              style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
                 gap: '0.5rem',
                 padding: '0.75rem 1.25rem',
                 backgroundColor: 'var(--accent-color)',
@@ -395,25 +329,54 @@ const ServiceProviderBookings = () => {
                 color: 'white',
                 fontSize: 'clamp(0.875rem, 2vw, 1rem)',
                 cursor: 'pointer',
-                transition: 'all 0.2s',
-                flex: '1 1 auto',
-                minWidth: '120px'
-              }}>
-                <Download size={18} />
-                Export
-              </button>
-            </div>
+                opacity: loading ? 0.7 : 1
+              }}
+            >
+              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+              Refresh
+            </button>
           </div>
+        </div>
+
+        {/* Search */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          backgroundColor: 'var(--card-bg)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '0.75rem',
+          padding: '0.75rem 1rem',
+          width: '100%',
+          boxSizing: 'border-box',
+          marginBottom: '1.5rem'
+        }}>
+          <Search size={20} style={{ opacity: 0.5, flexShrink: 0 }} />
+          <input
+            type="text"
+            placeholder="Search by customer name or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              flex: 1,
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--text-color)',
+              fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+              outline: 'none',
+              minWidth: '0'
+            }}
+          />
         </div>
       </div>
 
       {/* Stats Cards */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(min(250px, 100%), 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))',
         gap: '1rem'
       }}>
-        {stats.map((stat) => {
+        {displayStats.map((stat) => {
           const Icon = stat.icon;
           return (
             <div key={stat.label} style={{
@@ -458,128 +421,83 @@ const ServiceProviderBookings = () => {
         borderRadius: '1rem',
         overflow: 'hidden'
       }}>
-        {/* Header with Tabs */}
+        {/* Tabs */}
         <div style={{
           display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem',
-          padding: '1.25rem 1.25rem 0 1.25rem'
+          overflowX: 'auto',
+          gap: '0.5rem',
+          padding: '1.25rem',
+          paddingBottom: '0',
+          scrollbarWidth: 'none'
         }}>
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              flexWrap: 'wrap',
-              gap: '1rem'
-            }}>
-              <h2 style={{
-                fontSize: 'clamp(1.25rem, 3vw, 1.5rem)',
-                fontWeight: '600',
-                margin: 0
-              }}>All Service Requests</h2>
-              <span style={{
-                fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                color: 'var(--text-color)',
-                opacity: 0.8,
-                whiteSpace: 'nowrap'
-              }}>
-                {filteredBookings.length} {filteredBookings.length === 1 ? 'booking' : 'bookings'}
-              </span>
-            </div>
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.value;
 
-            {/* Tabs - Mobile friendly */}
-            <div style={{
-              display: 'flex',
-              overflowX: 'auto',
-              gap: '0.5rem',
-              paddingBottom: '1rem',
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
-              WebkitOverflowScrolling: 'touch'
-            }}>
-              {tabs.map((tab) => {
-                const isActive = activeTab === tab.value;
-                const count = bookings.filter(b => tab.value === 'all' ? true : b.status === tab.value).length;
-                
-                return (
-                  <button
-                    key={tab.value}
-                    onClick={() => setActiveTab(tab.value)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.625rem 1.25rem',
-                      backgroundColor: isActive ? 'var(--accent-color)' : 'var(--card-bg)',
-                      color: isActive ? 'white' : 'var(--text-color)',
-                      border: `1px solid ${isActive ? 'var(--accent-color)' : 'var(--border-color)'}`,
-                      borderRadius: '0.75rem',
-                      cursor: 'pointer',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                      fontWeight: '500',
-                      whiteSpace: 'nowrap',
-                      transition: 'all 0.2s',
-                      flexShrink: 0
-                    }}
-                  >
-                    {tab.label}
-                    <span style={{
-                      backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : 'var(--border-color)',
-                      color: isActive ? 'white' : 'var(--text-color)',
-                      padding: '0.125rem 0.5rem',
-                      borderRadius: '9999px',
-                      fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)'
-                    }}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+            return (
+              <button
+                key={tab.value}
+                onClick={() => {
+                  setActiveTab(tab.value);
+                  setPage(1);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.625rem 1.25rem',
+                  backgroundColor: isActive ? 'var(--accent-color)' : 'var(--card-bg)',
+                  color: isActive ? 'white' : 'var(--text-color)',
+                  border: `1px solid ${isActive ? 'var(--accent-color)' : 'var(--border-color)'}`,
+                  borderRadius: '0.75rem',
+                  cursor: 'pointer',
+                  fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+                  fontWeight: '500',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s',
+                  flexShrink: 0
+                }}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Bookings List */}
         <div style={{ padding: '1.25rem' }}>
-          {filteredBookings.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '3rem 1rem'
-            }}>
-              <Calendar size={48} style={{ 
-                margin: '0 auto 1rem', 
-                opacity: 0.5 
-              }} />
+          {loading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
+              <Loader2 size={48} style={{ color: 'var(--accent-color)' }} className="animate-spin" />
+            </div>
+          ) : filteredBookings.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+              <Calendar size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
               <h3 style={{
                 fontSize: 'clamp(1.25rem, 3vw, 1.5rem)',
                 fontWeight: '600',
                 marginBottom: '0.5rem'
               }}>No bookings found</h3>
-              <p style={{ 
-                opacity: 0.7,
-                fontSize: 'clamp(0.875rem, 2vw, 1.125rem)'
-              }}>Try adjusting your filters or search criteria</p>
+              <p style={{ opacity: 0.7, fontSize: 'clamp(0.875rem, 2vw, 1.125rem)' }}>
+                {searchQuery ? 'Try adjusting your search' : 'No bookings in this category yet'}
+              </p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {filteredBookings.map((booking) => {
                 const statusStyle = getStatusColor(booking.status);
                 const paymentStyle = getPaymentStatusColor(booking.paymentStatus);
-                
+                const isActionLoading = actionLoading === booking._id;
+                const seeker = booking.seekerId;
+
                 return (
-                  <div key={booking.id} style={{
+                  <div key={booking._id} style={{
                     backgroundColor: 'var(--background)',
                     border: '1px solid var(--border-color)',
                     borderRadius: '0.75rem',
                     overflow: 'hidden',
                     transition: 'all 0.2s'
                   }}>
-                    {/* Booking Header - Mobile Optimized */}
+                    {/* Booking Header */}
                     <div style={{
                       display: 'flex',
                       flexDirection: 'column',
@@ -589,336 +507,187 @@ const ServiceProviderBookings = () => {
                     }}>
                       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
                         <div style={{
-                          width: '40px',
-                          height: '40px',
+                          width: '48px',
+                          height: '48px',
                           borderRadius: '50%',
                           overflow: 'hidden',
-                          flexShrink: 0
+                          flexShrink: 0,
+                          backgroundColor: 'var(--accent-fade)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
                         }}>
-                          <img 
-                            src={booking.customer.avatar} 
-                            alt={booking.customer.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
+                          {seeker?.profileImage ? (
+                            <img
+                              src={seeker.profileImage}
+                              alt={seeker?.name || 'Customer'}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--accent-color)' }}>
+                              {seeker?.name?.charAt(0) || 'C'}
+                            </span>
+                          )}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ 
-                            display: 'flex', 
-                            flexDirection: 'column',
-                            gap: '0.5rem'
-                          }}>
-                            <div style={{ 
-                              display: 'flex', 
-                              flexWrap: 'wrap', 
-                              alignItems: 'center',
-                              gap: '0.5rem',
-                              rowGap: '0.25rem'
-                            }}>
-                              <h3 style={{
-                                fontSize: 'clamp(1rem, 2.5vw, 1.25rem)',
-                                fontWeight: '600',
-                                margin: 0,
-                                wordBreak: 'break-word'
-                              }}>{booking.customer.name}</h3>
-                              <div style={{ 
-                                display: 'flex', 
-                                flexWrap: 'wrap',
-                                gap: '0.375rem'
-                              }}>
-                                <span style={{
-                                  padding: '0.25rem 0.625rem',
-                                  borderRadius: '9999px',
-                                  fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                                  fontWeight: '600',
-                                  backgroundColor: `${statusStyle.background}20`,
-                                  color: statusStyle.color,
-                                  whiteSpace: 'nowrap'
-                                }}>
-                                  {statusStyle.text}
-                                </span>
-                                <span style={{
-                                  padding: '0.25rem 0.625rem',
-                                  borderRadius: '9999px',
-                                  fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                                  fontWeight: '600',
-                                  backgroundColor: `${paymentStyle.color}20`,
-                                  color: paymentStyle.color,
-                                  whiteSpace: 'nowrap'
-                                }}>
-                                  {paymentStyle.text}
-                                </span>
-                              </div>
-                            </div>
-                            <p style={{
-                              fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                              color: 'var(--text-color)',
-                              opacity: 0.8,
+                          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem' }}>
+                            <h3 style={{
+                              fontSize: 'clamp(1rem, 2.5vw, 1.25rem)',
+                              fontWeight: '600',
                               margin: 0,
                               wordBreak: 'break-word'
-                            }}>{booking.service.name}</p>
+                            }}>{seeker?.name || 'Customer'}</h3>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                              <span style={{
+                                padding: '0.25rem 0.625rem',
+                                borderRadius: '9999px',
+                                fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
+                                fontWeight: '600',
+                                backgroundColor: `${statusStyle.background}20`,
+                                color: statusStyle.color,
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {statusStyle.text}
+                              </span>
+                              <span style={{
+                                padding: '0.25rem 0.625rem',
+                                borderRadius: '9999px',
+                                fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
+                                fontWeight: '600',
+                                backgroundColor: `${paymentStyle.color}20`,
+                                color: paymentStyle.color,
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {paymentStyle.text}
+                              </span>
+                              {booking.priority === 'urgent' && (
+                                <span style={{
+                                  padding: '0.25rem 0.625rem',
+                                  borderRadius: '9999px',
+                                  fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
+                                  fontWeight: '600',
+                                  backgroundColor: '#fee2e2',
+                                  color: '#dc2626',
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  Urgent
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
-                      
-                      {/* Booking Details - Mobile Stacked */}
-                      <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.5rem'
-                      }}>
-                        <div style={{
+
+                      {/* Booking Details */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                        <span style={{
+                          fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
+                          color: 'var(--text-color)',
+                          opacity: 0.7,
                           display: 'flex',
-                          flexWrap: 'wrap',
-                          gap: '0.75rem',
-                          rowGap: '0.5rem'
+                          alignItems: 'center',
+                          gap: '0.25rem'
                         }}>
-                          <span style={{
-                            fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                            color: 'var(--text-color)',
-                            opacity: 0.7,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            flexShrink: 0
-                          }}>
-                            <Calendar size={14} />
-                            {booking.date} • {booking.time}
-                          </span>
-                          <span style={{
-                            fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                            color: 'var(--text-color)',
-                            opacity: 0.7,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            flexShrink: 0
-                          }}>
-                            <Clock size={14} />
-                            {booking.service.duration} hour{booking.service.duration > 1 ? 's' : ''}
-                          </span>
-                          <span style={{
-                            fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                            color: 'var(--text-color)',
-                            opacity: 0.7,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            flexShrink: 0
-                          }}>
-                            <DollarSign size={14} />
-                            ${booking.price}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {/* Action Buttons - Mobile Optimized */}
-                      <div style={{ 
-                        display: 'flex', 
-                        gap: '0.5rem',
-                        flexWrap: 'wrap'
-                      }}>
-                        <button
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '0.375rem',
-                            padding: '0.5rem 0.875rem',
-                            backgroundColor: 'transparent',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: '0.5rem',
-                            color: 'var(--text-color)',
-                            fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            flex: '1 1 auto'
-                          }}
-                        >
-                          <Eye size={14} />
-                          View
-                        </button>
-                        <button
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '0.5rem',
-                            backgroundColor: 'transparent',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: '0.5rem',
-                            color: 'var(--text-color)',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            flexShrink: 0
-                          }}
-                        >
-                          <MoreVertical size={14} />
-                        </button>
+                          <Calendar size={14} />
+                          {formatDate(booking.bookingDate)} • {formatTime(booking.bookingTime)}
+                        </span>
+                        <span style={{
+                          fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
+                          color: 'var(--accent-color)',
+                          fontWeight: '600',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem'
+                        }}>
+                          <DollarSign size={14} />
+                          ₹{booking.totalPrice}
+                        </span>
                       </div>
                     </div>
 
-                    {/* Expanded Details - Hidden by default, shown on click */}
-                    <div style={{
-                      padding: '1.25rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '1rem'
-                    }}>
-                      {/* Customer Info */}
+                    {/* Expanded Details */}
+                    <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {/* Customer Contact */}
                       <div>
-                        <h4 style={{
-                          fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                          fontWeight: '600',
-                          margin: '0 0 0.75rem 0',
-                          color: 'var(--text-color)'
-                        }}>Customer Details</h4>
-                        <div style={{ 
-                          display: 'flex', 
-                          flexDirection: 'column', 
-                          gap: '0.5rem' 
-                        }}>
-                          <div style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '0.5rem',
-                            flexWrap: 'wrap'
-                          }}>
-                            <Phone size={16} style={{ opacity: 0.7, flexShrink: 0 }} />
-                            <a 
-                              href={`tel:${booking.customer.phone}`}
-                              style={{
-                                color: 'var(--text-color)',
-                                textDecoration: 'none',
-                                fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                                wordBreak: 'break-all'
-                              }}
-                            >
-                              {booking.customer.phone}
-                            </a>
-                          </div>
-                          <div style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '0.5rem',
-                            flexWrap: 'wrap'
-                          }}>
-                            <Mail size={16} style={{ opacity: 0.7, flexShrink: 0 }} />
-                            <a 
-                              href={`mailto:${booking.customer.email}`}
-                              style={{
-                                color: 'var(--text-color)',
-                                textDecoration: 'none',
-                                fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                                wordBreak: 'break-all'
-                              }}
-                            >
-                              {booking.customer.email}
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Service Details */}
-                      <div>
-                        <h4 style={{
-                          fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                          fontWeight: '600',
-                          margin: '0 0 0.75rem 0',
-                          color: 'var(--text-color)'
-                        }}>Service Details</h4>
-                        <div style={{ 
-                          display: 'flex', 
-                          flexDirection: 'column', 
-                          gap: '0.5rem' 
-                        }}>
-                          <div style={{ 
-                            display: 'flex', 
-                            gap: '0.5rem', 
-                            flexWrap: 'wrap' 
-                          }}>
-                            <span style={{
-                              padding: '0.25rem 0.75rem',
-                              backgroundColor: 'var(--border-color)',
-                              borderRadius: '9999px',
-                              fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                              whiteSpace: 'nowrap'
-                            }}>
-                              {booking.service.category}
-                            </span>
-                            <span style={{
-                              padding: '0.25rem 0.75rem',
-                              backgroundColor: booking.service.priority === 'urgent' ? '#fee2e2' : '#dbeafe',
-                              color: booking.service.priority === 'urgent' ? '#dc2626' : '#1d4ed8',
-                              borderRadius: '9999px',
-                              fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                              fontWeight: '500',
-                              whiteSpace: 'nowrap'
-                            }}>
-                              {booking.service.priority === 'urgent' ? 'Urgent' : 'Standard'}
-                            </span>
-                          </div>
-                          <div style={{ 
-                            display: 'flex', 
-                            alignItems: 'flex-start', 
-                            gap: '0.5rem' 
-                          }}>
-                            <MapPin size={16} style={{ opacity: 0.7, flexShrink: 0, marginTop: '0.125rem' }} />
-                            <span style={{ 
-                              fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)', 
-                              opacity: 0.8,
-                              wordBreak: 'break-word'
-                            }}>
-                              {booking.address}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Customer Notes */}
-                      {booking.notes && (
-                        <div>
-                          <div style={{
-                            backgroundColor: 'var(--border-color)',
-                            opacity: 0.5,
-                            padding: '0.875rem',
-                            borderRadius: '0.75rem'
-                          }}>
-                            <div style={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '0.5rem', 
-                              marginBottom: '0.5rem' 
-                            }}>
-                              <MessageCircle size={16} />
-                              <h5 style={{
-                                fontSize: 'clamp(0.875rem, 2vw, 0.875rem)',
-                                fontWeight: '600',
-                                margin: 0,
-                                color: 'var(--text-color)'
-                              }}>Customer Notes</h5>
+                        <h4 style={{ fontSize: 'clamp(0.875rem, 2vw, 1rem)', fontWeight: '600', margin: '0 0 0.75rem 0' }}>
+                          Customer Details
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {seeker?.user?.phone && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <Phone size={16} style={{ opacity: 0.7 }} />
+                              <a href={`tel:${seeker.user.phone}`} style={{ color: 'var(--text-color)', textDecoration: 'none', fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)' }}>
+                                {seeker.user.phone}
+                              </a>
                             </div>
-                            <p style={{
-                              fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                              opacity: 0.8,
-                              margin: 0,
-                              lineHeight: '1.5',
-                              wordBreak: 'break-word'
-                            }}>{booking.notes}</p>
-                          </div>
+                          )}
+                          {seeker?.user?.email && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <Mail size={16} style={{ opacity: 0.7 }} />
+                              <a href={`mailto:${seeker.user.email}`} style={{ color: 'var(--text-color)', textDecoration: 'none', fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)' }}>
+                                {seeker.user.email}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Service Address */}
+                      {booking.serviceAddress && (
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                          <MapPin size={16} style={{ opacity: 0.7, flexShrink: 0, marginTop: '0.125rem' }} />
+                          <span style={{ fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)', opacity: 0.8, wordBreak: 'break-word' }}>
+                            {booking.serviceAddress.street}
+                            {booking.serviceAddress.city && `, ${booking.serviceAddress.city}`}
+                            {booking.serviceAddress.state && `, ${booking.serviceAddress.state}`}
+                          </span>
                         </div>
                       )}
 
-                      {/* Action Buttons - Mobile Optimized */}
-                      <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.75rem',
-                        paddingTop: '0.5rem'
-                      }}>
+                      {/* Customer Notes */}
+                      {booking.additionalNote && (
+                        <div style={{
+                          backgroundColor: 'var(--border-color)',
+                          opacity: 0.7,
+                          padding: '0.875rem',
+                          borderRadius: '0.75rem'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                            <MessageCircle size={16} />
+                            <h5 style={{ fontSize: 'clamp(0.875rem, 2vw, 0.875rem)', fontWeight: '600', margin: 0 }}>
+                              Customer Notes
+                            </h5>
+                          </div>
+                          <p style={{ fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)', opacity: 0.8, margin: 0, lineHeight: '1.5' }}>
+                            {booking.additionalNote}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Cancellation Reason */}
+                      {booking.cancellationReason && (
+                        <div style={{
+                          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                          padding: '0.875rem',
+                          borderRadius: '0.75rem',
+                          borderLeft: '3px solid #ef4444'
+                        }}>
+                          <p style={{ fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)', fontWeight: '600', color: '#ef4444', margin: '0 0 0.25rem 0' }}>
+                            Cancellation Reason:
+                          </p>
+                          <p style={{ fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)', opacity: 0.8, margin: 0 }}>
+                            {booking.cancellationReason}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
                         {booking.status === 'pending' && (
                           <>
-                            <button 
-                              onClick={() => handleAccept(booking.id)}
+                            <button
+                              onClick={() => handleAccept(booking._id)}
+                              disabled={isActionLoading}
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -932,43 +701,21 @@ const ServiceProviderBookings = () => {
                                 cursor: 'pointer',
                                 fontWeight: '600',
                                 fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                                transition: 'all 0.2s',
-                                width: '100%'
+                                width: '100%',
+                                opacity: isActionLoading ? 0.7 : 1
                               }}
                             >
-                              <CheckCircle size={18} />
+                              {isActionLoading ? (
+                                <Loader2 size={18} className="animate-spin" />
+                              ) : (
+                                <CheckCircle size={18} />
+                              )}
                               Accept Booking
                             </button>
-                            <div style={{
-                              display: 'flex',
-                              gap: '0.75rem',
-                              flexWrap: 'wrap'
-                            }}>
+                            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                               <button
-                                onClick={() => handleReschedule(booking.id)}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '0.5rem',
-                                  padding: '0.75rem',
-                                  backgroundColor: 'transparent',
-                                  border: '1px solid var(--border-color)',
-                                  borderRadius: '0.75rem',
-                                  cursor: 'pointer',
-                                  color: 'var(--text-color)',
-                                  fontWeight: '600',
-                                  fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                                  transition: 'all 0.2s',
-                                  flex: '1 1 auto',
-                                  minWidth: '140px'
-                                }}
-                              >
-                                <CalendarClock size={18} />
-                                Reschedule
-                              </button>
-                              <button
-                                onClick={() => handleReject(booking.id)}
+                                onClick={() => handleReject(booking._id)}
+                                disabled={isActionLoading}
                                 style={{
                                   display: 'flex',
                                   alignItems: 'center',
@@ -982,9 +729,9 @@ const ServiceProviderBookings = () => {
                                   cursor: 'pointer',
                                   fontWeight: '600',
                                   fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                                  transition: 'all 0.2s',
                                   flex: '1 1 auto',
-                                  minWidth: '140px'
+                                  minWidth: '140px',
+                                  opacity: isActionLoading ? 0.7 : 1
                                 }}
                               >
                                 <XCircle size={18} />
@@ -993,36 +740,35 @@ const ServiceProviderBookings = () => {
                             </div>
                           </>
                         )}
-                        
-                        {booking.status === 'confirmed' && (
-                          <div style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.75rem'
-                          }}>
+
+                        {(booking.status === 'accepted' || booking.status === 'confirmed') && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            {seeker?.user?.phone && (
+                              <button
+                                onClick={() => handleContactCustomer(seeker.user.phone, seeker.user.email)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '0.5rem',
+                                  padding: '0.75rem',
+                                  backgroundColor: 'var(--accent-color)',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '0.75rem',
+                                  cursor: 'pointer',
+                                  fontWeight: '600',
+                                  fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+                                  width: '100%'
+                                }}
+                              >
+                                <Phone size={18} />
+                                Contact Customer
+                              </button>
+                            )}
                             <button
-                              onClick={() => handleContactCustomer(booking.customer.phone, booking.customer.email)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '0.5rem',
-                                padding: '0.75rem',
-                                backgroundColor: 'var(--accent-color)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '0.75rem',
-                                cursor: 'pointer',
-                                fontWeight: '600',
-                                fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                                width: '100%'
-                              }}
-                            >
-                              <Phone size={18} />
-                              Contact Customer
-                            </button>
-                            <button
-                              onClick={() => handleMarkAsCompleted(booking.id)}
+                              onClick={() => handleCancel(booking._id)}
+                              disabled={isActionLoading}
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -1036,18 +782,19 @@ const ServiceProviderBookings = () => {
                                 color: 'var(--text-color)',
                                 fontWeight: '600',
                                 fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                                width: '100%'
+                                width: '100%',
+                                opacity: isActionLoading ? 0.7 : 1
                               }}
                             >
-                              <CheckCircle size={18} />
-                              Mark as Completed
+                              <XCircle size={18} />
+                              Cancel Booking
                             </button>
                           </div>
                         )}
-                        
-                        {(booking.status === 'completed' || booking.status === 'cancelled') && (
+
+                        {(booking.status === 'completed' || booking.status === 'cancelled' || booking.status === 'rejected') && seeker?.user?.phone && (
                           <button
-                            onClick={() => handleContactCustomer(booking.customer.phone, booking.customer.email)}
+                            onClick={() => handleContactCustomer(seeker.user.phone, seeker.user.email)}
                             style={{
                               display: 'flex',
                               alignItems: 'center',
@@ -1075,79 +822,52 @@ const ServiceProviderBookings = () => {
               })}
             </div>
           )}
+
+          {/* Pagination */}
+          {pagination && pagination.totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1.5rem' }}>
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1 || loading}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: 'var(--card-bg)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '0.5rem',
+                  cursor: 'pointer',
+                  color: 'var(--text-color)',
+                  opacity: page === 1 ? 0.5 : 1
+                }}
+              >
+                Previous
+              </button>
+              <span style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: 'var(--accent-color)',
+                color: 'white',
+                borderRadius: '0.5rem'
+              }}>
+                {page} / {pagination.totalPages}
+              </span>
+              <button
+                onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+                disabled={page === pagination.totalPages || loading}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: 'var(--card-bg)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '0.5rem',
+                  cursor: 'pointer',
+                  color: 'var(--text-color)',
+                  opacity: page === pagination.totalPages ? 0.5 : 1
+                }}
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Mobile Responsive CSS */}
-      <style jsx="true">{`
-        @media (max-width: 768px) {
-          div[style*="padding: 1rem"] {
-            padding: 0.75rem;
-          }
-          
-          div[style*="padding: 1.25rem"] {
-            padding: 1rem;
-          }
-          
-          div[style*="gap: 1.5rem"] {
-            gap: 1rem;
-          }
-          
-          div[style*="padding: 1.5rem"] {
-            padding: 1rem;
-          }
-          
-          div[style*="borderRadius: 1rem"] {
-            border-radius: 0.75rem;
-          }
-        }
-        
-        @media (max-width: 480px) {
-          div[style*="padding: 1rem"] {
-            padding: 0.5rem;
-          }
-          
-          div[style*="gap: 2rem"] {
-            gap: 1rem;
-          }
-          
-          button[style*="minWidth: 140px"] {
-            min-width: 100% !important;
-          }
-          
-          div[style*="flexDirection: row"] {
-            flex-direction: column;
-          }
-          
-          div[style*="gridTemplateColumns"] {
-            grid-template-columns: 1fr;
-          }
-        }
-        
-        /* Hide scrollbar for tabs on mobile */
-        div[style*="overflowX: auto"]::-webkit-scrollbar {
-          display: none;
-        }
-        
-        /* Better touch targets for mobile */
-        button {
-          min-height: 44px;
-        }
-        
-        input, textarea {
-          font-size: 16px; /* Prevent zoom on iOS */
-        }
-        
-        /* Prevent text overflow */
-        * {
-          max-width: 100%;
-        }
-        
-        /* Better link handling on mobile */
-        a {
-          touch-action: manipulation;
-        }
-      `}</style>
     </div>
   );
 };

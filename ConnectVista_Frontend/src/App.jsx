@@ -18,6 +18,7 @@ import ErrorPage from "./pages/Common/Error";
 
 import Layout from "./layout/CommonLayout";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { SocketProvider } from "./contexts/SocketContext";
 
 // Import layouts and components
 import UserLayout from "./layout/UserLayout";
@@ -27,6 +28,7 @@ import UserServices from "./pages/User/UserServices";
 import UserExplore from "./pages/User/UserExplore";
 import UserProfile from "./pages/User/UserProfile";
 import UserNotification from "./pages/User/UserNotification";
+import UserBookings from "./pages/User/UserBookings";
 import ServiceProviderDashboard from "./pages/ServiceProvider/ServiceProviderDashboard";
 import ServiceProviderProfile from "./pages/ServiceProvider/ServiceProviderProfile";
 import ServiceManagement from "./pages/ServiceProvider/ServiceManagement";
@@ -39,8 +41,9 @@ import ServiceProviderSubscription from "./pages/ServiceProvider/ServiceProvider
 function App() {
   return (
     <AuthProvider>
-      <ThemeProvider>
-        <Router>
+      <SocketProvider>
+        <ThemeProvider>
+          <Router>
           <Toaster position="top-center" reverseOrder={false} />
           <Routes>
             {/* ✅ Public Routes WITH Layout (Header/Footer) */}
@@ -72,6 +75,7 @@ function App() {
               <Route path="explore" element={<UserExplore />} />
               <Route path="profile" element={<UserProfile />} />
               <Route path="notifications" element={<UserNotification />} />
+              <Route path="bookings" element={<UserBookings />} />
               <Route path="about" element={<CommonAbout />} />
               <Route path="contact" element={<CommonContact />} />
             </Route>
@@ -103,8 +107,9 @@ function App() {
             {/* ✅ Error Routes */}
             <Route path="*" element={<ErrorPage />} />
           </Routes>
-        </Router>
-      </ThemeProvider>
+          </Router>
+        </ThemeProvider>
+      </SocketProvider>
     </AuthProvider>
   );
 }

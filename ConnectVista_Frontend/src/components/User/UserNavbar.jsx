@@ -1,31 +1,58 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Moon, Sun, Menu, X, User, Bell, MessageSquare } from "lucide-react";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useSocket } from "../../contexts/SocketContext";
 import { useState, useRef, useEffect } from "react";
+import { serviceAPI } from "../../services/serviceAPI";
 import resources from "../../resources";
 
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
+  const { unreadCount, setInitialUnreadCount, updateUnreadCount } = useSocket();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [hoverTimeout, setHoverTimeout] = useState(null);
+  const [notifications, setNotifications] = useState([]);
   const notificationsRef = useRef(null);
 
-  // Mock notifications data
-  const notifications = [
-    { id: 1, type: "booking", message: "Your plumbing service is confirmed for tomorrow", time: "2 min ago", read: false },
-    { id: 2, type: "message", message: "New message from Clean Sweep Co.", time: "1 hour ago", read: true },
-    { id: 3, type: "reminder", message: "Reminder: Electrical service tomorrow at 10 AM", time: "3 hours ago", read: true },
-    { id: 4, type: "review", message: "Your review has been published", time: "1 day ago", read: true },
-  ];
+  // Fetch unread count on mount
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await serviceAPI.getUnreadCount();
+        if (response.success) {
+          setInitialUnreadCount(response.data.unreadCount);
+        }
+      } catch (error) {
+        console.error('Failed to fetch unread count:', error);
+      }
+    };
+    fetchUnreadCount();
+  }, [setInitialUnreadCount]);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  // Fetch notifications when dropdown opens
+  useEffect(() => {
+    if (notificationsOpen) {
+      const fetchNotifications = async () => {
+        try {
+          const response = await serviceAPI.getNotifications({ limit: 5 });
+          if (response.success) {
+            setNotifications(response.data.notifications);
+          }
+        } catch (error) {
+          console.error('Failed to fetch notifications:', error);
+        }
+      };
+      fetchNotifications();
+    }
+  }, [notificationsOpen]);
 
   const navLinks = [
     { to: "/user/home", label: "Home" },
     { to: "/user/services", label: "Services" },
+    { to: "/user/bookings", label: "Bookings" },
     { to: "/user/about", label: "About" },
     { to: "/user/contact", label: "Contact" },
   ];
@@ -80,10 +107,31 @@ const Navbar = () => {
   };
 
   // Handle notification item click
-  const handleNotificationItemClick = (notificationId) => {
-    // Handle notification click (mark as read, etc.)
-    console.log(`Notification ${notificationId} clicked`);
+  const handleNotificationItemClick = async (notificationId) => {
+    try {
+      await serviceAPI.markNotificationAsRead(notificationId);
+      const response = await serviceAPI.getUnreadCount();
+      if (response.success) {
+        updateUnreadCount(response.data.unreadCount);
+      }
+      setNotifications(prev => 
+        prev.map(n => n._id === notificationId ? { ...n, isRead: true } : n)
+      );
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
     setNotificationsOpen(false);
+  };
+
+  // Mark all as read
+  const handleMarkAllAsRead = async () => {
+    try {
+      await serviceAPI.markAllNotificationsAsRead();
+      updateUnreadCount(0);
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+    }
   };
 
   // Close notifications dropdown when clicking outside
@@ -229,6 +277,7 @@ const Navbar = () => {
                       </h3>
                       {unreadCount > 0 && (
                         <button 
+                          onClick={handleMarkAllAsRead}
                           className="text-sm sm:text-base font-medium cursor-pointer hover:underline transition-all duration-300"
                           style={{ 
                             color: "var(--accent-color)",
@@ -245,31 +294,26 @@ const Navbar = () => {
                     {notifications.length > 0 ? (
                       notifications.map((notification) => (
                         <div 
-                          key={notification.id}
+                          key={notification._id}
                           className={`px-3 sm:px-4 py-2 sm:py-3 hover:opacity-90 cursor-pointer transition-all ${
-                            !notification.read ? 'opacity-100' : 'opacity-70'
+                            !notification.isRead ? 'opacity-100' : 'opacity-70'
                           }`}
                           style={{
-                            backgroundColor: !notification.read ? 'var(--accent-fade)' : 'transparent',
+                            backgroundColor: !notification.isRead ? 'var(--accent-fade)' : 'transparent',
                             borderBottom: '1px solid var(--border-color)'
                           }}
-                          onClick={() => handleNotificationItemClick(notification.id)}
+                          onClick={() => handleNotificationItemClick(notification._id)}
                         >
                           <div className="flex items-start gap-2 sm:gap-3">
                             <div className="mt-0.5 sm:mt-1">
-                              {notification.type === 'message' && (
-                                <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" style={{ color: "var(--accent-color)" }} />
-                              )}
-                              {notification.type === 'booking' && (
-                                <Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4" style={{ color: "var(--accent-color)" }} />
-                              )}
+                              <Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4" style={{ color: "var(--accent-color)" }} />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm sm:text-base truncate" style={{ color: "var(--text-color)" }}>
-                                {notification.message}
+                              <p className="font-medium text-sm sm:text-base" style={{ color: "var(--text-color)" }}>
+                                {notification.title}
                               </p>
                               <p className="text-xs sm:text-sm mt-0.5" style={{ color: "var(--text-color)", opacity: 0.7 }}>
-                                {notification.time}
+                                {notification.message}
                               </p>
                             </div>
                           </div>

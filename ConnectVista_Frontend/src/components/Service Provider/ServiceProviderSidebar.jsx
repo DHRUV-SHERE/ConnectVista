@@ -13,9 +13,28 @@ import {
   XCircle
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSocket } from '../../contexts/SocketContext';
+import { useEffect } from 'react';
+import { serviceAPI } from '../../services/serviceAPI';
 
 const ServiceProviderSidebar = ({ sidebarOpen, setSidebarOpen, currentPath }) => {
   const { user, profile, logout } = useAuth();
+  const { unreadCount, setInitialUnreadCount } = useSocket();
+  
+  // Fetch unread count on mount
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await serviceAPI.getUnreadCount();
+        if (response.success) {
+          setInitialUnreadCount(response.data.unreadCount);
+        }
+      } catch (error) {
+        console.error('Failed to fetch unread count:', error);
+      }
+    };
+    fetchUnreadCount();
+  }, [setInitialUnreadCount]);
   
   const navigation = [
     { name: 'Dashboard', href: '/service-provider/dashboard', icon: LayoutDashboard },
@@ -193,7 +212,7 @@ const ServiceProviderSidebar = ({ sidebarOpen, setSidebarOpen, currentPath }) =>
                 onClick={() => setSidebarOpen(false)}
                 className={`
                   flex items-center gap-3 rounded-lg px-3 py-3
-                  text-base font-medium transition-all duration-200
+                  text-base font-medium transition-all duration-200 relative
                   ${active 
                     ? 'text-white bg-[var(--accent-color)]' 
                     : 'text-[var(--text-color)] hover:bg-[var(--hover-bg)]'
@@ -202,6 +221,18 @@ const ServiceProviderSidebar = ({ sidebarOpen, setSidebarOpen, currentPath }) =>
               >
                 <Icon size={22} />
                 <span>{item.name}</span>
+                {item.name === 'Notifications' && unreadCount > 0 && (
+                  <span 
+                    className="ml-auto w-5 h-5 rounded-full flex items-center justify-center text-white font-medium"
+                    style={{
+                      backgroundColor: active ? 'white' : 'var(--accent-color)',
+                      color: active ? 'var(--accent-color)' : 'white',
+                      fontSize: '10px'
+                    }}
+                  >
+                    {unreadCount}
+                  </span>
+                )}
               </Link>
             );
           })}

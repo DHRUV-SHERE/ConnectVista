@@ -157,6 +157,245 @@ export const serviceAPI = {
     await throttleRequest();
     const response = await api.post('/api/services/provider', serviceData);
     return response.data;
+  },
+
+  // ==========================================
+  // SEEKER-SPECIFIC SERVICE DISCOVERY APIs
+  // ==========================================
+
+  /**
+   * Get all service categories with aggregated price ranges
+   * Returns services with min/max prices from all providers
+   */
+  getSeekerServices: async () => {
+    await throttleRequest();
+    const response = await api.get('/api/seeker/services');
+    return response.data;
+  },
+
+  /**
+   * Get nearby providers for a specific service category
+   * @param {string} categoryId - Service category ID (e.g., 'plumbing_water_services')
+   * @param {object} options - Query options
+   * @param {number} options.lat - Seeker latitude (required)
+   * @param {number} options.lng - Seeker longitude (required)
+   * @param {number} options.radius - Search radius in km (default: 15, max: 50)
+   * @param {string} options.sortBy - Sort order: distance|rating|price-low|price-high|experience
+   * @param {number} options.page - Page number for pagination
+   * @param {number} options.limit - Results per page (max: 50)
+   */
+  getNearbyProviders: async (categoryId, options = {}) => {
+    await throttleRequest();
+    const { lat, lng, radius = 15, sortBy = 'distance', page = 1, limit = 20 } = options;
+
+    const params = new URLSearchParams();
+    if (lat) params.append('lat', lat);
+    if (lng) params.append('lng', lng);
+    if (radius) params.append('radius', radius);
+    if (sortBy) params.append('sortBy', sortBy);
+    if (page) params.append('page', page);
+    if (limit) params.append('limit', limit);
+
+    const response = await api.get(`/api/seeker/services/${categoryId}/providers?${params}`);
+    return response.data;
+  },
+
+  /**
+   * Get detailed provider profile including portfolio, reviews, and schedule
+   * @param {string} providerId - Provider ObjectId
+   */
+  getProviderFullDetails: async (providerId) => {
+    await throttleRequest();
+    const response = await api.get(`/api/seeker/providers/${providerId}`);
+    return response.data;
+  },
+
+  // ==========================================
+  // BOOKING APIs
+  // ==========================================
+
+  /**
+   * Create a new booking request
+   * @param {object} bookingData - Booking details
+   * @param {string} bookingData.providerId - Provider ObjectId
+   * @param {string} bookingData.serviceId - Service ObjectId (optional)
+   * @param {string} bookingData.bookingDate - Date in YYYY-MM-DD format
+   * @param {string} bookingData.bookingTime - Time in HH:MM format (24-hour)
+   * @param {string} bookingData.priority - 'normal' or 'urgent'
+   * @param {object} bookingData.serviceAddress - Service address object
+   * @param {string} bookingData.additionalNote - Optional notes
+   * @param {string} bookingData.contactPhone - Contact phone number
+   */
+  createBooking: async (bookingData) => {
+    await throttleRequest();
+    const response = await api.post('/api/bookings', bookingData);
+    return response.data;
+  },
+
+  /**
+   * Get seeker's booking history
+   * @param {object} options - Query options
+   * @param {string} options.status - Filter by status (pending, accepted, rejected, completed, cancelled)
+   * @param {number} options.page - Page number
+   * @param {number} options.limit - Results per page
+   */
+  getSeekerBookings: async (options = {}) => {
+    await throttleRequest();
+    const { status, page = 1, limit = 10 } = options;
+    const params = new URLSearchParams();
+    if (status && status !== 'all') params.append('status', status);
+    if (page) params.append('page', page);
+    if (limit) params.append('limit', limit);
+
+    const response = await api.get(`/api/bookings/seeker?${params}`);
+    return response.data;
+  },
+
+  /**
+   * Get provider's booking requests
+   * @param {object} options - Query options
+   * @param {string} options.status - Filter by status
+   * @param {number} options.page - Page number
+   * @param {number} options.limit - Results per page
+   */
+  getProviderBookings: async (options = {}) => {
+    await throttleRequest();
+    const { status, page = 1, limit = 10 } = options;
+    const params = new URLSearchParams();
+    if (status && status !== 'all') params.append('status', status);
+    if (page) params.append('page', page);
+    if (limit) params.append('limit', limit);
+
+    const response = await api.get(`/api/bookings/provider?${params}`);
+    return response.data;
+  },
+
+  /**
+   * Get single booking by ID
+   * @param {string} bookingId - Booking ObjectId
+   */
+  getBookingById: async (bookingId) => {
+    await throttleRequest();
+    const response = await api.get(`/api/bookings/${bookingId}`);
+    return response.data;
+  },
+
+  /**
+   * Accept a booking request (provider only)
+   * @param {string} bookingId - Booking ObjectId
+   */
+  acceptBooking: async (bookingId) => {
+    await throttleRequest();
+    const response = await api.patch(`/api/bookings/${bookingId}/accept`);
+    return response.data;
+  },
+
+  /**
+   * Reject a booking request (provider only)
+   * @param {string} bookingId - Booking ObjectId
+   * @param {string} reason - Optional rejection reason
+   */
+  rejectBooking: async (bookingId, reason = '') => {
+    await throttleRequest();
+    const response = await api.patch(`/api/bookings/${bookingId}/reject`, { reason });
+    return response.data;
+  },
+
+  /**
+   * Cancel a booking (seeker or provider)
+   * @param {string} bookingId - Booking ObjectId
+   * @param {string} reason - Optional cancellation reason
+   */
+  cancelBooking: async (bookingId, reason = '') => {
+    await throttleRequest();
+    const response = await api.patch(`/api/bookings/${bookingId}/cancel`, { reason });
+    return response.data;
+  },
+
+  // ==========================================
+  // NOTIFICATION APIs
+  // ==========================================
+
+  /**
+   * Get user's notifications
+   * @param {object} options - Query options
+   * @param {number} options.page - Page number
+   * @param {number} options.limit - Results per page
+   * @param {string} options.category - Filter by category (booking, payment, verification, system)
+   * @param {boolean} options.isRead - Filter by read status
+   */
+  getNotifications: async (options = {}) => {
+    await throttleRequest();
+    const { page = 1, limit = 20, category, isRead } = options;
+    const params = new URLSearchParams();
+    if (page) params.append('page', page);
+    if (limit) params.append('limit', limit);
+    if (category && category !== 'all') params.append('category', category);
+    if (isRead !== undefined) params.append('isRead', isRead);
+
+    const response = await api.get(`/api/notifications?${params}`);
+    return response.data;
+  },
+
+  /**
+   * Get unread notification count
+   */
+  getUnreadCount: async () => {
+    await throttleRequest();
+    const response = await api.get('/api/notifications/unread-count');
+    return response.data;
+  },
+
+  /**
+   * Mark a notification as read
+   * @param {string} notificationId - Notification ObjectId
+   */
+  markNotificationAsRead: async (notificationId) => {
+    await throttleRequest();
+    const response = await api.patch(`/api/notifications/${notificationId}/read`);
+    return response.data;
+  },
+
+  /**
+   * Mark all notifications as read
+   */
+  markAllNotificationsAsRead: async () => {
+    await throttleRequest();
+    const response = await api.patch('/api/notifications/read-all');
+    return response.data;
+  },
+
+  /**
+   * Delete a notification
+   * @param {string} notificationId - Notification ObjectId
+   */
+  deleteNotification: async (notificationId) => {
+    await throttleRequest();
+    const response = await api.delete(`/api/notifications/${notificationId}`);
+    return response.data;
+  },
+
+  // ==========================================
+  // SEEKER PROFILE APIs
+  // ==========================================
+
+  /**
+   * Get seeker profile
+   */
+  getSeekerProfile: async () => {
+    await throttleRequest();
+    const response = await api.get('/api/seeker/profile');
+    return response.data;
+  },
+
+  /**
+   * Update seeker profile
+   * @param {object} profileData - Profile data to update
+   */
+  updateSeekerProfile: async (profileData) => {
+    await throttleRequest();
+    const response = await api.put('/api/seeker/profile', profileData);
+    return response.data;
   }
 };
 

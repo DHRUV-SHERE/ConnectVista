@@ -1,99 +1,18 @@
-import { Calendar, Star, MessageSquare, TrendingUp, Bell, Check, X, Settings, Mail, DollarSign, AlertCircle, Clock, UserCheck, TrendingDown } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { Calendar, Star, MessageSquare, TrendingUp, Bell, Check, X, Settings, Mail, DollarSign, AlertCircle, Clock, UserCheck, Loader2, RefreshCw, Shield } from 'lucide-react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import toast from 'react-hot-toast';
+import { serviceAPI } from '../../services/serviceAPI';
+import { useSocket } from '../../contexts/SocketContext';
 
 const Notifications = () => {
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: 'booking',
-      title: 'New Booking Request',
-      message: 'John Smith requested "Emergency Pipe Repair" service for tomorrow at 10:00 AM',
-      time: '5 minutes ago',
-      read: false,
-      icon: Calendar,
-      priority: 'high',
-      action: 'view_booking'
-    },
-    {
-      id: 2,
-      type: 'review',
-      title: 'New 5-Star Review',
-      message: 'Sarah Johnson left an excellent review for your bathroom renovation service',
-      time: '1 hour ago',
-      read: false,
-      icon: Star,
-      priority: 'medium',
-      action: 'view_review'
-    },
-    {
-      id: 3,
-      type: 'message',
-      title: 'Customer Inquiry',
-      message: 'Mike Brown sent a message about urgent pipe installation needs',
-      time: '2 hours ago',
-      read: false,
-      icon: MessageSquare,
-      priority: 'high',
-      action: 'reply_message'
-    },
-    {
-      id: 4,
-      type: 'booking',
-      title: 'Booking Confirmed',
-      message: 'Emily Davis confirmed the water heater installation for January 22',
-      time: '3 hours ago',
-      read: true,
-      icon: Calendar,
-      priority: 'low',
-      action: 'view_booking'
-    },
-    {
-      id: 5,
-      type: 'analytics',
-      title: 'Performance Update',
-      message: 'Your profile views increased by 25% and bookings by 15% this week',
-      time: '1 day ago',
-      read: true,
-      icon: TrendingUp,
-      priority: 'low',
-      action: 'view_analytics'
-    },
-    {
-      id: 6,
-      type: 'payment',
-      title: 'Payment Received',
-      message: 'Payment of $850 received for booking #BK-2024-002',
-      time: '1 day ago',
-      read: true,
-      icon: DollarSign,
-      priority: 'medium',
-      action: 'view_payment'
-    },
-    {
-      id: 7,
-      type: 'alert',
-      title: 'Service Reminder',
-      message: 'You have 3 confirmed bookings scheduled for tomorrow',
-      time: '2 days ago',
-      read: true,
-      icon: AlertCircle,
-      priority: 'medium',
-      action: 'view_schedule'
-    },
-    {
-      id: 8,
-      type: 'review',
-      title: 'Review Response',
-      message: 'David Lee appreciated your response to his review',
-      time: '2 days ago',
-      read: true,
-      icon: UserCheck,
-      priority: 'low',
-      action: 'view_review'
-    }
-  ]);
-
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const { subscribe, setInitialUnreadCount } = useSocket();
+
   const [notificationSettings, setNotificationSettings] = useState({
     newBookings: true,
     newReviews: true,
@@ -104,24 +23,137 @@ const Notifications = () => {
     promotions: false
   });
 
-  const markAsRead = (id) => {
-    setNotifications(
-      notifications.map((notif) =>
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    );
+  // Get icon for notification category
+  const getCategoryIcon = (category, type) => {
+    switch (category) {
+      case 'booking':
+        return Calendar;
+      case 'payment':
+        return DollarSign;
+      case 'verification':
+        return Shield;
+      case 'review':
+        return Star;
+      case 'promotion':
+        return TrendingUp;
+      case 'system':
+      default:
+        if (type === 'success') return UserCheck;
+        if (type === 'error') return AlertCircle;
+        return Bell;
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((notif) => ({ ...notif, read: true })));
+  // Fetch notifications
+  const fetchNotifications = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await serviceAPI.getNotifications({
+        page,
+        limit: 20,
+        category: activeFilter === 'all' || activeFilter === 'unread' ? undefined : activeFilter
+      });
+
+      if (response.success) {
+        let notifs = response.data.notifications || [];
+        // Filter for unread if that tab is active
+        if (activeFilter === 'unread') {
+          notifs = notifs.filter(n => !n.isRead);
+        }
+        setNotifications(notifs);
+        setPagination(response.data.pagination);
+      }
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      toast.error("Failed to load notifications");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, activeFilter]);
+
+  // Fetch unread count
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const response = await serviceAPI.getUnreadCount();
+      if (response.success) {
+        setUnreadCount(response.data.count);
+        setInitialUnreadCount(response.data.count);
+      }
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
+    }
+  }, [setInitialUnreadCount]);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchNotifications();
+    fetchUnreadCount();
+  }, [fetchNotifications, fetchUnreadCount]);
+
+  // Subscribe to real-time events
+  useEffect(() => {
+    const unsubscribeNew = subscribe('booking:new', (data) => {
+      toast.success('New booking request received!', { icon: '📅', duration: 5000 });
+      fetchNotifications();
+      fetchUnreadCount();
+    });
+
+    const unsubscribeCancelled = subscribe('booking:cancelled', () => {
+      fetchNotifications();
+      fetchUnreadCount();
+    });
+
+    return () => {
+      unsubscribeNew();
+      unsubscribeCancelled();
+    };
+  }, [subscribe, fetchNotifications, fetchUnreadCount]);
+
+  const markAsRead = async (id) => {
+    try {
+      const response = await serviceAPI.markNotificationAsRead(id);
+      if (response.success) {
+        setNotifications(prev =>
+          prev.map(n => n._id === id ? { ...n, isRead: true, readAt: new Date() } : n)
+        );
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error("Error marking as read:", error);
+      toast.error("Failed to mark as read");
+    }
   };
 
-  const deleteNotification = (id) => {
-    setNotifications(notifications.filter(notif => notif.id !== id));
+  const markAllAsRead = async () => {
+    try {
+      const response = await serviceAPI.markAllNotificationsAsRead();
+      if (response.success) {
+        setNotifications(prev =>
+          prev.map(n => ({ ...n, isRead: true, readAt: new Date() }))
+        );
+        setUnreadCount(0);
+        toast.success(`${response.data.modifiedCount} notifications marked as read`);
+      }
+    } catch (error) {
+      console.error("Error marking all as read:", error);
+      toast.error("Failed to mark all as read");
+    }
   };
 
-  const clearAllRead = () => {
-    setNotifications(notifications.filter(notif => !notif.read));
+  const deleteNotification = async (id) => {
+    try {
+      const response = await serviceAPI.deleteNotification(id);
+      if (response.success) {
+        const notif = notifications.find(n => n._id === id);
+        setNotifications(prev => prev.filter(n => n._id !== id));
+        if (notif && !notif.isRead) {
+          setUnreadCount(prev => Math.max(0, prev - 1));
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+      toast.error("Failed to delete notification");
+    }
   };
 
   const toggleSetting = (setting) => {
@@ -131,59 +163,47 @@ const Notifications = () => {
     }));
   };
 
-  const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
+  // Format time ago
+  const formatTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
 
-  const getTypeColor = (type) => {
-    switch (type) {
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`;
+    return date.toLocaleDateString();
+  };
+
+  const getTypeColor = (category) => {
+    switch (category) {
       case 'booking':
         return { background: '#3b82f6', text: '#3b82f6' };
       case 'review':
         return { background: '#f59e0b', text: '#f59e0b' };
-      case 'message':
-        return { background: '#8b5cf6', text: '#8b5cf6' };
       case 'payment':
         return { background: '#10b981', text: '#10b981' };
-      case 'analytics':
-        return { background: '#06b6d4', text: '#06b6d4' };
-      case 'alert':
-        return { background: '#ef4444', text: '#ef4444' };
+      case 'verification':
+        return { background: '#8b5cf6', text: '#8b5cf6' };
+      case 'system':
+        return { background: '#6b7280', text: '#6b7280' };
       default:
         return { background: '#6b7280', text: '#6b7280' };
     }
   };
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'high':
-        return '#ef4444';
-      case 'medium':
-        return '#f59e0b';
-      case 'low':
-        return '#6b7280';
-      default:
-        return '#6b7280';
-    }
-  };
-
   const filters = [
-    { value: 'all', label: 'All', count: notifications.length },
-    { value: 'unread', label: 'Unread', count: notifications.filter(n => !n.read).length },
-    { value: 'booking', label: 'Bookings', count: notifications.filter(n => n.type === 'booking').length },
-    { value: 'review', label: 'Reviews', count: notifications.filter(n => n.type === 'review').length },
-    { value: 'message', label: 'Messages', count: notifications.filter(n => n.type === 'message').length },
-    { value: 'payment', label: 'Payments', count: notifications.filter(n => n.type === 'payment').length },
+    { value: 'all', label: 'All', count: pagination?.total || notifications.length },
+    { value: 'unread', label: 'Unread', count: unreadCount },
+    { value: 'booking', label: 'Bookings', count: notifications.filter(n => n.category === 'booking').length },
+    { value: 'payment', label: 'Payments', count: notifications.filter(n => n.category === 'payment').length },
   ];
 
-  const filteredNotifications = useMemo(() => {
-    if (activeFilter === 'all') return notifications;
-    if (activeFilter === 'unread') return notifications.filter(n => !n.read);
-    return notifications.filter(n => n.type === activeFilter);
-  }, [notifications, activeFilter]);
-
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
       gap: '1.5rem',
       backgroundColor: 'var(--background)',
       color: 'var(--text-color)',
@@ -199,7 +219,7 @@ const Notifications = () => {
         gap: '1rem',
         width: '100%'
       }}>
-        <div style={{ 
+        <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -207,9 +227,9 @@ const Notifications = () => {
           gap: '1rem',
           width: '100%'
         }}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
             gap: '0.75rem',
             flexWrap: 'wrap'
           }}>
@@ -238,14 +258,38 @@ const Notifications = () => {
               )}
             </h1>
           </div>
-          
+
           <div style={{
             display: 'flex',
             gap: '0.75rem',
             flexWrap: 'wrap'
           }}>
+            <button
+              onClick={fetchNotifications}
+              disabled={loading}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                padding: '0.75rem 1.25rem',
+                backgroundColor: 'var(--card-bg)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '0.75rem',
+                cursor: 'pointer',
+                color: 'var(--text-color)',
+                fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+                fontWeight: '600',
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
+                opacity: loading ? 0.7 : 1
+              }}
+            >
+              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+              Refresh
+            </button>
             {unreadCount > 0 && (
-              <button 
+              <button
                 onClick={markAllAsRead}
                 style={{
                   display: 'flex',
@@ -268,31 +312,9 @@ const Notifications = () => {
                 Mark All as Read
               </button>
             )}
-            <button 
-              onClick={clearAllRead}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem 1.25rem',
-                backgroundColor: 'transparent',
-                border: '1px solid var(--border-color)',
-                borderRadius: '0.75rem',
-                cursor: 'pointer',
-                color: 'var(--text-color)',
-                fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                fontWeight: '600',
-                transition: 'all 0.2s',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              <X size={18} />
-              Clear Read
-            </button>
           </div>
         </div>
-        
+
         <p style={{
           color: 'var(--text-color)',
           opacity: 0.8,
@@ -300,7 +322,7 @@ const Notifications = () => {
           margin: 0,
           lineHeight: '1.5'
         }}>
-          Stay updated with your business activities, customer interactions, and important alerts
+          Stay updated with your business activities and customer interactions
         </p>
       </div>
 
@@ -319,7 +341,10 @@ const Notifications = () => {
           return (
             <button
               key={filter.value}
-              onClick={() => setActiveFilter(filter.value)}
+              onClick={() => {
+                setActiveFilter(filter.value);
+                setPage(1);
+              }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -390,46 +415,32 @@ const Notifications = () => {
                   margin: 0
                 }}>
                   Recent Activity
-                  {filteredNotifications.length > 0 && (
-                    <span style={{
-                      marginLeft: '0.5rem',
-                      fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                      fontWeight: '400',
-                      opacity: 0.7
-                    }}>
-                      ({filteredNotifications.length})
-                    </span>
-                  )}
                 </h2>
               </div>
-              
-              <span style={{
-                fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                color: 'var(--text-color)',
-                opacity: 0.7
-              }}>
-                {filteredNotifications.length} {filteredNotifications.length === 1 ? 'notification' : 'notifications'}
-              </span>
             </div>
           </div>
-          
-          <div style={{ 
-            padding: '1.25rem', 
-            display: 'flex', 
-            flexDirection: 'column', 
+
+          <div style={{
+            padding: '1.25rem',
+            display: 'flex',
+            flexDirection: 'column',
             gap: '0.75rem',
             width: '100%',
             boxSizing: 'border-box'
           }}>
-            {filteredNotifications.length === 0 ? (
+            {loading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
+                <Loader2 size={48} style={{ color: 'var(--accent-color)' }} className="animate-spin" />
+              </div>
+            ) : notifications.length === 0 ? (
               <div style={{
                 textAlign: 'center',
                 padding: '3rem 1rem',
                 width: '100%'
               }}>
-                <Bell size={48} style={{ 
-                  margin: '0 auto 1rem', 
-                  opacity: 0.5 
+                <Bell size={48} style={{
+                  margin: '0 auto 1rem',
+                  opacity: 0.5
                 }} />
                 <h3 style={{
                   fontSize: 'clamp(1.25rem, 3vw, 1.5rem)',
@@ -438,223 +449,266 @@ const Notifications = () => {
                 }}>
                   No notifications
                 </h3>
-                <p style={{ 
+                <p style={{
                   opacity: 0.7,
                   fontSize: 'clamp(0.875rem, 2vw, 1rem)'
                 }}>
-                  {activeFilter === 'unread' 
-                    ? 'All notifications are read' 
+                  {activeFilter === 'unread'
+                    ? 'All notifications are read'
                     : `No ${activeFilter === 'all' ? '' : activeFilter + ' '}notifications found`
                   }
                 </p>
               </div>
             ) : (
-              filteredNotifications.map((notification) => {
-                const Icon = notification.icon;
-                const typeStyle = getTypeColor(notification.type);
-                
-                return (
-                  <div
-                    key={notification.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '1rem',
-                      padding: '1rem',
-                      borderRadius: '0.75rem',
-                      transition: 'all 0.2s ease',
-                      backgroundColor: !notification.read ? 'var(--background)' : 'transparent',
-                      border: `1px solid ${!notification.read ? 'var(--border-color)' : 'transparent'}`,
-                      width: '100%',
-                      boxSizing: 'border-box'
-                    }}
-                    className="notification-item"
-                  >
-                    {/* Notification Icon */}
-                    <div style={{
-                      position: 'relative',
-                      flexShrink: 0
-                    }}>
-                      <div style={{
-                        padding: '0.75rem',
-                        borderRadius: '0.75rem',
-                        backgroundColor: `${typeStyle.background}15`,
-                        color: typeStyle.text,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <Icon size={20} />
-                      </div>
-                      
-                      {/* Priority Indicator */}
-                      {notification.priority === 'high' && !notification.read && (
-                        <div style={{
-                          position: 'absolute',
-                          top: '-4px',
-                          right: '-4px',
-                          height: '10px',
-                          width: '10px',
-                          borderRadius: '50%',
-                          backgroundColor: getPriorityColor(notification.priority),
-                          border: '2px solid var(--card-bg)'
-                        }} />
-                      )}
-                    </div>
+              <>
+                {notifications.map((notification) => {
+                  const Icon = getCategoryIcon(notification.category, notification.type);
+                  const typeStyle = getTypeColor(notification.category);
 
-                    {/* Notification Content */}
-                    <div style={{ 
-                      flex: 1, 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      gap: '0.5rem',
-                      minWidth: 0 
-                    }}>
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'flex-start', 
-                        justifyContent: 'space-between',
-                        gap: '0.5rem',
-                        flexWrap: 'wrap'
+                  return (
+                    <div
+                      key={notification._id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '1rem',
+                        padding: '1rem',
+                        borderRadius: '0.75rem',
+                        transition: 'all 0.2s ease',
+                        backgroundColor: !notification.isRead ? 'var(--background)' : 'transparent',
+                        border: `1px solid ${!notification.isRead ? 'var(--border-color)' : 'transparent'}`,
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                    >
+                      {/* Notification Icon */}
+                      <div style={{
+                        position: 'relative',
+                        flexShrink: 0
                       }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                          <div style={{ 
-                            display: 'flex', 
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            flexWrap: 'wrap'
-                          }}>
-                            <p style={{ 
-                              fontWeight: '600',
-                              fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                              margin: 0
-                            }}>
-                              {notification.title}
-                            </p>
-                            {!notification.read && (
-                              <span style={{
-                                padding: '0.125rem 0.5rem',
-                                backgroundColor: 'var(--accent-color)',
-                                color: 'white',
-                                borderRadius: '9999px',
-                                fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                                fontWeight: '600'
-                              }}>
-                                New
-                              </span>
-                            )}
-                          </div>
-                          
-                          <div style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '0.75rem',
-                            flexWrap: 'wrap'
-                          }}>
-                            <span style={{ 
-                              fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                              opacity: 0.7,
+                        <div style={{
+                          padding: '0.75rem',
+                          borderRadius: '0.75rem',
+                          backgroundColor: `${typeStyle.background}15`,
+                          color: typeStyle.text,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <Icon size={20} />
+                        </div>
+
+                        {/* Unread Indicator */}
+                        {!notification.isRead && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '-4px',
+                            right: '-4px',
+                            height: '10px',
+                            width: '10px',
+                            borderRadius: '50%',
+                            backgroundColor: '#ef4444',
+                            border: '2px solid var(--card-bg)'
+                          }} />
+                        )}
+                      </div>
+
+                      {/* Notification Content */}
+                      <div style={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.5rem',
+                        minWidth: 0
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          justifyContent: 'space-between',
+                          gap: '0.5rem',
+                          flexWrap: 'wrap'
+                        }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <div style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '0.25rem'
+                              gap: '0.5rem',
+                              flexWrap: 'wrap'
                             }}>
-                              <Clock size={12} />
-                              {notification.time}
-                            </span>
-                            <span style={{
-                              padding: '0.125rem 0.5rem',
-                              backgroundColor: `${typeStyle.background}15`,
-                              color: typeStyle.text,
-                              borderRadius: '9999px',
-                              fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                              fontWeight: '500',
-                              textTransform: 'capitalize'
+                              <p style={{
+                                fontWeight: '600',
+                                fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+                                margin: 0
+                              }}>
+                                {notification.title}
+                              </p>
+                              {!notification.isRead && (
+                                <span style={{
+                                  padding: '0.125rem 0.5rem',
+                                  backgroundColor: 'var(--accent-color)',
+                                  color: 'white',
+                                  borderRadius: '9999px',
+                                  fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
+                                  fontWeight: '600'
+                                }}>
+                                  New
+                                </span>
+                              )}
+                            </div>
+
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem',
+                              flexWrap: 'wrap'
                             }}>
-                              {notification.type}
-                            </span>
+                              <span style={{
+                                fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
+                                opacity: 0.7,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.25rem'
+                              }}>
+                                <Clock size={12} />
+                                {formatTimeAgo(notification.createdAt)}
+                              </span>
+                              <span style={{
+                                padding: '0.125rem 0.5rem',
+                                backgroundColor: `${typeStyle.background}15`,
+                                color: typeStyle.text,
+                                borderRadius: '9999px',
+                                fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
+                                fontWeight: '500',
+                                textTransform: 'capitalize'
+                              }}>
+                                {notification.category}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      
-                      <p style={{ 
-                        fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                        opacity: 0.8,
-                        margin: 0,
-                        lineHeight: '1.5'
-                      }}>
-                        {notification.message}
-                      </p>
-                      
-                      {/* Action Buttons */}
-                      <div style={{ 
-                        display: 'flex', 
-                        gap: '0.75rem',
-                        flexWrap: 'wrap'
-                      }}>
-                        <button
-                          onClick={() => {
-                            // Handle notification action
-                            alert(`Action: ${notification.action}`);
-                            markAsRead(notification.id);
-                          }}
-                          style={{
-                            padding: '0.5rem 1rem',
-                            backgroundColor: 'var(--accent-color)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '0.5rem',
-                            cursor: 'pointer',
-                            fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                            fontWeight: '600',
-                            transition: 'all 0.2s',
-                            whiteSpace: 'nowrap'
-                          }}
-                        >
-                          {notification.action.includes('view') ? 'View Details' : 'Reply'}
-                        </button>
-                        
-                        {!notification.read && (
+
+                        <p style={{
+                          fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+                          opacity: 0.8,
+                          margin: 0,
+                          lineHeight: '1.5'
+                        }}>
+                          {notification.message}
+                        </p>
+
+                        {/* Action Buttons */}
+                        <div style={{
+                          display: 'flex',
+                          gap: '0.75rem',
+                          flexWrap: 'wrap'
+                        }}>
+                          {notification.actionUrl && (
+                            <a
+                              href={notification.actionUrl}
+                              style={{
+                                padding: '0.5rem 1rem',
+                                backgroundColor: 'var(--accent-color)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '0.5rem',
+                                textDecoration: 'none',
+                                fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
+                                fontWeight: '600',
+                                transition: 'all 0.2s',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              View Details
+                            </a>
+                          )}
+
+                          {!notification.isRead && (
+                            <button
+                              onClick={() => markAsRead(notification._id)}
+                              style={{
+                                padding: '0.5rem 1rem',
+                                backgroundColor: 'transparent',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '0.5rem',
+                                cursor: 'pointer',
+                                fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
+                                color: 'var(--text-color)',
+                                transition: 'all 0.2s',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              Mark as Read
+                            </button>
+                          )}
+
                           <button
-                            onClick={() => markAsRead(notification.id)}
+                            onClick={() => deleteNotification(notification._id)}
                             style={{
-                              padding: '0.5rem 1rem',
+                              padding: '0.5rem',
                               backgroundColor: 'transparent',
                               border: '1px solid var(--border-color)',
                               borderRadius: '0.5rem',
                               cursor: 'pointer',
-                              fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                              color: 'var(--text-color)',
+                              color: '#ef4444',
                               transition: 'all 0.2s',
-                              whiteSpace: 'nowrap'
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
                             }}
+                            title="Delete notification"
                           >
-                            Mark as Read
+                            <X size={16} />
                           </button>
-                        )}
-                        
-                        <button
-                          onClick={() => deleteNotification(notification.id)}
-                          style={{
-                            padding: '0.5rem',
-                            backgroundColor: 'transparent',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: '0.5rem',
-                            cursor: 'pointer',
-                            color: '#ef4444',
-                            transition: 'all 0.2s',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                          title="Delete notification"
-                        >
-                          <X size={16} />
-                        </button>
+                        </div>
                       </div>
                     </div>
+                  );
+                })}
+
+                {/* Pagination */}
+                {pagination && pagination.totalPages > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+                    <button
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: 'var(--card-bg)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '0.5rem',
+                        cursor: 'pointer',
+                        color: 'var(--text-color)',
+                        opacity: page === 1 ? 0.5 : 1
+                      }}
+                    >
+                      Previous
+                    </button>
+                    <span style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: 'var(--accent-color)',
+                      color: 'white',
+                      borderRadius: '0.5rem'
+                    }}>
+                      {page} / {pagination.totalPages}
+                    </span>
+                    <button
+                      onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+                      disabled={page === pagination.totalPages}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: 'var(--card-bg)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '0.5rem',
+                        cursor: 'pointer',
+                        color: 'var(--text-color)',
+                        opacity: page === pagination.totalPages ? 0.5 : 1
+                      }}
+                    >
+                      Next
+                    </button>
                   </div>
-                );
-              })
+                )}
+              </>
             )}
           </div>
         </div>
@@ -694,410 +748,79 @@ const Notifications = () => {
               </div>
             </div>
           </div>
-          
-          <div style={{ 
-            padding: '1.25rem', 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: '1.25rem',
+
+          <div style={{
+            padding: '1.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
             width: '100%',
             boxSizing: 'border-box'
           }}>
-            {/* Setting Item */}
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '1rem',
-              padding: '1rem',
-              backgroundColor: 'var(--background)',
-              borderRadius: '0.75rem',
-              border: '1px solid var(--border-color)'
-            }}>
-              <div style={{ flex: 1, minWidth: '200px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <Calendar size={18} style={{ opacity: 0.8 }} />
-                  <div>
-                    <p style={{ 
-                      fontWeight: '600',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                      margin: '0 0 0.25rem 0'
-                    }}>
-                      New Bookings
-                    </p>
-                    <p style={{ 
-                      fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                      opacity: 0.7,
-                      margin: 0,
-                      lineHeight: '1.4'
-                    }}>
-                      Get notified when you receive new booking requests
-                    </p>
+            {/* Setting Items */}
+            {[
+              { key: 'newBookings', icon: Calendar, title: 'New Bookings', desc: 'Get notified when you receive new booking requests' },
+              { key: 'newReviews', icon: Star, title: 'Reviews & Ratings', desc: 'Get notified about new reviews and ratings' },
+              { key: 'messages', icon: MessageSquare, title: 'Customer Messages', desc: 'Get notified when customers send you messages' },
+              { key: 'payments', icon: DollarSign, title: 'Payment Updates', desc: 'Get notified about payments and invoices' },
+              { key: 'analytics', icon: TrendingUp, title: 'Analytics Reports', desc: 'Weekly reports about your business performance' },
+              { key: 'alerts', icon: AlertCircle, title: 'Important Alerts', desc: 'Urgent notifications and system alerts' }
+            ].map(({ key, icon: Icon, title, desc }) => (
+              <div key={key} style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '1rem',
+                padding: '1rem',
+                backgroundColor: 'var(--background)',
+                borderRadius: '0.75rem',
+                border: '1px solid var(--border-color)'
+              }}>
+                <div style={{ flex: 1, minWidth: '200px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <Icon size={18} style={{ opacity: 0.8 }} />
+                    <div>
+                      <p style={{
+                        fontWeight: '600',
+                        fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+                        margin: '0 0 0.25rem 0'
+                      }}>
+                        {title}
+                      </p>
+                      <p style={{
+                        fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
+                        opacity: 0.7,
+                        margin: 0,
+                        lineHeight: '1.4'
+                      }}>
+                        {desc}
+                      </p>
+                    </div>
                   </div>
                 </div>
+                <button
+                  onClick={() => toggleSetting(key)}
+                  style={{
+                    padding: '0.5rem 1.5rem',
+                    backgroundColor: notificationSettings[key] ? 'var(--accent-color)' : 'var(--border-color)',
+                    color: notificationSettings[key] ? 'white' : 'var(--text-color)',
+                    border: 'none',
+                    borderRadius: '0.75rem',
+                    cursor: 'pointer',
+                    fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+                    fontWeight: '600',
+                    transition: 'all 0.2s',
+                    minWidth: '100px'
+                  }}
+                >
+                  {notificationSettings[key] ? 'Enabled' : 'Disabled'}
+                </button>
               </div>
-              <button 
-                onClick={() => toggleSetting('newBookings')}
-                style={{
-                  padding: '0.5rem 1.5rem',
-                  backgroundColor: notificationSettings.newBookings ? 'var(--accent-color)' : 'var(--border-color)',
-                  color: notificationSettings.newBookings ? 'white' : 'var(--text-color)',
-                  border: 'none',
-                  borderRadius: '0.75rem',
-                  cursor: 'pointer',
-                  fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                  fontWeight: '600',
-                  transition: 'all 0.2s',
-                  minWidth: '100px'
-                }}
-              >
-                {notificationSettings.newBookings ? 'Enabled' : 'Disabled'}
-              </button>
-            </div>
-
-            {/* Setting Item */}
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '1rem',
-              padding: '1rem',
-              backgroundColor: 'var(--background)',
-              borderRadius: '0.75rem',
-              border: '1px solid var(--border-color)'
-            }}>
-              <div style={{ flex: 1, minWidth: '200px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <Star size={18} style={{ opacity: 0.8 }} />
-                  <div>
-                    <p style={{ 
-                      fontWeight: '600',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                      margin: '0 0 0.25rem 0'
-                    }}>
-                      Reviews & Ratings
-                    </p>
-                    <p style={{ 
-                      fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                      opacity: 0.7,
-                      margin: 0,
-                      lineHeight: '1.4'
-                    }}>
-                      Get notified about new reviews and ratings
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <button 
-                onClick={() => toggleSetting('newReviews')}
-                style={{
-                  padding: '0.5rem 1.5rem',
-                  backgroundColor: notificationSettings.newReviews ? 'var(--accent-color)' : 'var(--border-color)',
-                  color: notificationSettings.newReviews ? 'white' : 'var(--text-color)',
-                  border: 'none',
-                  borderRadius: '0.75rem',
-                  cursor: 'pointer',
-                  fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                  fontWeight: '600',
-                  transition: 'all 0.2s',
-                  minWidth: '100px'
-                }}
-              >
-                {notificationSettings.newReviews ? 'Enabled' : 'Disabled'}
-              </button>
-            </div>
-
-            {/* Setting Item */}
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '1rem',
-              padding: '1rem',
-              backgroundColor: 'var(--background)',
-              borderRadius: '0.75rem',
-              border: '1px solid var(--border-color)'
-            }}>
-              <div style={{ flex: 1, minWidth: '200px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <MessageSquare size={18} style={{ opacity: 0.8 }} />
-                  <div>
-                    <p style={{ 
-                      fontWeight: '600',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                      margin: '0 0 0.25rem 0'
-                    }}>
-                      Customer Messages
-                    </p>
-                    <p style={{ 
-                      fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                      opacity: 0.7,
-                      margin: 0,
-                      lineHeight: '1.4'
-                    }}>
-                      Get notified when customers send you messages
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <button 
-                onClick={() => toggleSetting('messages')}
-                style={{
-                  padding: '0.5rem 1.5rem',
-                  backgroundColor: notificationSettings.messages ? 'var(--accent-color)' : 'var(--border-color)',
-                  color: notificationSettings.messages ? 'white' : 'var(--text-color)',
-                  border: 'none',
-                  borderRadius: '0.75rem',
-                  cursor: 'pointer',
-                  fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                  fontWeight: '600',
-                  transition: 'all 0.2s',
-                  minWidth: '100px'
-                }}
-              >
-                {notificationSettings.messages ? 'Enabled' : 'Disabled'}
-              </button>
-            </div>
-
-            {/* Setting Item */}
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '1rem',
-              padding: '1rem',
-              backgroundColor: 'var(--background)',
-              borderRadius: '0.75rem',
-              border: '1px solid var(--border-color)'
-            }}>
-              <div style={{ flex: 1, minWidth: '200px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <DollarSign size={18} style={{ opacity: 0.8 }} />
-                  <div>
-                    <p style={{ 
-                      fontWeight: '600',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                      margin: '0 0 0.25rem 0'
-                    }}>
-                      Payment Updates
-                    </p>
-                    <p style={{ 
-                      fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                      opacity: 0.7,
-                      margin: 0,
-                      lineHeight: '1.4'
-                    }}>
-                      Get notified about payments and invoices
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <button 
-                onClick={() => toggleSetting('payments')}
-                style={{
-                  padding: '0.5rem 1.5rem',
-                  backgroundColor: notificationSettings.payments ? 'var(--accent-color)' : 'var(--border-color)',
-                  color: notificationSettings.payments ? 'white' : 'var(--text-color)',
-                  border: 'none',
-                  borderRadius: '0.75rem',
-                  cursor: 'pointer',
-                  fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                  fontWeight: '600',
-                  transition: 'all 0.2s',
-                  minWidth: '100px'
-                }}
-              >
-                {notificationSettings.payments ? 'Enabled' : 'Disabled'}
-              </button>
-            </div>
-
-            {/* Setting Item */}
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '1rem',
-              padding: '1rem',
-              backgroundColor: 'var(--background)',
-              borderRadius: '0.75rem',
-              border: '1px solid var(--border-color)'
-            }}>
-              <div style={{ flex: 1, minWidth: '200px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <TrendingUp size={18} style={{ opacity: 0.8 }} />
-                  <div>
-                    <p style={{ 
-                      fontWeight: '600',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                      margin: '0 0 0.25rem 0'
-                    }}>
-                      Analytics Reports
-                    </p>
-                    <p style={{ 
-                      fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                      opacity: 0.7,
-                      margin: 0,
-                      lineHeight: '1.4'
-                    }}>
-                      Weekly reports about your business performance
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <button 
-                onClick={() => toggleSetting('analytics')}
-                style={{
-                  padding: '0.5rem 1.5rem',
-                  backgroundColor: notificationSettings.analytics ? 'var(--accent-color)' : 'var(--border-color)',
-                  color: notificationSettings.analytics ? 'white' : 'var(--text-color)',
-                  border: 'none',
-                  borderRadius: '0.75rem',
-                  cursor: 'pointer',
-                  fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                  fontWeight: '600',
-                  transition: 'all 0.2s',
-                  minWidth: '100px'
-                }}
-              >
-                {notificationSettings.analytics ? 'Enabled' : 'Disabled'}
-              </button>
-            </div>
-
-            {/* Setting Item */}
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '1rem',
-              padding: '1rem',
-              backgroundColor: 'var(--background)',
-              borderRadius: '0.75rem',
-              border: '1px solid var(--border-color)'
-            }}>
-              <div style={{ flex: 1, minWidth: '200px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <AlertCircle size={18} style={{ opacity: 0.8 }} />
-                  <div>
-                    <p style={{ 
-                      fontWeight: '600',
-                      fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                      margin: '0 0 0.25rem 0'
-                    }}>
-                      Important Alerts
-                    </p>
-                    <p style={{ 
-                      fontSize: 'clamp(0.75rem, 1.5vw, 0.875rem)',
-                      opacity: 0.7,
-                      margin: 0,
-                      lineHeight: '1.4'
-                    }}>
-                      Urgent notifications and system alerts
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <button 
-                onClick={() => toggleSetting('alerts')}
-                style={{
-                  padding: '0.5rem 1.5rem',
-                  backgroundColor: notificationSettings.alerts ? 'var(--accent-color)' : 'var(--border-color)',
-                  color: notificationSettings.alerts ? 'white' : 'var(--text-color)',
-                  border: 'none',
-                  borderRadius: '0.75rem',
-                  cursor: 'pointer',
-                  fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                  fontWeight: '600',
-                  transition: 'all 0.2s',
-                  minWidth: '100px'
-                }}
-              >
-                {notificationSettings.alerts ? 'Enabled' : 'Disabled'}
-              </button>
-            </div>
+            ))}
           </div>
         </div>
       </div>
-
-      {/* Mobile Responsive CSS */}
-      <style jsx="true">{`
-        @media (max-width: 768px) {
-          div[style*="padding: 1rem"] {
-            padding: 0.75rem !important;
-          }
-          
-          div[style*="padding: 1.25rem"] {
-            padding: 1rem !important;
-          }
-          
-          div[style*="gap: 1.5rem"] {
-            gap: 1rem !important;
-          }
-          
-          div[style*="borderRadius: 1rem"] {
-            border-radius: 0.75rem !important;
-          }
-          
-          /* Stack notification content vertically on mobile */
-          .notification-item {
-            flex-direction: column !important;
-            align-items: flex-start !important;
-          }
-          
-          .notification-item > div:first-child {
-            margin-bottom: 0.5rem;
-          }
-        }
-        
-        @media (max-width: 480px) {
-          div[style*="padding: 1rem"] {
-            padding: 0.5rem !important;
-          }
-          
-          div[style*="gridTemplateColumns"] {
-            grid-template-columns: 1fr !important;
-          }
-          
-          /* Make all buttons full width on very small screens */
-          div[style*="flex-wrap: wrap"] button {
-            width: 100% !important;
-          }
-        }
-        
-        /* Hide scrollbar for tabs */
-        div[style*="overflowX: auto"]::-webkit-scrollbar {
-          display: none;
-        }
-        
-        /* Better touch targets */
-        button {
-          min-height: 44px;
-        }
-        
-        /* Prevent text overflow */
-        * {
-          overflow-wrap: break-word;
-          word-wrap: break-word;
-        }
-        
-        /* Hover effects */
-        .notification-item:hover {
-          background-color: var(--background) !important;
-          border-color: var(--border-color) !important;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-        
-        /* Smooth transitions */
-        * {
-          transition: all 0.2s ease;
-        }
-      `}</style>
     </div>
   );
 };

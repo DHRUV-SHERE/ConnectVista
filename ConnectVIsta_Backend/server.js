@@ -1,10 +1,13 @@
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 const dotenv = require('dotenv');
 const path = require('path');
+const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
 
 // Load env vars FIRST - before any other imports that use process.env
 dotenv.config();
@@ -17,23 +20,89 @@ const authRoutes = require('./src/routes/authRoutes');
 const verificationRoutes = require('./src/routes/verificationRoutes');
 const providerprofileRoutes = require('./src/routes/providerProfileRoutes'); // Add this import
 const seekerProfileRoutes = require('./src/routes/seekerProfileRoutes'); // Add this import
+const seekerServiceRoutes = require('./src/routes/seekerServiceRoutes'); // Seeker service discovery routes
 const serviceRoutes = require('./src/routes/serviceRoutes'); // Add service routes
+const bookingRoutes = require('./src/routes/bookingRoutes'); // Booking routes
+const notificationRoutes = require('./src/routes/notificationRoutes'); // Notification routes
 const authController = require('./src/controllers/authController');
 const auth = require('./src/middleware/auth');
-
+const socketManager = require('./src/utils/socketManager');
+const User = require('./src/models/User');
 
 // Initialize express
 const app = express();
 
+// Create HTTP server for Socket.IO
+const server = http.createServer(app);
+
 // Connect to database
 connectDB();
+
+// Initialize Socket.IO
+const io = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true,
+    methods: ['GET', 'POST']
+  }
+});
+
+// Store io instance in socket manager
+socketManager.setIO(io);
+
+// Socket.IO Authentication Middleware
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth.token;
+
+    if (!token) {
+      return next(new Error('Authentication token required'));
+    }
+
+    // Verify JWT token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Get user from database
+    const user = await User.findById(decoded.id).select('-password');
+
+    if (!user) {
+      return next(new Error('User not found'));
+    }
+
+    // Attach user to socket
+    socket.user = user;
+    next();
+  } catch (error) {
+    console.error('Socket authentication error:', error.message);
+    next(new Error('Invalid authentication token'));
+  }
+});
+
+// Socket.IO Connection Handling
+io.on('connection', (socket) => {
+  console.log(`Socket connected: ${socket.id} | User: ${socket.user._id} (${socket.user.role})`);
+
+  // Map user to socket
+  socketManager.addUserSocket(socket.user._id, socket.id);
+
+  // Handle disconnection
+  socket.on('disconnect', (reason) => {
+    console.log(`Socket disconnected: ${socket.id} | Reason: ${reason}`);
+    socketManager.removeUserSocket(socket.id);
+  });
+
+  // Handle errors
+  socket.on('error', (error) => {
+    console.error('Socket error:', error);
+  });
+});
 
 // Security middleware
 app.use(helmet());
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -58,7 +127,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/verification', verificationRoutes);
 app.use('/api/profile', providerprofileRoutes); // Add this line to register profile routes
 app.use('/api/seeker', seekerProfileRoutes); // Add this line to register seeker profile routes
+app.use('/api/seeker', seekerServiceRoutes); // Seeker service discovery routes
 app.use('/api/service-catalog', serviceRoutes); // Mount service routes at /api/service-catalog
+app.use('/api/bookings', bookingRoutes); // Booking routes
+app.use('/api/notifications', notificationRoutes); // Notification routes
 app.get('/api/auth/profile', auth(), authController.getProfile);
 
 // Health check
@@ -100,11 +172,14 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+// Use server.listen instead of app.listen for Socket.IO
+server.listen(PORT, () => {
   console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  console.log(`🔌 Socket.IO enabled`);
   console.log(`📝 Available routes:`);
   console.log(`   - Health: http://localhost:${PORT}/api/health`);
   console.log(`   - Auth Profile: http://localhost:${PORT}/api/auth/profile`);
   console.log(`   - Provider Profile: http://localhost:${PORT}/api/profile/provider`);
-  console.log(`   - Test Profile: http://localhost:${PORT}/api/test/profile`);
+  console.log(`   - Bookings: http://localhost:${PORT}/api/bookings`);
+  console.log(`   - Notifications: http://localhost:${PORT}/api/notifications`);
 });
