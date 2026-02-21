@@ -1,7 +1,10 @@
 import { User, Lock, Bell, CreditCard, Shield, Mail, Phone, Globe, Download, Trash2, Eye, EyeOff, Key, LogOut, Database, Smartphone, Tablet } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { settingsAPI } from '../../services/settingsAPI';
+import toast from 'react-hot-toast';
 
 const Settings = () => {
+  const [loading, setLoading] = useState(true);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -10,13 +13,104 @@ const Settings = () => {
   const [smsNotifications, setSmsNotifications] = useState(false);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [profileVisibility, setProfileVisibility] = useState('public');
+  const [profileData, setProfileData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    businessName: '',
+    businessLocation: ''
+  });
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
 
-  const handleSave = () => {
-    alert('Settings saved! Your account settings have been updated.');
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      const response = await settingsAPI.getSettings();
+      if (response.success) {
+        const { user, provider, settings } = response.data;
+        setProfileData({
+          name: user.name || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          businessName: provider.businessName || '',
+          businessLocation: provider.businessAddress?.street || ''
+        });
+        setEmailNotifications(settings.notifications?.email ?? true);
+        setSmsNotifications(settings.notifications?.sms ?? false);
+        setPushNotifications(settings.notifications?.push ?? true);
+        setProfileVisibility(settings.privacy?.profileVisibility || 'public');
+      }
+    } catch (error) {
+      console.error('Load settings error:', error);
+      toast.error('Failed to load settings');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handlePasswordChange = () => {
-    alert('Password updated! Your password has been changed successfully.');
+  const handleSave = async () => {
+    try {
+      const response = await settingsAPI.updateProfile(profileData);
+      if (response.success) {
+        toast.success('Profile updated successfully!');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update profile');
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    try {
+      const response = await settingsAPI.changePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+      if (response.success) {
+        toast.success('Password updated successfully!');
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to change password');
+    }
+  };
+
+  const handleNotificationUpdate = async (type, value) => {
+    try {
+      const updates = {
+        email: emailNotifications,
+        sms: smsNotifications,
+        push: pushNotifications,
+        [type]: value
+      };
+      const response = await settingsAPI.updateNotifications(updates);
+      if (response.success) {
+        toast.success('Notification settings updated');
+      }
+    } catch (error) {
+      toast.error('Failed to update notifications');
+    }
+  };
+
+  const handlePrivacyUpdate = async (visibility) => {
+    try {
+      const response = await settingsAPI.updatePrivacy({ profileVisibility: visibility });
+      if (response.success) {
+        toast.success('Privacy settings updated');
+      }
+    } catch (error) {
+      toast.error('Failed to update privacy');
+    }
   };
 
   const handleLogoutAllDevices = () => {
@@ -123,7 +217,8 @@ const Settings = () => {
                   </label>
                   <input 
                     type="text"
-                    defaultValue="John Smith"
+                    value={profileData.name}
+                    onChange={(e) => setProfileData({...profileData, name: e.target.value})}
                     style={{
                       padding: '0.75rem',
                       border: '1px solid var(--border-color)',
@@ -147,7 +242,8 @@ const Settings = () => {
                   </label>
                   <input 
                     type="tel"
-                    defaultValue="+1 (555) 123-4567"
+                    value={profileData.phone}
+                    onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
                     style={{
                       padding: '0.75rem',
                       border: '1px solid var(--border-color)',
@@ -173,7 +269,8 @@ const Settings = () => {
                 </label>
                 <input 
                   type="email"
-                  defaultValue="john@quickfixplumbing.com"
+                  value={profileData.email}
+                  readOnly
                   style={{
                     padding: '0.75rem',
                     border: '1px solid var(--border-color)',
@@ -198,7 +295,8 @@ const Settings = () => {
                 </label>
                 <input 
                   type="text"
-                  defaultValue="123 Main St, New York, NY"
+                  value={profileData.businessLocation}
+                  onChange={(e) => setProfileData({...profileData, businessLocation: e.target.value})}
                   style={{
                     padding: '0.75rem',
                     border: '1px solid var(--border-color)',
@@ -310,6 +408,8 @@ const Settings = () => {
                   <input 
                     type={showCurrentPassword ? "text" : "password"}
                     placeholder="Enter current password"
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
                     style={{
                       padding: '0.75rem 2.5rem 0.75rem 0.75rem',
                       border: '1px solid var(--border-color)',
@@ -347,6 +447,8 @@ const Settings = () => {
                   <input 
                     type={showNewPassword ? "text" : "password"}
                     placeholder="Enter new password"
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
                     style={{
                       padding: '0.75rem 2.5rem 0.75rem 0.75rem',
                       border: '1px solid var(--border-color)',
@@ -384,6 +486,8 @@ const Settings = () => {
                   <input 
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Confirm new password"
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
                     style={{
                       padding: '0.75rem 2.5rem 0.75rem 0.75rem',
                       border: '1px solid var(--border-color)',
@@ -556,7 +660,7 @@ const Settings = () => {
                   </p>
                 </div>
                 <button 
-                  onClick={() => setEmailNotifications(!emailNotifications)}
+                  onClick={() => { setEmailNotifications(!emailNotifications); handleNotificationUpdate('email', !emailNotifications); }}
                   style={{
                     padding: '0.5rem 1.25rem',
                     backgroundColor: emailNotifications ? 'var(--accent-color)' : 'transparent',
@@ -590,7 +694,7 @@ const Settings = () => {
                   </p>
                 </div>
                 <button 
-                  onClick={() => setSmsNotifications(!smsNotifications)}
+                  onClick={() => { setSmsNotifications(!smsNotifications); handleNotificationUpdate('sms', !smsNotifications); }}
                   style={{
                     padding: '0.5rem 1.25rem',
                     backgroundColor: smsNotifications ? 'var(--accent-color)' : 'transparent',
@@ -624,7 +728,7 @@ const Settings = () => {
                   </p>
                 </div>
                 <button 
-                  onClick={() => setPushNotifications(!pushNotifications)}
+                  onClick={() => { setPushNotifications(!pushNotifications); handleNotificationUpdate('push', !pushNotifications); }}
                   style={{
                     padding: '0.5rem 1.25rem',
                     backgroundColor: pushNotifications ? 'var(--accent-color)' : 'transparent',
@@ -727,7 +831,7 @@ const Settings = () => {
                     type="radio"
                     name="visibility"
                     checked={profileVisibility === 'public'}
-                    onChange={() => setProfileVisibility('public')}
+                    onChange={() => { setProfileVisibility('public'); handlePrivacyUpdate('public'); }}
                     style={{ accentColor: 'var(--accent-color)' }}
                   />
                   <div>
@@ -745,7 +849,7 @@ const Settings = () => {
                     type="radio"
                     name="visibility"
                     checked={profileVisibility === 'private'}
-                    onChange={() => setProfileVisibility('private')}
+                    onChange={() => { setProfileVisibility('private'); handlePrivacyUpdate('private'); }}
                     style={{ accentColor: 'var(--accent-color)' }}
                   />
                   <div>

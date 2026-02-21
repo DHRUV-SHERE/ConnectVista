@@ -241,7 +241,7 @@ if (role === 'seeker') {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
     // Find user with password
     const user = await User.findOne({ email }).select('+password');
@@ -259,6 +259,14 @@ const login = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
+      });
+    }
+
+    // If role is specified in request, verify user has that role
+    if (role && user.role !== role) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Invalid role.'
       });
     }
 
@@ -293,8 +301,8 @@ const login = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    // Get profile based on role
-    let profile;
+    // Get profile based on role (skip for admin)
+    let profile = null;
     if (user.role === 'seeker') {
       profile = await ServiceSeeker.findOne({ user: user._id });
     } else if (user.role === 'provider') {

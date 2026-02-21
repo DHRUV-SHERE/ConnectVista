@@ -17,13 +17,15 @@ const connectDB = require('./src/config/db');
 
 // Import routes (these should be after dotenv.config)
 const authRoutes = require('./src/routes/authRoutes');
+const adminRoutes = require('./src/routes/admin_routes');
 const verificationRoutes = require('./src/routes/verificationRoutes');
-const providerprofileRoutes = require('./src/routes/providerProfileRoutes'); // Add this import
-const seekerProfileRoutes = require('./src/routes/seekerProfileRoutes'); // Add this import
-const seekerServiceRoutes = require('./src/routes/seekerServiceRoutes'); // Seeker service discovery routes
-const serviceRoutes = require('./src/routes/serviceRoutes'); // Add service routes
-const bookingRoutes = require('./src/routes/bookingRoutes'); // Booking routes
-const notificationRoutes = require('./src/routes/notificationRoutes'); // Notification routes
+const providerprofileRoutes = require('./src/routes/providerProfileRoutes');
+const seekerProfileRoutes = require('./src/routes/seekerProfileRoutes');
+const seekerServiceRoutes = require('./src/routes/seekerServiceRoutes');
+const serviceRoutes = require('./src/routes/serviceRoutes');
+const bookingRoutes = require('./src/routes/bookingRoutes');
+const notificationRoutes = require('./src/routes/notificationRoutes');
+const settingsRoutes = require('./src/routes/settingsRoutes');
 const authController = require('./src/controllers/authController');
 const auth = require('./src/middleware/auth');
 const socketManager = require('./src/utils/socketManager');
@@ -41,7 +43,7 @@ connectDB();
 // Initialize Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: [process.env.FRONTEND_URL || 'http://localhost:5173', process.env.ADMIN_URL || 'http://localhost:5174'],
     credentials: true,
     methods: ['GET', 'POST']
   }
@@ -99,12 +101,13 @@ io.on('connection', (socket) => {
 
 // Security middleware
 app.use(helmet());
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+const corsOptions = {
+  origin: [process.env.FRONTEND_URL || 'http://localhost:5173', process.env.ADMIN_URL || 'http://localhost:5174'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
-}));
+};
+app.use(cors(corsOptions));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -124,13 +127,15 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/verification', verificationRoutes);
-app.use('/api/profile', providerprofileRoutes); // Add this line to register profile routes
-app.use('/api/seeker', seekerProfileRoutes); // Add this line to register seeker profile routes
-app.use('/api/seeker', seekerServiceRoutes); // Seeker service discovery routes
-app.use('/api/service-catalog', serviceRoutes); // Mount service routes at /api/service-catalog
-app.use('/api/bookings', bookingRoutes); // Booking routes
-app.use('/api/notifications', notificationRoutes); // Notification routes
+app.use('/api/profile', providerprofileRoutes);
+app.use('/api/seeker', seekerProfileRoutes);
+app.use('/api/seeker', seekerServiceRoutes);
+app.use('/api/service-catalog', serviceRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/settings', settingsRoutes);
 app.get('/api/auth/profile', auth(), authController.getProfile);
 
 // Health check
