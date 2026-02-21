@@ -1,0 +1,1355 @@
+================================================================================
+                    CONNECTVISTA - FULL-STACK PROJECT ANALYSIS
+================================================================================
+
+## 1. PROJECT OVERVIEW
+
+Project Type:           MERN Stack + Real-time Service Marketplace
+Architecture Style:     Layered/REST API with Controller-Service-Model separation
+Core Purpose:          Two-sided marketplace connecting service seekers with 
+                       service providers, featuring booking workflows, real-time 
+                       notifications, and location-based service discovery
+
+================================================================================
+## 2. FOLDER STRUCTURE
+
+### 2.1 BACKEND (ConnectVIsta_Backend/)
+
+ConnectVIsta_Backend/
+├── server.js                           Main entry point, Express + Socket.IO setup
+├── src/
+│   ├── config/
+│   │   ├── cloudinary.js               Cloudinary image storage configuration
+│   │   └── db.js                       MongoDB connection
+│   ├── controllers/                    Request handlers (11 controllers)
+│   │   ├── admin_controller.js         Admin operations
+│   │   ├── authController.js           Login, signup, profile management
+│   │   ├── bookingController.js        Full booking lifecycle management
+│   │   ├── notificationController.js    Notifications CRUD
+│   │   ├── providerProfileController.js Provider profile management
+│   │   ├── seekerProfileController.js  Seeker profile management
+│   │   ├── seekerServiceController.js  Seeker services
+│   │   ├── serviceController.js        Service catalog
+│   │   ├── settingsController.js       Settings management
+│   │   ├── subscriptionController.js   Subscription plans
+│   │   └── verificationController.js  Provider verification
+│   ├── middleware/
+│   │   ├── auth.js                     JWT authentication + role checking
+│   │   ├── upload.js                   Multer file upload
+│   │   ├── uploadBusinessImages.js     Business image uploads
+│   │   └── validation.js               Input validation
+│   ├── models/                         Mongoose schemas (18 models)
+│   │   ├── Booking.js                  Core booking with geospatial index
+│   │   ├── FavouriteServiceProvider.js Favorite providers
+│   │   ├── Notification.js             User notifications
+│   │   ├── Payment.js                  Payment records
+│   │   ├── ProviderPortfolio.js        Provider portfolio
+│   │   ├── ProviderSchedule.js         Weekly availability schedule
+│   │   ├── ProviderService.js          Provider services offered
+│   │   ├── ProviderSettings.js         Provider preferences
+│   │   ├── ProviderSubscription.js     Subscription status
+│   │   ├── ProviderVerification.js     KYC documents
+│   │   ├── Review.js                   Service reviews/ratings
+│   │   ├── Service.js                  Service categories
+│   │   ├── ServiceProvider.js           Provider profile with 2dsphere coords
+│   │   ├── ServiceSeeker.js            Seeker profile with address
+│   │   ├── Subscription.js             Subscription plans
+│   │   ├── Token.js                   JWT refresh tokens
+│   │   ├── User.js                    Base user with roles
+│   │   └── index.js                   Model exports
+│   ├── routes/                         API route definitions (12 route files)
+│   ├── services/
+│   │   └── geocodingService.js         OpenStreetMap + Google fallback
+│   ├── scripts/
+│   │   ├── createAdmin.js              Create admin user script
+│   │   ├── migrateProviderCoordinates.js Coordinate migration
+│   │   └── seedBasicServices.js        Seed initial services
+│   └── utils/
+│       ├── jwtUtils.js                 JWT token utilities
+│       └── socketManager.js             Socket.IO connection manager
+
+### 2.2 FRONTEND (ConnectVista_Frontend/)
+
+ConnectVista_Frontend/
+├── src/
+│   ├── components/
+│   │   ├── Common/                      Shared components
+│   │   │   ├── CommonNavbar.jsx
+│   │   │   ├── Footer.jsx
+│   │   │   └── PageTransitionLoader.jsx
+│   │   ├── Service Provider/            Provider-specific components
+│   │   │   ├── ServiceProviderSidebar.jsx
+│   │   │   ├── RevenueChart.jsx
+│   │   │   ├── PerformanceChart.jsx
+│   │   │   └── SubscriptionBadge.jsx
+│   │   └── User/                        Seeker components + Maps
+│   │       ├── UserNavbar.jsx
+│   │       ├── MapView.jsx
+│   │       ├── SimpleMapExplore.jsx
+│   │       ├── SimpleMapServices.jsx
+│   │       ├── GoogleMapsServices.jsx
+│   │       ├── GoogleMapsExplore.jsx
+│   │       ├── ServicesMap.jsx
+│   │       ├── ExploreMap.jsx
+│   │       └── UserBookingModel.jsx
+│   ├── contexts/
+│   │   ├── AuthContext.jsx             Authentication state management
+│   │   ├── SocketContext.jsx           Real-time connection handling
+│   │   └── ThemeContext.jsx            Light/dark mode
+│   ├── data/
+│   │   └── services.json               Static service categories
+│   ├── hooks/
+│   │   └── InspectProtection.jsx       Route protection hook
+│   ├── layout/
+│   │   ├── CommonLayout.jsx            Public pages layout
+│   │   ├── ServiceProviderLayout.jsx   Provider dashboard layout
+│   │   └── UserLayout.jsx              Seeker dashboard layout
+│   ├── pages/
+│   │   ├── Common/                      Public pages
+│   │   │   ├── CommonHome.jsx
+│   │   │   ├── CommonAbout.jsx
+│   │   │   ├── CommonContact.jsx
+│   │   │   ├── Error.jsx
+│   │   │   ├── Unauthorized.jsx
+│   │   │   ├── Login.jsx
+│   │   │   └── SignupSelector.jsx
+│   │   ├── ServiceProvider/             Provider pages
+│   │   │   ├── ServiceProviderDashboard.jsx
+│   │   │   ├── ServiceProviderProfile.jsx
+│   │   │   ├── ServiceManagement.jsx
+│   │   │   ├── ServiceProviderBookings.jsx
+│   │   │   ├── ServiceProviderReviews.jsx
+│   │   │   ├── ServiceProviderNotification.jsx
+│   │   │   ├── ServiceProviderSubscription.jsx
+│   │   │   ├── ServiceProviderSettings.jsx
+│   │   │   ├── ServiceProviderSignup.jsx
+│   │   │   └── ServiceProviderVerification.jsx
+│   │   └── User/                        Seeker pages
+│   │       ├── UserHome.jsx
+│   │       ├── UserServices.jsx
+│   │       ├── UserExplore.jsx
+│   │       ├── UserBookings.jsx
+│   │       ├── UserProfile.jsx
+│   │       ├── UserNotification.jsx
+│   │       └── UserSignup.jsx
+│   ├── routes/
+│   │   ├── ProtectedRoutes.jsx          Role-based route guards
+│   │   ├── ServiceProviderRoutes.jsx
+│   │   └── UserRoutes.jsx
+│   ├── services/                        API service layer
+│   │   ├── api.js                      Axios instance with interceptors
+│   │   ├── authService.js              Authentication API
+│   │   ├── profileService.js           Profile API
+│   │   ├── serviceAPI.js               Services API
+│   │   ├── settingsAPI.js              Settings API
+│   │   ├── subscriptionAPI.js          Subscription API
+│   │   └── verificationAPI.js          Verification API
+│   ├── App.jsx                         Main router setup
+│   ├── App.css
+│   ├── index.css
+│   ├── main.jsx
+│   ├── resources.js
+│   └── assets/                         Images, fonts, icons
+
+### 2.3 ADMIN DASHBOARD (ConnectVista_Admin/)
+
+ConnectVista_Admin/
+├── src/
+│   ├── components/
+│   │   ├── DataTable.jsx               Reusable data table
+│   │   ├── Header.jsx                  Admin header
+│   │   ├── Modal.jsx                   Reusable modal
+│   │   ├── ProtectedRoute.jsx           Auth guard
+│   │   ├── Sidebar.jsx                 Navigation sidebar
+│   │   └── StatCard.jsx                Statistics card
+│   ├── context/
+│   │   └── AuthContext.jsx            Admin auth state
+│   ├── layout/
+│   │   └── AdminLayout.jsx            Admin layout wrapper
+│   ├── pages/
+│   │   ├── Bookings.jsx               Manage all bookings
+│   │   ├── Dashboard.jsx              Overview statistics
+│   │   ├── Login.jsx                  Admin login
+│   │   ├── Revenue.jsx                Revenue analytics
+│   │   ├── Reviews.jsx                Manage reviews
+│   │   ├── Services.jsx                Service management
+│   │   ├── Settings.jsx               Platform settings
+│   │   ├── Subscriptions.jsx           Subscription management
+│   │   ├── Users.jsx                   User management
+│   │   └── Verification.jsx           Provider verification queue
+│   ├── services/
+│   │   └── api.js                     Axios instance
+│   ├── App.jsx
+│   ├── index.css
+│   └── main.jsx
+
+================================================================================
+## 3. BACKEND ANALYSIS
+
+### 3.1 MODELS & RELATIONSHIPS
+
+USER MODEL (User.js)
+- Purpose: Base authentication table
+- Key Fields:
+  * email (unique, required)
+  * phone (required)
+  * password (hashed, select: false)
+  * role: enum ['seeker', 'provider', 'admin']
+  * isActive (boolean)
+  * isEmailVerified (boolean)
+  * lastLogin (Date)
+  * createdAt, updatedAt
+
+SERVICE SEEKER MODEL (ServiceSeeker.js)
+- Purpose: Customer profile
+- Key Fields:
+  * user (ref: User, unique)
+  * name (required)
+  * gender (enum: male/female/other)
+  * address:
+    - street, city, state, pinCode
+    - coordinates (GeoJSON Point, nullable)
+  * profileImage
+  * preferences (notifications, emailUpdates)
+  * createdAt, updatedAt
+- Indexes: address.city, address.state
+
+SERVICE PROVIDER MODEL (ServiceProvider.js)
+- Purpose: Service provider business profile
+- Key Fields:
+  * userId (ref: User, unique)
+  * name, businessName
+  * description (max 1000 chars)
+  * experienceYears
+  * businessAddress:
+    - street, city, state, pinCode (all required)
+    - coordinates: GeoJSON Point [longitude, latitude]
+  * languages []
+  * rating:
+    - average (0-5)
+    - count
+    - breakdown {1-5}
+  * startingPrice, emergencyCharge, extraChargeNote
+  * isVerified (boolean)
+  * verificationStatus (enum: pending/approved/rejected)
+  * totalJobsCompleted, totalEarnings, platformEarnings
+  * currentPlan (enum: Basic/Professional/Business/Enterprise/null)
+  * planExpiresAt
+  * businessImages [] (url, filename, originalName, uploadedAt)
+- Indexes:
+  * businessAddress.coordinates: '2dsphere' (geospatial queries)
+  * isVerified, rating, businessName (text search)
+  * city, state
+
+BOOKING MODEL (Booking.js)
+- Purpose: Core transaction between seeker and provider
+- Key Fields:
+  * seekerId (ref: ServiceSeeker, required)
+  * providerId (ref: ServiceProvider, required)
+  * serviceId (ref: Service)
+  * bookingDate (Date, required)
+  * bookingTime (String, HH:MM format)
+  * priority (enum: normal/urgent)
+  * serviceAddress:
+    - sameAsSeeker (boolean)
+    - street, city, state, pinCode
+    - coordinates (GeoJSON Point)
+  * additionalNote (max 500 chars)
+  * Pricing:
+    - basePrice (required)
+    - extraCharge
+    - platformFee
+    - totalPrice
+  * paymentStatus (enum: pending/paid/failed/refunded/partially-refunded)
+  * paymentMethod (enum: stripe/razorpay/cash/bank-transfer)
+  * paymentId
+  * status (enum: pending/accepted/rejected/confirmed/in-progress/completed/cancelled/disputed)
+  * cancellationReason, cancelledBy
+  * completedAt, providerNotes, seekerFeedback
+- Indexes:
+  * seekerId, providerId, serviceId, status, bookingDate
+  * serviceAddress.coordinates: '2dsphere'
+
+NOTIFICATION MODEL (Notification.js)
+- Purpose: User notifications
+- Key Fields:
+  * userId (ref: User)
+  * bookingId (ref: Booking)
+  * title, message
+  * category
+  * type (info/success/warning/error)
+  * isRead (boolean)
+  * readAt
+  * actionUrl
+  * metadata {}
+  * createdAt
+
+PROVIDER SCHEDULE MODEL (ProviderSchedule.js)
+- Purpose: Weekly availability management
+- Key Fields:
+  * providerId (ref: ServiceProvider)
+  * weeklySchedule: { [day]: { isAvailable, startTime, endTime } }
+
+PROVIDER VERIFICATION MODEL (ProviderVerification.js)
+- Purpose: KYC document storage
+- Key Fields:
+  * providerId
+  * documents [] (type, url, uploadedAt)
+  * status
+  * submittedAt, reviewedAt
+
+SUBSCRIPTION MODELS
+- Subscription.js: Platform subscription plans
+- ProviderSubscription.js: Provider's active subscription
+
+REVIEW MODEL (Review.js)
+- Purpose: Service ratings and feedback
+- Key Fields:
+  * bookingId, seekerId, providerId, serviceId
+  * rating (1-5), comment
+  * createdAt
+
+### 3.2 CONTROLLERS & RESPONSIBILITIES
+
+AUTH CONTROLLER (authController.js)
+- signup(): Create user + role-specific profile
+- login(): Verify credentials, generate tokens
+- logout(): Token management
+- getProfile(): Fetch user + profile data
+- updateProfile(): Update user/profile
+- changePassword(): Password update
+
+BOOKING CONTROLLER (bookingController.js)
+- createBooking(): Seeker creates booking request
+  * Validates provider exists and is verified
+  * Checks provider availability/schedule
+  * Calculates pricing (base + urgent multiplier + platform fee)
+  * Creates notification + socket event
+- getSeekerBookings(): Paginated seeker bookings
+- getProviderBookings(): Provider bookings + stats aggregation
+- getBookingById(): Single booking with auth check
+- acceptBooking(): Provider accepts (status: accepted)
+- rejectBooking(): Provider rejects (status: rejected)
+- cancelBooking(): Either party cancels
+
+NOTIFICATION CONTROLLER (notificationController.js)
+- getNotifications(): Paginated with filters
+- getUnreadCount(): Unread notifications count
+- markAsRead(): Single notification
+- markAllAsRead(): Bulk update
+- deleteNotification(): Remove notification
+
+PROVIDER PROFILE CONTROLLER (providerProfileController.js)
+- Profile CRUD operations
+- Business images upload
+- Portfolio management
+
+SEEKER PROFILE CONTROLLER (seekerProfileController.js)
+- Profile CRUD operations
+
+SERVICE CONTROLLER (serviceController.js)
+- Service category management
+- Service listing
+
+SUBSCRIPTION CONTROLLER (subscriptionController.js)
+- Plan management
+- Provider subscription activation
+
+VERIFICATION CONTROLLER (verificationController.js)
+- Document upload
+- Verification status checks
+
+SETTINGS CONTROLLER (settingsController.js)
+- Provider settings management
+
+### 3.3 ROUTES STRUCTURE
+
+/api/auth           Authentication (login, signup, logout, profile)
+/api/admin          Admin operations
+/api/verification   Provider verification documents
+/api/profile        Provider profile (provider routes)
+/api/seeker         Seeker profile + seeker services
+/api/service-catalog Service categories and listings
+/api/bookings       Booking CRUD operations
+/api/notifications  Notification management
+/api/settings       Provider settings
+/api/subscriptions  Subscription plans
+
+### 3.4 MIDDLEWARE USAGE
+
+AUTH MIDDLEWARE (auth.js)
+- JWT verification from Bearer header or cookies
+- User fetch from database
+- Provider profile attachment for provider role
+- Role-based authorization with allowedRoles array
+- Error handling for token expiration/invalid
+
+VALIDATION MIDDLEWARE (validation.js)
+- Request body validation using express-validator
+- Validation chains for different endpoints
+
+UPLOAD MIDDLEWARE (upload.js)
+- Multer configuration for file uploads
+- File type and size limits
+
+### 3.5 AUTHENTICATION MECHANISM
+
+JWT-Based Authentication Flow:
+1. User submits credentials → POST /api/auth/login
+2. Controller verifies password with bcrypt.compare()
+3. JWT tokens generated via jwtUtils.generateTokens()
+4. Token returned in response + stored in localStorage
+5. Subsequent requests include: Authorization: Bearer <token>
+6. Auth middleware validates JWT signature
+7. User fetched and attached to req.user
+8. Socket connections include JWT in handshake auth
+
+Token Storage:
+- Access token: localStorage ('accessToken', 'token')
+- Also stored in cookies for redundancy
+
+Password Security:
+- bcryptjs with salt rounds (10)
+- User schema has select: false for password field
+
+### 3.6 ROLE-BASED ACCESS IMPLEMENTATION
+
+Role Definition (User.js):
+- enum: ['seeker', 'provider', 'admin']
+
+Middleware Usage Examples:
+- auth()                          → Any authenticated user
+- auth(['provider'])              → Provider only
+- auth(['seeker'])                → Seeker only  
+- auth(['admin'])                 → Admin only
+- auth(['provider', 'admin'])     → Multiple roles
+
+Frontend Protection:
+- ProtectedRoutes component checks:
+  1. isAuthenticated
+  2. user.role in allowedRoles
+  3. profile?.isVerified for providers
+
+### 3.7 DATABASE SCHEMA PATTERNS
+
+Geospatial Queries:
+- ServiceProvider: 2dsphere index on businessAddress.coordinates
+- Booking: 2dsphere index on serviceAddress.coordinates
+
+Compound Indexes:
+- Booking: { seekerId: 1 }, { providerId: 1 }, { status: 1 }, { bookingDate: 1 }
+- ServiceProvider: { isVerified: 1 }, { rating: -1 }, { city: 1 }, { state: 1 }
+
+Referential Integrity:
+- User → ServiceSeeker/ServiceProvider (one-to-one)
+- ServiceSeeker → Booking (one-to-many)
+- ServiceProvider → Booking (one-to-many)
+- Booking → Notification (one-to-many)
+
+Soft Delete:
+- Status-based (no hard deletes)
+- Booking status: pending → accepted → confirmed → in-progress → completed
+- Or: rejected, cancelled, disputed
+
+### 3.8 GEO-LOCATION IMPLEMENTATION
+
+Geocoding Service (geocodingService.js):
+
+Primary Provider: OpenStreetMap Nominatim API
+- Free, no API key required
+- Request: https://nominatim.openstreetmap.org/search
+- Headers: User-Agent required
+- Timeout: 5 seconds
+- Retry: 2 attempts on timeout
+
+Fallback Provider: Google Maps API
+- Paid, requires GOOGLE_MAPS_API_KEY
+- Request: https://maps.googleapis.com/maps/api/geocode/json
+
+PIN Code Fallback:
+- Lookup table for major Indian cities
+- Ahmedabad: 382, 380 | Mumbai: 400 | Delhi: 110
+- Bangalore: 560 | Hyderabad: 500 | Chennai: 600
+- Kolkata: 700 | Pune: 411 | Surat: 395 | etc.
+
+Default Coordinates:
+- Ahmedabad: [72.5714, 23.0225] (when all geocoding fails)
+
+Coordinate Format:
+- GeoJSON Point: { type: 'Point', coordinates: [longitude, latitude] }
+
+Distance Calculation:
+- Haversine formula for km distance
+- Method: calculateDistance(lat1, lon1, lat2, lon2)
+
+Validation:
+- Latitude: -90 to 90
+- Longitude: -180 to 180
+- Reject default India center [78.9629, 20.5937]
+
+### 3.9 SOCKET.IO SETUP
+
+Server Setup (server.js):
+- HTTP server: http.createServer(app)
+- Socket.IO: new Server(server, { cors, credentials })
+- CORS origins: FRONTEND_URL (5173), ADMIN_URL (5174)
+
+Socket Manager (socketManager.js):
+- Singleton pattern with io instance
+- userSocketMap: Map<userId, socketId>
+- Methods:
+  * setIO(), getIO()
+  * addUserSocket(), removeUserSocket()
+  * getUserSocketId(), isUserOnline()
+  * emitToUser(), emitToUsers(), broadcast()
+  * getConnectedUsersCount(), getConnectedUsers()
+
+Authentication:
+- JWT verified in handshake auth middleware
+- Token from socket.handshake.auth.token
+- User attached to socket.user after verification
+
+Connection Events:
+- connection: Log socket.id and user info
+- disconnect: Remove socket mapping
+- error: Error handling
+
+Emitted Events (server → client):
+- booking:new          New booking request
+- booking:accepted     Provider accepted
+- booking:rejected     Provider rejected
+- booking:cancelled    Cancelled by either party
+- notification:new     General notification
+- notification:count   Unread count update
+
+Client Events (client → server):
+- Custom events can be emitted via socket.emit()
+
+### 3.10 BOOKING WORKFLOW LOGIC
+
+Phase 1: Creation (Seeker)
+1. POST /api/bookings with providerId, serviceId, date, time, address
+2. Validations:
+   - Provider exists and isVerified
+   - Provider service isAvailable
+   - Booking date is in future
+   - No duplicate booking (same provider, date, time)
+   - Within provider's working hours (from ProviderSchedule)
+3. Pricing calculation:
+   - basePrice = providerService.minPrice || provider.startingPrice || 500
+   - extraCharge = priority === 'urgent' ? basePrice * 0.5 : 0
+   - platformFee = basePrice * 0.05
+   - totalPrice = (basePrice + extraCharge + platformFee) * priorityMultiplier
+4. Booking created with status: 'pending', paymentStatus: 'pending'
+5. Notification created for provider
+6. Socket event 'booking:new' emitted to provider
+
+Phase 2: Provider Response
+- Accept: PATCH /api/bookings/:id/accept
+  * Status → 'accepted'
+  * Notification + socket to seeker
+- Reject: PATCH /api/bookings/:id/reject
+  * Status → 'rejected'
+  * cancellationReason stored
+  * Notification + socket to seeker
+
+Phase 3: Cancellation
+- PATCH /api/bookings/:id/cancel
+- Allowed statuses: pending, accepted, confirmed, in-progress
+- Not allowed: cancelled, completed, rejected
+- Either seeker or provider can cancel
+- Notification + socket to other party
+
+Status Flow:
+pending → accepted → confirmed → in-progress → completed
+    ↓         ↓
+  rejected  cancelled
+
+Pricing Breakdown:
+- basePrice: Provider's minimum/service price
+- extraCharge: 50% for urgent priority
+- platformFee: 5% of base price
+- priorityMultiplier: 1.5x for urgent
+
+### 3.11 NOTIFICATION FLOW
+
+Trigger Events:
+- Booking created → provider notified
+- Booking accepted → seeker notified
+- Booking rejected → seeker notified
+- Booking cancelled → both parties notified
+
+Storage:
+- MongoDB Notification collection
+- Fields: userId, bookingId, title, message, category, type, isRead, actionUrl, metadata
+
+Real-time Delivery:
+1. Controller creates Notification document
+2. socketManager.emitToUser(userId, event, data)
+3. SocketContext receives event in frontend
+4. Updates notifications array + increments unread count
+5. UI re-renders with new notification badge
+
+Read Status:
+- GET /api/notifications → list with isRead
+- GET /api/notifications/unread-count → count
+- PATCH /api/notifications/:id/read → mark single
+- PATCH /api/notifications/read-all → mark all
+- DELETE /api/notifications/:id → remove
+
+================================================================================
+## 4. FRONTEND ANALYSIS
+
+### 4.1 COMPONENT STRUCTURE
+
+Shared Components:
+- CommonNavbar: Top navigation with auth state
+- Footer: Site footer
+- PageTransitionLoader: Loading states
+- PaymentGateway: Payment integration UI
+- SubscriptionBadge: Plan status indicator
+
+Provider Components:
+- ServiceProviderSidebar: Dashboard navigation
+- RevenueChart: Earnings visualization (Recharts)
+- PerformanceChart: Jobs/stats visualization
+
+User Components:
+- MapView: Base map component
+- SimpleMapExplore: Explore page map
+- SimpleMapServices: Services page map
+- GoogleMapsExplore: Google Maps integration
+- GoogleMapsServices: Services with Google
+- ServicesMap: Service provider markers
+- ExploreMap: Location-based discovery
+- UserBookingModel: Booking modal/form
+
+### 4.2 PAGES STRUCTURE
+
+PUBLIC PAGES:
+- /                     CommonHome
+- /about                CommonAbout
+- /contact              CommonContact
+- /login                LoginPage
+- /signup               SignupSelection
+- /user/signup          UserSignup
+- /service-provider/signup  ServiceProviderSignup
+- /payment              PaymentPage
+- /unauthorized         UnauthorizedPage
+- /*                    ErrorPage
+
+SEEKER PROTECTED (/user):
+- /user, /user/home     UserHome
+- /user/services        UserServices (browse services)
+- /user/explore         UserExplore (map-based discovery)
+- /user/profile         UserProfile
+- /user/notifications  UserNotification
+- /user/bookings       UserBookings
+
+PROVIDER PROTECTED (/service-provider):
+- /service-provider, /service-provider/dashboard  ServiceProviderDashboard
+- /service-provider/profile     ServiceProviderProfile
+- /service-provider/services   ServiceManagement
+- /service-provider/bookings   ServiceProviderBookings
+- /service-provider/reviews   ServiceProviderReviews
+- /service-provider/notifications  ServiceProviderNotification
+- /service-provider/subscription   ServiceProviderSubscription
+- /service-provider/settings      ServiceProviderSettings
+- /service-provider/verify       ServiceProviderVerification (separate guard)
+
+ADMIN (/admin):
+- /admin/dashboard      Dashboard
+- /admin/users         Users
+- /admin/bookings      Bookings
+- /admin/services      Services
+- /admin/reviews       Reviews
+- /admin/subscriptions Subscriptions
+- /admin/revenue       Revenue
+- /admin/verification  Verification queue
+- /admin/settings      Settings
+
+### 4.3 API CALLING STRATEGY
+
+Axios Configuration (services/api.js):
+- Base URL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+- Request interceptor: Adds Bearer token from localStorage
+- Response interceptor: Error handling
+
+Service Modules:
+- authService: login, signupSeeker, signupProvider, logout, getProfile, updateProfile
+- profileService: Seeker/Provider profile operations
+- serviceAPI: Service catalog, provider search
+- bookingAPI: Booking CRUD
+- notificationAPI: Notifications
+- subscriptionAPI: Plans
+- verificationAPI: Document upload, status
+- settingsAPI: Provider settings
+
+Error Handling:
+- Try-catch in services
+- Error message extraction from response
+- Global Toaster notifications via react-hot-toast
+
+### 4.4 STATE MANAGEMENT
+
+AuthContext (AuthContext.jsx):
+State:
+- user: { _id, email, role, ... }
+- profile: ServiceSeeker | ServiceProvider object
+- loading: boolean
+- error: string | null
+
+Methods:
+- signupSeeker(userData)
+- signupProvider(userData)
+- login(email, password)
+- logout()
+- updateProfile(data)
+- changePassword(current, new)
+- refreshAuth()
+- refreshProfile()
+- checkProviderVerification()
+
+Computed:
+- isAuthenticated: !!user
+- isProvider: user?.role === 'provider'
+- isSeeker: user?.role === 'seeker'
+- isAdmin: user?.role === 'admin'
+- isVerifiedProvider: user?.role === 'provider' && profile?.isVerified
+
+SocketContext (SocketContext.jsx):
+State:
+- socket: socket.io client instance
+- isConnected: boolean
+- notifications: [] array
+- unreadCount: number
+
+Methods:
+- subscribe(eventType, callback): Listen to events
+- emit(event, data): Send to server
+- resetUnreadCount(): Set to 0
+- clearNotifications(): Clear all
+- setInitialUnreadCount(count)
+- updateUnreadCount(count)
+
+Events Listened:
+- booking:new
+- booking:accepted
+- booking:rejected
+- booking:cancelled
+- notification:new
+- notification:count
+
+ThemeContext (ThemeContext.jsx):
+- Light/dark mode toggle
+- CSS variables or Tailwind dark: variant
+
+### 4.5 ROUTING IMPLEMENTATION
+
+React Router v7 Setup:
+- BrowserRouter as Router
+- Routes with element composition
+- Nested routes for layouts
+
+ProtectedRoutes Component:
+Props:
+- children: ReactNode
+- allowedRoles: string[] (default: [])
+- checkVerification: boolean (default: false)
+
+Logic:
+1. Check loading state → show spinner
+2. Check isAuthenticated → redirect /login
+3. Check role authorization → redirect /unauthorized
+4. If checkVerification && provider && !verified → redirect /verify
+5. Special case: verified providers redirected from /verify to /dashboard
+
+Route Groups:
+- Public: No layout or CommonLayout
+- Auth: No layout (login/signup)
+- Protected: UserLayout, ServiceProviderLayout, AdminLayout
+
+### 4.6 ROLE-BASED UI HANDLING
+
+Authentication State:
+- localStorage stores: accessToken, user (JSON)
+- AuthContext hydrates on app mount
+- Protected routes render children only if authorized
+
+Verification Gate:
+- Providers must complete verification before accessing dashboard
+- checkVerification prop in ProtectedRoutes
+- Unverified → /service-provider/verify
+- Verified → /service-provider/dashboard
+
+Role-Specific UI:
+- Navbar shows different links based on role
+- Sidebar changes for provider/admin
+- Dashboard metrics differ by role
+
+### 4.7 BOOKING FORM LOGIC
+
+Form Steps (UserBookingModel):
+1. Service Selection: Choose from categories
+2. Provider Selection: Filter by location, rating, price
+3. Date/Time Picker: Validate against provider schedule
+4. Address Input: Same as profile or custom
+5. Additional Notes: Optional text
+6. Priority Toggle: Normal or Urgent (1.5x price)
+7. Confirmation: Summary + submit
+
+Pricing Display:
+- Base price shown upfront
+- Extra charges (urgent) calculated live
+- Platform fee displayed
+- Total price prominently shown
+
+Submission:
+- POST /api/bookings with all form data
+- Success: Toast + redirect to bookings
+- Error: Toast with error message
+
+### 4.8 MAP INTEGRATION LOGIC
+
+Library: Leaflet + react-leaflet
+- Open-source, no API key required for basic tiles
+- OpenStreetMap tiles by default
+
+Components:
+- MapContainer: Base map
+- TileLayer: OSM tiles
+- Marker: Provider location
+- Popup: Info window
+- CircleMarker: Radius indicator
+
+Google Maps Integration:
+- @googlemaps/google-maps-services-js for geocoding
+- Separate components for Google maps display
+
+Map Features:
+- Provider markers with business info popup
+- User location (if permitted)
+- Radius search circle
+- Zoom controls
+- Geolocation button
+
+Explore/Services Pages:
+- UserExplore: Browse providers on map
+- UserServices: Service category selection + nearby providers
+- ExploreMap: Full-screen map view
+
+### 4.9 SOCKET CLIENT IMPLEMENTATION
+
+SocketProvider (SocketContext.jsx):
+- Wraps entire app
+- useEffect triggers connection on auth change
+
+Connection Logic:
+1. Check isAuthenticated + user exists
+2. Get token from localStorage
+3. io(SOCKET_URL, { auth: { token }, transports, reconnection })
+4. Store socket in socketRef
+5. Setup event listeners
+6. Cleanup on unmount or auth change
+
+Event Handlers:
+- connect: setIsConnected(true)
+- disconnect: setIsConnected(false)
+- connect_error: Error logging
+- booking:new: handleNewNotification(data, 'booking:new')
+- booking:accepted: handleNewNotification(data, 'booking:accepted')
+- booking:rejected: handleNewNotification(data, 'booking:rejected')
+- booking:cancelled: handleNewNotification(data, 'booking:cancelled')
+- notification:new: handleNewNotification(data, 'notification:new')
+- notification:count: setUnreadCount(data.count)
+
+handleNewNotification:
+- Add to notifications array (prepend)
+- Increment unreadCount
+- Call subscribed callbacks
+- Trigger UI updates
+
+Subscribe Pattern:
+- Listeners stored in Map<eventType, Set<callback>>
+- subscribe() returns unsubscribe function
+- Multiple listeners per event supported
+
+================================================================================
+## 5. TECHNOLOGY STACK DETECTION
+
+### 5.1 BACKEND TECHNOLOGIES
+
+Core:
+- Node.js runtime
+- Express.js v5.2.1 (web framework)
+- MongoDB database
+- Mongoose v9.0.2 (ODM)
+
+Authentication & Security:
+- jsonwebtoken v9.0.3 (JWT)
+- bcryptjs v3.0.3 (password hashing)
+- helmet v8.1.0 (security headers)
+- cors v2.8.5 (cross-origin)
+- express-rate-limit v8.2.1 (rate limiting)
+- cookie-parser v1.4.7
+
+Real-time:
+- socket.io v4.8.3 (WebSocket)
+- socket.io-client v4.8.3 (frontend)
+
+File Handling:
+- multer v2.0.2 (file upload)
+- multer-storage-cloudinary v4.0.0
+- cloudinary v1.41.0 (image CDN)
+
+Maps & Location:
+- @googlemaps/google-maps-services-js v3.4.2
+- node-geocoder v4.4.1
+- geoip-lite v1.4.10
+
+Payments:
+- stripe v20.1.0
+- razorpay v2.9.6
+
+Email:
+- nodemailer v7.0.12
+
+Validation:
+- joi v18.0.2
+- express-validator v7.3.1
+
+Utilities:
+- axios v1.13.2 (HTTP client)
+- moment v2.30.1 (dates)
+- winston v3.19.0 (logging)
+- compression v1.8.1
+- morgan v1.10.1 (HTTP logging)
+- dotenv v17.2.3 (environment)
+- swagger-jsdoc v6.2.8
+- swagger-ui-express v5.0.1
+- redis v5.10.0 (caching)
+
+Development:
+- nodemon v3.1.11 (auto-restart)
+- eslint v9.39.2
+- prettier v3.7.4
+
+### 5.2 FRONTEND TECHNOLOGIES (Main App)
+
+Core:
+- React v19.1.1
+- Vite v7.1.7 (build tool)
+- JavaScript (ES6+)
+
+Routing:
+- react-router-dom v7.9.4
+
+Styling:
+- Tailwind CSS v4.1.14
+- @tailwindcss/vite v4.1.14
+
+HTTP:
+- axios v1.13.2
+
+Real-time:
+- socket.io-client v4.8.3
+
+Maps:
+- leaflet v1.9.4
+- react-leaflet v5.0.0
+
+Charts:
+- recharts v3.5.1
+
+Animations:
+- framer-motion v12.23.22
+
+Icons:
+- lucide-react v0.545.0
+
+Notifications:
+- react-hot-toast v2.6.0
+
+Development:
+- eslint v9.36.0
+- @vitejs/plugin-react v5.0.4
+
+### 5.3 ADMIN DASHBOARD TECHNOLOGIES
+
+Core:
+- React v18.3.1
+- Vite v6.0.6 (older version)
+- Tailwind CSS v3.4.17 (older version)
+
+Routing:
+- react-router-dom v7.1.1
+
+Charts:
+- recharts v2.15.0
+
+Animations:
+- framer-motion v11.15.0
+
+Icons:
+- lucide-react v0.468.0
+
+Utilities:
+- clsx v2.1.1
+- tailwind-merge v2.6.0
+
+================================================================================
+## 6. DATA FLOW EXPLANATION
+
+### 6.1 AUTHENTICATION FLOW (End-to-End)
+
+1. USER LOGIN:
+   - User submits email/password to /api/auth/login
+   - Controller finds user by email
+   - bcrypt.compare(password, user.password)
+   - If valid: generateTokens(user._id, user.role)
+   - Return { accessToken, user, profile }
+
+2. TOKEN STORAGE (Frontend):
+   - localStorage.setItem('accessToken', token)
+   - localStorage.setItem('user', JSON.stringify(user))
+
+3. REQUEST AUTHENTICATION:
+   - axios interceptor adds: Authorization: Bearer ${token}
+   - Backend auth middleware extracts token
+   - jwt.verify(token, JWT_SECRET)
+   - req.user = { id: decoded.id, role: decoded.role }
+
+4. SOCKET AUTHENTICATION:
+   - Socket connects with: io(url, { auth: { token } })
+   - Server middleware verifies JWT
+   - User attached to socket.user
+   - userSocketMap.set(userId, socketId)
+
+5. TOKEN REFRESH:
+   - Refresh token mechanism available
+   - verifyRefreshToken() in jwtUtils
+   - New access token issued
+
+### 6.2 SERVICE DISCOVERY FLOW
+
+1. SERVICE CATEGORIES:
+   - GET /api/service-catalog
+   - Returns Service categories with subServices
+
+2. PROVIDER SEARCH:
+   - GET /api/seeker/services or /api/service-catalog
+   - Query params: category, city, lat, lng, radius
+
+3. GEOSPATIAL QUERY:
+   - MongoDB 2dsphere index on provider coordinates
+   - $near or $geoWithin operators
+   - Distance calculated in kilometers
+
+4. RESULTS PROCESSING:
+   - Sort by: rating, distance, price
+   - Filter by: isVerified, availability
+   - Paginate results
+
+5. MAP DISPLAY:
+   - Leaflet renders markers
+   - Popup shows provider info
+   - Click marker → provider detail
+
+### 6.3 BOOKING LIFECYCLE FLOW
+
+STEP 1: CREATE BOOKING
+User Action:
+  - Select provider → Choose service → Pick date/time → Confirm
+Frontend:
+  - POST /api/bookings with form data
+Backend:
+  - Validate provider, availability, schedule
+  - Calculate pricing
+  - Create Booking document (status: pending)
+  - Create Notification for provider
+  - socketManager.emitToUser(provider.userId, 'booking:new', data)
+Frontend Socket:
+  - Receive 'booking:new' event
+  - Update notifications list
+  - Show toast notification
+
+STEP 2: PROVIDER RESPONSE
+Provider Action:
+  - View booking → Accept or Reject
+Backend (Accept):
+  - PATCH /api/bookings/:id/accept
+  - Update status to 'accepted'
+  - Create notification for seeker
+  - Emit 'booking:accepted'
+Backend (Reject):
+  - PATCH /api/bookings/:id/reject
+  - Update status to 'rejected'
+  - Store cancellationReason
+  - Emit 'booking:rejected'
+
+STEP 3: CANCELLATION
+User/Provider Action:
+  - Cancel booking with optional reason
+Backend:
+  - PATCH /api/bookings/:id/cancel
+  - Verify ownership (seeker/provider)
+  - Update status to 'cancelled'
+  - Notify other party
+  - Emit 'booking:cancelled'
+
+### 6.4 NOTIFICATION FLOW
+
+CREATION:
+- Triggered by bookingController
+- new Notification({
+    userId: recipient,
+    bookingId: booking._id,
+    title, message, category, type, actionUrl, metadata
+  })
+- notification.save()
+
+REAL-TIME:
+- socketManager.emitToUser(userId, eventType, {
+    booking: {...},
+    notification: {...}
+  })
+
+FRONTEND HANDLING:
+- SocketContext subscribes to events
+- handleNewNotification(notification, eventType):
+  * notifications.unshift(notification)
+  * unreadCount++
+  * trigger callbacks
+- UI updates badge count
+
+READ STATUS:
+- GET /api/notifications → fetch all
+- PATCH /api/notifications/:id/read → mark single
+- Socket emits 'notification:count' with new total
+
+### 6.5 SOCKET COMMUNICATION FLOW
+
+SERVER SIDE:
+server.js:
+  - Create HTTP server
+  - Initialize Socket.IO with CORS
+  - socketManager.setIO(io)
+
+Authentication:
+  - io.use(middleware) for JWT verification
+  - Token from socket.handshake.auth.token
+  - User object attached to socket
+
+Connection:
+  - io.on('connection', (socket) => {...})
+  - socketManager.addUserSocket(user._id, socket.id)
+  - Log connection info
+
+Events Emitted:
+  - booking:new → Provider receives new booking
+  - booking:accepted → Seeker sees acceptance
+  - booking:rejected → Seeker sees rejection
+  - booking:cancelled → Either party notified
+  - notification:new → General notifications
+  - notification:count → Unread count updates
+
+Disconnection:
+  - socket.on('disconnect', (reason) => {...})
+  - socketManager.removeUserSocket(socket.id)
+  - Log disconnection
+
+CLIENT SIDE:
+SocketContext:
+  - useEffect on isAuthenticated change
+  - Connect with token in auth object
+  - Setup event listeners
+  - Cleanup on unmount
+
+Event Handling:
+  - Each event type has dedicated handler
+  - Updates state (notifications, unreadCount)
+  - Triggers UI updates via callbacks
+
+================================================================================
+## 7. SECURITY ANALYSIS
+
+### 7.1 JWT HANDLING
+
+Token Generation:
+- jwt.sign(payload, secret, options)
+- Payload: { id: user._id, role: user.role }
+- Options: { expiresIn: '7d' }
+
+Token Verification:
+- Middleware extracts from Authorization header
+- jwt.verify(token, process.env.JWT_SECRET)
+- Decoded payload attached to req.user
+
+Storage Security:
+- Frontend: localStorage (vulnerable to XSS)
+- Backend: select: false on password field
+
+Token Refresh:
+- Refresh token mechanism available
+- Separate endpoint for token renewal
+- Short-lived access tokens recommended
+
+### 7.2 ROUTE PROTECTION
+
+Authentication:
+- All /api routes require valid JWT (except /api/health)
+- auth() middleware on protected routes
+
+Role Authorization:
+- auth(['provider']) - Provider only
+- auth(['seeker']) - Seeker only
+- auth(['admin']) - Admin only
+
+Frontend Routes:
+- ProtectedRoutes component
+- Checks isAuthenticated, role, verification status
+- Redirects to /login, /unauthorized, or /verify
+
+### 7.3 INPUT VALIDATION
+
+Backend:
+- Joi schemas in validation middleware
+- express-validator for route-level validation
+- Mongoose schema validation with custom messages
+- Example: email regex, phone format, password minlength
+
+Frontend:
+- Form validation before submission
+- Required field checks
+- Format validation (email, phone)
+
+### 7.4 ROLE AUTHORIZATION
+
+User Roles:
+- seeker: Can browse, book, review
+- provider: Can manage services, accept/reject bookings
+- admin: Full platform access
+
+Authorization Checks:
+- Booking ownership: seekerId/providerId match
+- Profile access: userId reference
+- Admin routes: auth(['admin']) middleware
+
+### 7.5 DATA EXPOSURE RISKS
+
+Password Storage:
+- ✅ bcrypt hashed with salt
+- ✅ select: false prevents accidental exposure
+
+API Responses:
+- ✅ User.toJSON removes password, __v
+- ⚠️ Some endpoints may return sensitive data (review implementation)
+
+Error Messages:
+- ✅ Only in development mode
+- ✅ Generic messages in production
+
+Rate Limiting:
+- ✅ 100 requests/15 minutes per IP
+- ⚠️ Could be stricter for auth endpoints
+
+CORS:
+- ✅ Whitelist: frontend (5173), admin (5174)
+- ⚠️ Consider environment-based configuration
+
+Socket Security:
+- ✅ JWT validated on handshake
+- ⚠️ No room/namespace isolation visible
+
+================================================================================
+## 8. SYSTEM STRENGTH ANALYSIS
+
+### 8.1 SCALABILITY LEVEL: MEDIUM-HIGH
+
+Strengths:
+- ✅ Stateless JWT authentication (horizontal scaling)
+- ✅ Database indexes for common queries
+- ✅ Redis configured for caching
+- ✅ Socket.IO can scale with Redis adapter
+- ✅ Clean separation of concerns
+
+Weaknesses:
+- ⚠️ Monolithic Express app
+- ⚠️ Single MongoDB instance
+- ⚠️ No microservices decomposition
+
+Recommendations for Scale:
+- Implement Redis adapter for Socket.IO (multi-instance)
+- Add read replicas for MongoDB
+- Consider CDN for static assets
+- Cache service catalog results
+
+### 8.2 MODULARITY LEVEL: HIGH
+
+Strengths:
+- ✅ Clear controller-service-model separation
+- ✅ Route modules organized by feature
+- ✅ Middleware isolated
+- ✅ Frontend: contexts, services, components separated
+- ✅ API service layer abstracts HTTP calls
+
+Areas for Improvement:
+- Could further decompose into modules/features
+- Shared utilities could be extracted to packages
+
+### 8.3 PRODUCTION READINESS: MEDIUM
+
+Security:
+- ✅ Helmet, CORS, Rate limiting
+- ✅ JWT authentication
+- ✅ Input validation
+- ✅ Error handling middleware
+- ✅ Logging (Winston)
+
+Observability:
+- ✅ Health check endpoint
+- ✅ Error logging
+- ⚠️ No metrics/monitoring (Sentry, Datadog)
+- ⚠️ No APM
+
+Reliability:
+- ⚠️ No PM2/clustering
+- ⚠️ No graceful shutdown
+- ⚠️ No dead letter queues
+
+Deployment:
+- ⚠️ No Dockerfile
+- ⚠️ No Docker Compose
+
+Testing:
+- ⚠️ No test suite visible
+
+### 8.4 IMPROVEMENTS POSSIBLE
+
+Immediate:
+1. Add rate limiting per endpoint
+2. Implement refresh token rotation
+3. Add health check for dependencies (DB, Redis)
+4. Setup basic monitoring
+
+Short-term:
+5. Docker configuration
+6. CI/CD pipeline
+7. Unit/integration tests
+8. API versioning (/api/v1/)
+
+Medium-term:
+9. Redis adapter for Socket.IO
+10. Read replicas for MongoDB
+11. CDN for static files
+12. WebP image optimization
+
+Long-term:
+13. Microservices decomposition
+14. Message queue for async jobs
+15. Advanced caching strategy
+16. GraphQL API layer
+
+================================================================================
+                              END OF ANALYSIS
+================================================================================
