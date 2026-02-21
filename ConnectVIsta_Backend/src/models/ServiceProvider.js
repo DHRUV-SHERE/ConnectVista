@@ -130,7 +130,17 @@ const serviceProviderSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  // Add this to your ServiceProvider schema
+
+  currentPlan: {
+    type: String,
+    enum: ['Basic', 'Professional', 'Business', 'Enterprise', null],
+    default: null
+  },
+
+  planExpiresAt: {
+    type: Date
+  },
+
   businessImages: [{
     url: {
       type: String,

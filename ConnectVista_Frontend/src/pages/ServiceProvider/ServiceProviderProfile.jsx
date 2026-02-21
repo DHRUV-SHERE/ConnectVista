@@ -1,4 +1,3 @@
-"use client";
 import { useState, useEffect, useCallback, memo } from "react";
 import { Upload, Plus, X, Clock, Save, Loader2, Wrench, Check, AlertCircle } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
@@ -7,6 +6,7 @@ import profileService from "../../services/profileService";
 import { serviceAPI } from "../../services/serviceAPI";
 import toast from "react-hot-toast";
 import resources from "../../resources";
+import SubscriptionBadge from "../../components/SubscriptionBadge";
 
 // Memoized components for better performance
 const ServiceTag = memo(({ service, onRemove }) => (
@@ -567,7 +567,7 @@ const ServiceProviderProfile = () => {
         }}
         className="responsive-header"
       >
-        <div>
+        <div style={{ flex: 1 }}>
           <h1
             style={{
               fontSize: "2rem",
@@ -590,6 +590,7 @@ const ServiceProviderProfile = () => {
             Manage your business information and services
           </p>
         </div>
+        <SubscriptionBadge />
         <button
           onClick={handleSave}
           disabled={saving}

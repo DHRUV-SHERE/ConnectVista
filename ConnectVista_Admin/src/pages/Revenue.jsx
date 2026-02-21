@@ -1,23 +1,15 @@
 import { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, CreditCard, Wallet, DollarSign as Money } from 'lucide-react';
+import { DollarSign, TrendingUp, CreditCard, Wallet, Eye, X } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import DataTable from '../components/DataTable';
 import { getRevenue } from '../services/api';
 
-const mockTransactions = [
-  { id: 'TXN-001', provider: 'Mike Smith', service: 'Plumbing', type: 'Booking', amount: 150, date: '2024-12-20', status: 'Completed' },
-  { id: 'TXN-002', provider: 'Sarah Davis', service: 'House Cleaning', type: 'Subscription', amount: 79, date: '2024-12-19', status: 'Completed' },
-  { id: 'TXN-003', provider: 'Tom Brown', service: 'Electrical', type: 'Booking', amount: 200, date: '2024-12-19', status: 'Completed' },
-  { id: 'TXN-004', provider: 'John Smith', service: 'AC Repair', type: 'Booking', amount: 180, date: '2024-12-18', status: 'Completed' },
-  { id: 'TXN-005', provider: 'Lisa Anderson', service: 'Gardening', type: 'Subscription', amount: 29, date: '2024-12-18', status: 'Completed' },
-  { id: 'TXN-006', provider: 'Mike Wilson', service: 'Painting', type: 'Booking', amount: 350, date: '2024-12-17', status: 'Completed' },
-];
-
-const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export default function Revenue() {
   const [dateRange, setDateRange] = useState('6months');
   const [loading, setLoading] = useState(true);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [revenueData, setRevenueData] = useState({
     totalRevenue: 0,
     monthlyRevenue: [],
@@ -33,9 +25,15 @@ export default function Revenue() {
   const fetchRevenue = async () => {
     try {
       setLoading(true);
-      const response = await getRevenue({ period: dateRange });
+      const response = await getRevenue();
       if (response.data.success) {
-        setRevenueData(response.data.data);
+        setRevenueData({
+          totalRevenue: response.data.totalRevenue || 0,
+          monthlyRevenue: response.data.monthlyRevenue || [],
+          topProviders: [],
+          recentTransactions: response.data.data || [],
+          planDistribution: []
+        });
       }
     } catch (err) {
       console.error('Failed to fetch revenue:', err);
@@ -44,89 +42,91 @@ export default function Revenue() {
     }
   };
 
-  const monthlyData = revenueData.monthlyRevenue.length > 0 
-    ? revenueData.monthlyRevenue.map(m => ({ month: months[m._id - 1], revenue: m.total, bookings: m.bookings }))
-    : [
-        { month: 'Jan', revenue: 12500, subscriptions: 4500, bookings: 8000 },
-        { month: 'Feb', revenue: 15800, subscriptions: 5200, bookings: 10600 },
-        { month: 'Mar', revenue: 18200, subscriptions: 6100, bookings: 12100 },
-        { month: 'Apr', revenue: 21400, subscriptions: 7800, bookings: 13600 },
-        { month: 'May', revenue: 24600, subscriptions: 9200, bookings: 15400 },
-        { month: 'Jun', revenue: 28900, subscriptions: 10500, bookings: 18400 },
-      ];
+  const monthlyData = revenueData.monthlyRevenue.map(m => ({ 
+    month: months[m._id - 1], 
+    revenue: m.total, 
+    bookings: m.bookings 
+  }));
 
-  const planDistribution = revenueData.planDistribution.length > 0
-    ? revenueData.planDistribution
-    : [
-        { name: 'Basic', value: 150, color: '#64748b' },
-        { name: 'Professional', value: 85, color: '#0ea5e9' },
-        { name: 'Business', value: 42, color: '#8b5cf6' },
-        { name: 'Enterprise', value: 15, color: '#f97316' },
-      ];
+  const planDistribution = revenueData.planDistribution;
 
-  const topProviders = revenueData.topProviders.length > 0
-    ? revenueData.topProviders.slice(0, 5).map((p, i) => ({
-        id: i + 1,
-        name: p.businessName,
-        service: p.service || 'N/A',
-        totalRevenue: p.totalEarnings || 0,
-        bookings: p.totalJobsCompleted || 0,
-        plan: 'N/A'
-      }))
-    : [
-        { id: '1', name: 'Mike Smith', service: 'Plumbing', totalRevenue: 12450, bookings: 156, plan: 'Business' },
-        { id: '2', name: 'Sarah Davis', service: 'House Cleaning', totalRevenue: 9820, bookings: 124, plan: 'Professional' },
-        { id: '3', name: 'Tom Brown', service: 'Electrical', totalRevenue: 8760, bookings: 98, plan: 'Business' },
-        { id: '4', name: 'John Smith', service: 'AC Repair', totalRevenue: 7650, bookings: 85, plan: 'Professional' },
-        { id: '5', name: 'Lisa Anderson', service: 'Gardening', totalRevenue: 5430, bookings: 72, plan: 'Basic' },
-      ];
+  const topProviders = revenueData.topProviders.slice(0, 5).map((p, i) => ({
+    id: i + 1,
+    name: p.businessName,
+    service: p.service || 'N/A',
+    totalRevenue: p.totalEarnings || 0,
+    bookings: p.totalJobsCompleted || 0,
+    plan: 'N/A'
+  }));
 
-  const transactions = revenueData.recentTransactions.length > 0
-    ? revenueData.recentTransactions.map((t, i) => ({
-        id: i + 1,
-        provider: t.providerId?.businessName || 'N/A',
-        service: t.serviceId?.name || 'N/A',
-        type: 'Booking',
-        amount: t.amount || 0,
-        date: t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'N/A',
-        status: t.paymentStatus || 'pending'
-      }))
-    : mockTransactions;
+  const transactions = revenueData.recentTransactions.map((t, i) => ({
+    id: t.paymentDetails?.transactionId || `TXN-${i}`,
+    provider: t.providerId?.businessName || 'N/A',
+    providerId: t.providerId?._id,
+    providerEmail: t.providerId?.email,
+    providerPhone: t.providerId?.phone,
+    providerCity: t.providerId?.city,
+    plan: t.plan || 'N/A',
+    duration: t.duration || 'N/A',
+    paymentMethod: t.paymentDetails?.method || 'N/A',
+    cardType: t.paymentDetails?.cardType || '',
+    cardLast4: t.paymentDetails?.cardLast4 || '',
+    amount: t.amount || 0,
+    date: t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'N/A',
+    startDate: t.startDate ? new Date(t.startDate).toLocaleDateString() : 'N/A',
+    endDate: t.endDate ? new Date(t.endDate).toLocaleDateString() : 'N/A',
+    status: t.status || 'active',
+    rawData: t
+  }));
 
-  const totalRevenue = revenueData.totalRevenue || monthlyData.reduce((acc, item) => acc + item.revenue, 0);
+  const totalRevenue = revenueData.totalRevenue || 0;
   const totalSubscriptions = monthlyData.reduce((acc, item) => acc + (item.subscriptions || 0), 0);
   const totalBookingRevenue = monthlyData.reduce((acc, item) => acc + item.bookings, 0);
 
   const columns = [
     { key: 'id', header: 'Transaction ID' },
     { key: 'provider', header: 'Provider' },
-    { key: 'service', header: 'Service' },
+    { key: 'plan', header: 'Plan' },
+    { key: 'duration', header: 'Duration' },
     { 
-      key: 'type', 
-      header: 'Type',
-      render: (value) => (
-        <span className={`px-2 py-1 text-xs rounded-full ${
-          value === 'Subscription' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-        }`}>
-          {value}
+      key: 'paymentMethod', 
+      header: 'Payment',
+      render: (value, row) => (
+        <span className="text-sm">
+          {value} {row.cardType ? `(${row.cardType})` : ''}
         </span>
       )
     },
     { 
       key: 'amount', 
       header: 'Amount',
-      render: (value) => <span className="font-medium">${value}</span>
+      render: (value) => <span className="font-medium">₹{value}</span>
     },
     { key: 'date', header: 'Date' },
     { 
       key: 'status', 
       header: 'Status',
       render: (value) => (
-        <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">
+        <span className={`px-2 py-1 text-xs rounded-full ${
+          value === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+        }`}>
           {value}
         </span>
       )
     },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: (_, row) => (
+        <button
+          onClick={() => setSelectedTransaction(row)}
+          className="flex items-center gap-1 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition"
+        >
+          <Eye className="w-4 h-4" />
+          View Details
+        </button>
+      )
+    }
   ];
 
   if (loading) {
@@ -161,22 +161,20 @@ export default function Revenue() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Total Revenue</p>
-              <p className="text-2xl font-bold text-gray-800">${totalRevenue.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-800">₹{totalRevenue.toLocaleString()}</p>
             </div>
             <div className="p-3 bg-green-100 rounded-lg">
               <DollarSign className="w-6 h-6 text-green-600" />
             </div>
           </div>
-          <p className="text-sm text-green-600 mt-2 flex items-center gap-1">
-            <TrendingUp className="w-4 h-4" /> +15.2% from last month
-          </p>
+          <p className="text-sm text-gray-500 mt-2">From subscriptions</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Booking Revenue</p>
-              <p className="text-2xl font-bold text-gray-800">${totalBookingRevenue.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-800">₹{totalBookingRevenue.toLocaleString()}</p>
             </div>
             <div className="p-3 bg-blue-100 rounded-lg">
               <Wallet className="w-6 h-6 text-blue-600" />
@@ -189,7 +187,7 @@ export default function Revenue() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Subscription Revenue</p>
-              <p className="text-2xl font-bold text-gray-800">${totalSubscriptions.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-800">₹{totalSubscriptions.toLocaleString()}</p>
             </div>
             <div className="p-3 bg-purple-100 rounded-lg">
               <CreditCard className="w-6 h-6 text-purple-600" />
@@ -201,18 +199,18 @@ export default function Revenue() {
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Active Providers</p>
-              <p className="text-2xl font-bold text-gray-800">292</p>
+              <p className="text-sm text-gray-500">Total Subscriptions</p>
+              <p className="text-2xl font-bold text-gray-800">{transactions.length}</p>
             </div>
             <div className="p-3 bg-orange-100 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-orange-600" />
+              <CreditCard className="w-6 h-6 text-orange-600" />
             </div>
           </div>
-          <p className="text-sm text-orange-600 mt-2">+8 this month</p>
+          <p className="text-sm text-gray-500 mt-2">Active plans</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {monthlyData.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Revenue Overview</h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -231,80 +229,7 @@ export default function Revenue() {
             </LineChart>
           </ResponsiveContainer>
         </div>
-
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Plan Distribution</h3>
-          <div className="flex items-center justify-center">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={planDistribution}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {planDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color || '#' + Math.floor(Math.random()*16777215).toString(16)} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex justify-center gap-4 mt-4">
-            {planDistribution.map((item) => (
-              <div key={item.name} className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color || '#64748b' }} />
-                <span className="text-sm text-gray-600">{item.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Top Earning Providers</h3>
-          <div className="space-y-4">
-            {topProviders.map((provider, idx) => (
-              <div key={provider.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <span className="text-lg font-bold text-gray-400">#{idx + 1}</span>
-                  <div>
-                    <p className="font-medium text-gray-800">{provider.name}</p>
-                    <p className="text-sm text-gray-500">{provider.service}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold text-green-600">${provider.totalRevenue.toLocaleString()}</p>
-                  <p className="text-sm text-gray-500">{provider.bookings} bookings</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Transactions</h3>
-          <div className="space-y-3">
-            {transactions.slice(0, 5).map((txn) => (
-              <div key={txn.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-800">{txn.provider}</p>
-                  <p className="text-sm text-gray-500">{txn.type} - {txn.service}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold text-green-600">+${txn.amount}</p>
-                  <p className="text-sm text-gray-500">{txn.date}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="p-4 border-b border-gray-200">
@@ -312,6 +237,106 @@ export default function Revenue() {
         </div>
         <DataTable columns={columns} data={transactions} actions={false} />
       </div>
+
+      {selectedTransaction && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-800">Transaction Details</h3>
+              <button onClick={() => setSelectedTransaction(null)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div>
+                <h4 className="text-sm font-semibold text-gray-500 mb-3">Payment Information</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Transaction ID</p>
+                    <p className="font-medium">{selectedTransaction.id}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Amount</p>
+                    <p className="font-medium text-green-600">₹{selectedTransaction.amount}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Payment Method</p>
+                    <p className="font-medium">{selectedTransaction.paymentMethod}</p>
+                  </div>
+                  {selectedTransaction.cardType && (
+                    <div>
+                      <p className="text-xs text-gray-500">Card Details</p>
+                      <p className="font-medium">{selectedTransaction.cardType} •••• {selectedTransaction.cardLast4}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs text-gray-500">Date</p>
+                    <p className="font-medium">{selectedTransaction.date}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Status</p>
+                    <span className={`inline-block px-2 py-1 text-xs rounded-full ${
+                      selectedTransaction.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    }`}>
+                      {selectedTransaction.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-semibold text-gray-500 mb-3">Subscription Details</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Plan</p>
+                    <p className="font-medium">{selectedTransaction.plan}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Duration</p>
+                    <p className="font-medium">{selectedTransaction.duration}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Start Date</p>
+                    <p className="font-medium">{selectedTransaction.startDate}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">End Date</p>
+                    <p className="font-medium">{selectedTransaction.endDate}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-semibold text-gray-500 mb-3">Provider Information</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Business Name</p>
+                    <p className="font-medium">{selectedTransaction.provider}</p>
+                  </div>
+                  {selectedTransaction.providerEmail && (
+                    <div>
+                      <p className="text-xs text-gray-500">Email</p>
+                      <p className="font-medium">{selectedTransaction.providerEmail}</p>
+                    </div>
+                  )}
+                  {selectedTransaction.providerPhone && (
+                    <div>
+                      <p className="text-xs text-gray-500">Phone</p>
+                      <p className="font-medium">{selectedTransaction.providerPhone}</p>
+                    </div>
+                  )}
+                  {selectedTransaction.providerCity && (
+                    <div>
+                      <p className="text-xs text-gray-500">City</p>
+                      <p className="font-medium">{selectedTransaction.providerCity}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

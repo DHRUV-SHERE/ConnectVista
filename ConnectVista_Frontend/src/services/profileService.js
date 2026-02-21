@@ -1,38 +1,33 @@
 import api from './api';
 
 const profileService = {
-  // Get provider profile
   getProviderProfile: async () => {
-    const response = await api.get('/api/profile/provider');
+    const response = await api.get('/profile/provider');
     return response.data;
   },
 
-  // Update provider profile
   updateProviderProfile: async (profileData) => {
-    const response = await api.put('/api/profile/provider', profileData);
+    const response = await api.put('/profile/provider', profileData);
     return response.data;
   },
 
-  // Update provider services
   updateProviderServices: async (serviceData) => {
-    const response = await api.put('/api/profile/provider/services', serviceData);
+    const response = await api.put('/profile/provider/services', serviceData);
     return response.data;
   },
 
-  // Upload business images
   uploadBusinessImages: async (images) => {
     const formData = new FormData();
     images.forEach((image, index) => {
       formData.append('images', image);
     });
     
-    const response = await api.post('/api/profile/provider/images', formData);
+    const response = await api.post('/profile/provider/images', formData);
     return response.data;
   },
 
-  // Delete business image
   deleteBusinessImage: async (imageIndex) => {
-    const response = await api.delete(`/api/profile/provider/images/${imageIndex}`);
+    const response = await api.delete(`/profile/provider/images/${imageIndex}`);
     return response.data;
   }
 };

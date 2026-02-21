@@ -3,6 +3,7 @@ const ServiceProvider = require('../models/ServiceProvider');
 const ServiceSeeker = require('../models/ServiceSeeker');
 const Booking = require('../models/Booking');
 const ProviderVerification = require('../models/ProviderVerification');
+const ProviderService = require('../models/ProviderService');
 
 const getDashboardStats = async (req, res) => {
   try {
@@ -100,14 +101,26 @@ const getAllProviders = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
+    // Get services for each provider
+    const providerIds = providers.map(p => p._id);
+    const providerServices = await ProviderService.find({ providerId: { $in: providerIds } });
+
+    const formattedProviders = providers.map(p => {
+      const provider = p.toObject();
+      const service = providerServices.find(s => s.providerId.toString() === p._id.toString());
+      provider.service = service?.mainService?.name || 'N/A';
+      return provider;
+    });
+
     const total = await ServiceProvider.countDocuments(query);
 
     res.json({
       success: true,
-      data: providers,
+      data: formattedProviders,
       pagination: { total, page: parseInt(page), pages: Math.ceil(total / limit) }
     });
   } catch (error) {
+    console.error('Get providers error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -122,11 +135,26 @@ const getAllSeekers = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
+    // Get booking counts for each seeker
+    const seekerIds = seekers.map(s => s._id);
+    const bookingCounts = await Booking.aggregate([
+      { $match: { seekerId: { $in: seekerIds } } },
+      { $group: { _id: '$seekerId', count: { $sum: 1 } } }
+    ]);
+
+    const seekersWithBookings = seekers.map(seeker => {
+      const bookingData = bookingCounts.find(b => b._id.toString() === seeker._id.toString());
+      return {
+        ...seeker.toObject(),
+        totalBookings: bookingData?.count || 0
+      };
+    });
+
     const total = await ServiceSeeker.countDocuments();
 
     res.json({
       success: true,
-      data: seekers,
+      data: seekersWithBookings,
       pagination: { total, page: parseInt(page), pages: Math.ceil(total / limit) }
     });
   } catch (error) {
@@ -247,22 +275,32 @@ const getVerifications = async (req, res) => {
     const { status, page = 1, limit = 20 } = req.query;
     
     const query = {};
-    if (status) query.status = status;
+    if (status) query.overallStatus = status;
 
     const verifications = await ProviderVerification.find(query)
       .populate({
         path: 'providerId',
-        select: 'businessName service userId',
+        select: 'businessName name userId',
         populate: { path: 'userId', select: 'email phone' }
       })
-      .sort({ submittedAt: -1 })
+      .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
-    const formattedVerifications = verifications.map(v => ({
-      ...v.toObject(),
-      service: v.providerId?.service?.name || 'N/A'
-    }));
+    // Get services for providers
+    const providerIds = verifications.map(v => v.providerId?._id).filter(Boolean);
+    const providerServices = await ProviderService.find({ providerId: { $in: providerIds } });
+
+    const formattedVerifications = verifications.map(v => {
+      const obj = v.toObject();
+      const service = providerServices.find(s => s.providerId.toString() === v.providerId?._id.toString());
+      return {
+        ...obj,
+        service: service?.mainService?.name || 'N/A',
+        submittedAt: v.createdAt,
+        status: v.overallStatus
+      };
+    });
 
     const total = await ProviderVerification.countDocuments(query);
 
@@ -284,8 +322,8 @@ const updateVerification = async (req, res) => {
     const verification = await ProviderVerification.findByIdAndUpdate(
       req.params.id,
       { 
-        status,
-        reason,
+        overallStatus: status,
+        rejectionReason: reason,
         reviewedBy: req.user.id,
         reviewedAt: new Date()
       },
@@ -303,6 +341,7 @@ const updateVerification = async (req, res) => {
 
     res.json({ success: true, data: verification });
   } catch (error) {
+    console.error('Update verification error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

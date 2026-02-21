@@ -40,9 +40,9 @@ export default function Users() {
   };
 
   const filteredSeekers = seekers.filter(user => {
-    const userData = user.userId || user;
+    const userData = user.user || user.userId || user;
     const matchesSearch = 
-      (userData?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (user.name || userData?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (userData?.email || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
@@ -59,22 +59,25 @@ export default function Users() {
     { 
       key: 'name', 
       header: 'User',
-      render: (value, row) => (
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-            <User className="w-5 h-5 text-blue-600" />
+      render: (value, row) => {
+        const userData = row.user || row.userId;
+        return (
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+              <User className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="font-medium text-gray-800">{row.name || userData?.name || 'N/A'}</p>
+              <p className="text-sm text-gray-500">{userData?.email || 'N/A'}</p>
+            </div>
           </div>
-          <div>
-            <p className="font-medium text-gray-800">{row.userId?.name || 'N/A'}</p>
-            <p className="text-sm text-gray-500">{row.userId?.email || 'N/A'}</p>
-          </div>
-        </div>
-      )
+        );
+      }
     },
     { 
       key: 'phone', 
       header: 'Phone',
-      render: (value, row) => row.userId?.phone || 'N/A'
+      render: (value, row) => (row.user || row.userId)?.phone || 'N/A'
     },
     { 
       key: 'bookings', 
@@ -84,18 +87,24 @@ export default function Users() {
     { 
       key: 'joinedAt', 
       header: 'Joined',
-      render: (value, row) => row.userId?.createdAt ? new Date(row.userId.createdAt).toLocaleDateString() : 'N/A'
+      render: (value, row) => {
+        const userData = row.user || row.userId;
+        return userData?.createdAt ? new Date(userData.createdAt).toLocaleDateString() : 'N/A';
+      }
     },
     { 
       key: 'isActive', 
       header: 'Status',
-      render: (value, row) => (
-        <span className={`px-2 py-1 text-xs rounded-full ${
-          row.userId?.isActive !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-        }`}>
-          {row.userId?.isActive !== false ? 'Active' : 'Inactive'}
-        </span>
-      )
+      render: (value, row) => {
+        const userData = row.user || row.userId;
+        return (
+          <span className={`px-2 py-1 text-xs rounded-full ${
+            userData?.isActive !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+          }`}>
+            {userData?.isActive !== false ? 'Active' : 'Inactive'}
+          </span>
+        );
+      }
     },
   ];
 
@@ -109,7 +118,7 @@ export default function Users() {
             <Wrench className="w-5 h-5 text-purple-600" />
           </div>
           <div>
-            <p className="font-medium text-gray-800">{row.businessName || 'N/A'}</p>
+            <p className="font-medium text-gray-800">{row.businessName || row.name || 'N/A'}</p>
             <p className="text-sm text-gray-500">{row.userId?.email || 'N/A'}</p>
           </div>
         </div>
@@ -118,7 +127,12 @@ export default function Users() {
     { 
       key: 'service', 
       header: 'Service',
-      render: (value, row) => row.service || 'N/A'
+      render: (value, row) => {
+        const service = row.service;
+        if (typeof service === 'string') return service;
+        if (service?.name) return service.name;
+        return 'N/A';
+      }
     },
     { 
       key: 'plan', 
@@ -128,7 +142,7 @@ export default function Users() {
     { 
       key: 'totalEarnings', 
       header: 'Earnings',
-      render: (value) => <span className="font-medium text-green-600">${(value || 0).toLocaleString()}</span>
+      render: (value) => <span className="font-medium text-green-600">₹{(value || 0).toLocaleString()}</span>
     },
     { 
       key: 'totalJobsCompleted', 
@@ -161,8 +175,9 @@ export default function Users() {
 
   const handleStatusToggle = async (user) => {
     try {
-      const newStatus = user.userId?.isActive === false;
-      await updateUserStatus(user.userId?._id || user.userId, { isActive: newStatus });
+      const userData = user.user || user.userId;
+      const newStatus = userData?.isActive === false;
+      await updateUserStatus(userData?._id || userData, { isActive: newStatus });
       fetchData();
     } catch (err) {
       console.error('Failed to update status:', err);
@@ -267,16 +282,18 @@ export default function Users() {
               </div>
               <div>
                 <h3 className="text-xl font-semibold text-gray-800">
-                  {activeTab === 'seekers' ? selectedUser.userId?.name : selectedUser.businessName}
+                  {activeTab === 'seekers' 
+                    ? (selectedUser.name || (selectedUser.user || selectedUser.userId)?.name)
+                    : (selectedUser.businessName || selectedUser.name)}
                 </h3>
-                <p className="text-gray-500">{selectedUser.userId?.email}</p>
+                <p className="text-gray-500">{(selectedUser.user || selectedUser.userId)?.email}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
               <div>
                 <p className="text-sm text-gray-500">Phone</p>
-                <p className="font-medium text-gray-800">{selectedUser.userId?.phone || 'N/A'}</p>
+                <p className="font-medium text-gray-800">{(selectedUser.user || selectedUser.userId)?.phone || 'N/A'}</p>
               </div>
               {activeTab === 'seekers' ? (
                 <>
@@ -287,7 +304,9 @@ export default function Users() {
                   <div>
                     <p className="text-sm text-gray-500">Joined</p>
                     <p className="font-medium text-gray-800">
-                      {selectedUser.userId?.createdAt ? new Date(selectedUser.userId.createdAt).toLocaleDateString() : 'N/A'}
+                      {(selectedUser.user || selectedUser.userId)?.createdAt 
+                        ? new Date((selectedUser.user || selectedUser.userId).createdAt).toLocaleDateString() 
+                        : 'N/A'}
                     </p>
                   </div>
                 </>
@@ -295,11 +314,15 @@ export default function Users() {
                 <>
                   <div>
                     <p className="text-sm text-gray-500">Service</p>
-                    <p className="font-medium text-gray-800">{selectedUser.service || 'N/A'}</p>
+                    <p className="font-medium text-gray-800">
+                      {typeof selectedUser.service === 'string' 
+                        ? selectedUser.service 
+                        : selectedUser.service?.name || 'N/A'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Total Earnings</p>
-                    <p className="font-medium text-green-600">${(selectedUser.totalEarnings || 0).toLocaleString()}</p>
+                    <p className="font-medium text-green-600">₹{(selectedUser.totalEarnings || 0).toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Completed Jobs</p>
@@ -318,7 +341,7 @@ export default function Users() {
                 onClick={() => handleStatusToggle(selectedUser)}
                 className="flex items-center gap-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
-                {selectedUser.userId?.isActive === false ? (
+                {(selectedUser.user || selectedUser.userId)?.isActive === false ? (
                   <><CheckCircle className="w-4 h-4" /> Activate</>
                 ) : (
                   <><Ban className="w-4 h-4" /> Deactivate</>

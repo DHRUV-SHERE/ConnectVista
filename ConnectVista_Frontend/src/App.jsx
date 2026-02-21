@@ -37,6 +37,7 @@ import ServiceProviderBookings from "./pages/ServiceProvider/ServiceProviderBook
 import ServiceProviderReviews from "./pages/ServiceProvider/ServiceProviderReviews";
 import ServiceProviderSettings from "./pages/ServiceProvider/ServiceProviderSettings";
 import ServiceProviderSubscription from "./pages/ServiceProvider/ServiceProviderSubscription";
+import PaymentPage from "./pages/PaymentPage";
 
 function App() {
   return (
@@ -58,6 +59,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupSelection />} />
             <Route path="/user/signup" element={<UserSignup />} />
+            <Route path="/payment" element={<PaymentPage />} />
             <Route
               path="/service-provider/signup"
               element={<ServiceProviderSignup />}

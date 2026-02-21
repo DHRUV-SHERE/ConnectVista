@@ -46,7 +46,7 @@ export const updateUserStatus = (id, data) => API.patch(`/admin/users/${id}/stat
 export const getBookings = (params) => API.get('/admin/bookings', { params });
 
 // Revenue
-export const getRevenue = (params) => API.get('/admin/revenue', { params });
+export const getRevenue = (params) => API.get('/subscriptions/all', { params });
 
 // Verifications
 export const getVerifications = (params) => API.get('/admin/verifications', { params });

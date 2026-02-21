@@ -11,6 +11,7 @@ export default function Verification() {
   const [selectedVerification, setSelectedVerification] = useState(null);
   const [loading, setLoading] = useState(true);
   const [verifications, setVerifications] = useState([]);
+  const [viewingDocument, setViewingDocument] = useState(null);
 
   useEffect(() => {
     fetchVerifications();
@@ -222,41 +223,30 @@ export default function Verification() {
             <div>
               <h4 className="font-medium text-gray-800 mb-3">Submitted Documents</h4>
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex items-center gap-3">
-                    <IdCard className="w-5 h-5 text-gray-600" />
-                    <div>
-                      <p className="font-medium text-gray-800">ID Card</p>
-                      <p className="text-sm text-gray-500">
-                        {selectedVerification.idCard?.originalName || 'Document uploaded'}
-                      </p>
+                {selectedVerification.documents && selectedVerification.documents.length > 0 ? (
+                  selectedVerification.documents.map((doc, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-5 h-5 text-gray-600" />
+                        <div>
+                          <p className="font-medium text-gray-800 capitalize">{doc.documentType?.replace('-', ' ')}</p>
+                          <p className="text-sm text-gray-500">
+                            {doc.status === 'approved' ? 'Approved' : doc.status === 'rejected' ? 'Rejected' : 'Pending'}
+                          </p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setViewingDocument(doc.documentUrl)}
+                        className="flex items-center gap-1 px-3 py-1.5 text-primary-600 border border-primary-600 rounded-lg hover:bg-primary-50"
+                      >
+                        <Eye className="w-4 h-4" />
+                        View
+                      </button>
                     </div>
-                  </div>
-                  <button className="flex items-center gap-1 px-3 py-1.5 text-primary-600 border border-primary-600 rounded-lg hover:bg-primary-50">
-                    <Eye className="w-4 h-4" />
-                    View
-                  </button>
-                </div>
-                
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-gray-600" />
-                    <div>
-                      <p className="font-medium text-gray-800">Business Permit</p>
-                      <p className="text-sm text-gray-500">
-                        {selectedVerification.businessPermit?.originalName || 'Not provided'}
-                      </p>
-                    </div>
-                  </div>
-                  {selectedVerification.businessPermit ? (
-                    <button className="flex items-center gap-1 px-3 py-1.5 text-primary-600 border border-primary-600 rounded-lg hover:bg-primary-50">
-                      <Eye className="w-4 h-4" />
-                      View
-                    </button>
-                  ) : (
-                    <span className="text-sm text-red-500">Missing</span>
-                  )}
-                </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500 text-center py-4">No documents uploaded</p>
+                )}
               </div>
             </div>
 
@@ -283,22 +273,46 @@ export default function Verification() {
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <button
                   onClick={() => handleReject(selectedVerification)}
-                  className="flex items-center gap-2 px-4 py-2 text-red-600 border border-red-600 rounded-lg hover:bg-red-50"
+                  className="flex items-center gap-2 px-6 py-2.5 text-white bg-red-600 rounded-lg hover:bg-red-700"
                 >
                   <X className="w-4 h-4" />
-                  Reject
+                  No (Reject)
                 </button>
                 <button
                   onClick={() => handleApprove(selectedVerification)}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700"
                 >
                   <Check className="w-4 h-4" />
-                  Approve
+                  Yes (Approve)
                 </button>
+              </div>
+            )}
+            {selectedVerification.status !== 'pending' && (
+              <div className="pt-4 border-t text-center">
+                <span className={`inline-block px-4 py-2 rounded-lg font-medium ${
+                  selectedVerification.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                }`}>
+                  {selectedVerification.status === 'approved' ? '✓ Verified' : '✗ Rejected'}
+                </span>
               </div>
             )}
           </div>
         )}
+      </Modal>
+
+      <Modal
+        isOpen={!!viewingDocument}
+        onClose={() => setViewingDocument(null)}
+        title="Document Viewer"
+        size="xl"
+      >
+        <div className="w-full h-[70vh]">
+          <iframe 
+            src={viewingDocument} 
+            className="w-full h-full rounded-lg border"
+            title="Document Viewer"
+          />
+        </div>
       </Modal>
     </div>
   );

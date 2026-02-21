@@ -73,40 +73,40 @@ export const serviceAPI = {
     if (lng) params.append('lng', lng);
     if (radius) params.append('radius', radius);
 
-    const response = await api.get(`/api/service-catalog/categories?${params}`);
+    const response = await api.get(`/service-catalog/categories?${params}`);
     return response.data;
   },
 
   // Get sub-services for a category from JSON catalog
   getSubServices: async (categoryId) => {
     await throttleRequest();
-    const response = await api.get(`/api/service-catalog/categories/${categoryId}/sub-services`);
+    const response = await api.get(`/service-catalog/categories/${categoryId}/sub-services`);
     return response.data;
   },
 
   // Provider service management
   getProviderService: async () => {
     await throttleRequest();
-    const response = await api.get('/api/service-catalog/provider/service');
+    const response = await api.get('/service-catalog/provider/service');
     return response.data;
   },
 
   saveProviderService: async (serviceData) => {
     await throttleRequest();
-    const response = await api.post('/api/service-catalog/provider/service', serviceData);
+    const response = await api.post('/service-catalog/provider/service', serviceData);
     return response.data;
   },
 
   deleteProviderService: async () => {
     await throttleRequest();
-    const response = await api.delete('/api/service-catalog/provider/service');
+    const response = await api.delete('/service-catalog/provider/service');
     return response.data;
   },
 
   // Get all services (from Service collection)
   getServices: async () => {
     await throttleRequest();
-    const response = await api.get('/api/services');
+    const response = await api.get('/services');
     return response.data;
   },
 
@@ -124,7 +124,7 @@ export const serviceAPI = {
     if (lng) params.append('lng', lng);
     if (radius) params.append('radius', radius);
 
-    const response = await api.get(`/api/services/categories/${categoryId}/providers?${params}`);
+    const response = await api.get(`/services/categories/${categoryId}/providers?${params}`);
     return response.data;
   },
 
@@ -141,21 +141,21 @@ export const serviceAPI = {
     if (lng) params.append('lng', lng);
     if (radius) params.append('radius', radius);
 
-    const response = await api.get(`/api/services/${serviceId}/providers?${params}`);
+    const response = await api.get(`/services/${serviceId}/providers?${params}`);
     return response.data;
   },
 
   // Get provider profile details
   getProviderProfile: async (providerId) => {
     await throttleRequest();
-    const response = await api.get(`/api/services/provider/${providerId}`);
+    const response = await api.get(`/services/provider/${providerId}`);
     return response.data;
   },
 
   // Add provider service (may create custom request for "Other" category)
   addProviderService: async (serviceData) => {
     await throttleRequest();
-    const response = await api.post('/api/services/provider', serviceData);
+    const response = await api.post('/services/provider', serviceData);
     return response.data;
   },
 
@@ -169,7 +169,7 @@ export const serviceAPI = {
    */
   getSeekerServices: async () => {
     await throttleRequest();
-    const response = await api.get('/api/seeker/services');
+    const response = await api.get('/seeker/services');
     return response.data;
   },
 
@@ -196,7 +196,7 @@ export const serviceAPI = {
     if (page) params.append('page', page);
     if (limit) params.append('limit', limit);
 
-    const response = await api.get(`/api/seeker/services/${categoryId}/providers?${params}`);
+    const response = await api.get(`/seeker/services/${categoryId}/providers?${params}`);
     return response.data;
   },
 
@@ -206,7 +206,7 @@ export const serviceAPI = {
    */
   getProviderFullDetails: async (providerId) => {
     await throttleRequest();
-    const response = await api.get(`/api/seeker/providers/${providerId}`);
+    const response = await api.get(`/seeker/providers/${providerId}`);
     return response.data;
   },
 
@@ -228,7 +228,7 @@ export const serviceAPI = {
    */
   createBooking: async (bookingData) => {
     await throttleRequest();
-    const response = await api.post('/api/bookings', bookingData);
+    const response = await api.post('/bookings', bookingData);
     return response.data;
   },
 
@@ -247,7 +247,7 @@ export const serviceAPI = {
     if (page) params.append('page', page);
     if (limit) params.append('limit', limit);
 
-    const response = await api.get(`/api/bookings/seeker?${params}`);
+    const response = await api.get(`/bookings/seeker?${params}`);
     return response.data;
   },
 
@@ -266,7 +266,7 @@ export const serviceAPI = {
     if (page) params.append('page', page);
     if (limit) params.append('limit', limit);
 
-    const response = await api.get(`/api/bookings/provider?${params}`);
+    const response = await api.get(`/bookings/provider?${params}`);
     return response.data;
   },
 
@@ -276,7 +276,7 @@ export const serviceAPI = {
    */
   getBookingById: async (bookingId) => {
     await throttleRequest();
-    const response = await api.get(`/api/bookings/${bookingId}`);
+    const response = await api.get(`/bookings/${bookingId}`);
     return response.data;
   },
 
@@ -286,7 +286,7 @@ export const serviceAPI = {
    */
   acceptBooking: async (bookingId) => {
     await throttleRequest();
-    const response = await api.patch(`/api/bookings/${bookingId}/accept`);
+    const response = await api.patch(`/bookings/${bookingId}/accept`);
     return response.data;
   },
 
@@ -297,7 +297,7 @@ export const serviceAPI = {
    */
   rejectBooking: async (bookingId, reason = '') => {
     await throttleRequest();
-    const response = await api.patch(`/api/bookings/${bookingId}/reject`, { reason });
+    const response = await api.patch(`/bookings/${bookingId}/reject`, { reason });
     return response.data;
   },
 
@@ -308,7 +308,7 @@ export const serviceAPI = {
    */
   cancelBooking: async (bookingId, reason = '') => {
     await throttleRequest();
-    const response = await api.patch(`/api/bookings/${bookingId}/cancel`, { reason });
+    const response = await api.patch(`/bookings/${bookingId}/cancel`, { reason });
     return response.data;
   },
 
@@ -333,7 +333,7 @@ export const serviceAPI = {
     if (category && category !== 'all') params.append('category', category);
     if (isRead !== undefined) params.append('isRead', isRead);
 
-    const response = await api.get(`/api/notifications?${params}`);
+    const response = await api.get(`/notifications?${params}`);
     return response.data;
   },
 
@@ -342,7 +342,7 @@ export const serviceAPI = {
    */
   getUnreadCount: async () => {
     await throttleRequest();
-    const response = await api.get('/api/notifications/unread-count');
+    const response = await api.get('/notifications/unread-count');
     return response.data;
   },
 
@@ -352,7 +352,7 @@ export const serviceAPI = {
    */
   markNotificationAsRead: async (notificationId) => {
     await throttleRequest();
-    const response = await api.patch(`/api/notifications/${notificationId}/read`);
+    const response = await api.patch(`/notifications/${notificationId}/read`);
     return response.data;
   },
 
@@ -361,7 +361,7 @@ export const serviceAPI = {
    */
   markAllNotificationsAsRead: async () => {
     await throttleRequest();
-    const response = await api.patch('/api/notifications/read-all');
+    const response = await api.patch('/notifications/read-all');
     return response.data;
   },
 
@@ -371,7 +371,7 @@ export const serviceAPI = {
    */
   deleteNotification: async (notificationId) => {
     await throttleRequest();
-    const response = await api.delete(`/api/notifications/${notificationId}`);
+    const response = await api.delete(`/notifications/${notificationId}`);
     return response.data;
   },
 
@@ -384,7 +384,7 @@ export const serviceAPI = {
    */
   getSeekerProfile: async () => {
     await throttleRequest();
-    const response = await api.get('/api/seeker/profile');
+    const response = await api.get('/seeker/profile');
     return response.data;
   },
 
@@ -394,7 +394,7 @@ export const serviceAPI = {
    */
   updateSeekerProfile: async (profileData) => {
     await throttleRequest();
-    const response = await api.put('/api/seeker/profile', profileData);
+    const response = await api.put('/seeker/profile', profileData);
     return response.data;
   }
 };
