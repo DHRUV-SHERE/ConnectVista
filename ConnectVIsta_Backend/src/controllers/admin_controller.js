@@ -2,6 +2,7 @@ const User = require('../models/User');
 const ServiceProvider = require('../models/ServiceProvider');
 const ServiceSeeker = require('../models/ServiceSeeker');
 const Booking = require('../models/Booking');
+const Subscription = require('../models/Subscription');
 const ProviderVerification = require('../models/ProviderVerification');
 const ProviderService = require('../models/ProviderService');
 
@@ -255,52 +256,125 @@ const getRevenueData = async (req, res) => {
     else if (period === '6months') dateFilter.setMonth(dateFilter.getMonth() - 6);
     else dateFilter.setFullYear(dateFilter.getFullYear() - 1);
 
+    // 1. Booking Revenue (Completed & Paid)
     const bookingRevenue = await Booking.aggregate([
       { $match: { status: 'completed', paymentStatus: 'paid', createdAt: { $gte: dateFilter } } },
-      { $group: { _id: null, total: { $sum: '$totalPrice' } } }
+      { $group: { _id: null, total: { $sum: '$totalPrice' }, count: { $sum: 1 } } }
     ]);
 
-    const monthlyRevenue = await Booking.aggregate([
+    // 2. Subscription Revenue
+    const subscriptionRevenue = await Subscription.aggregate([
+      { $match: { createdAt: { $gte: dateFilter } } },
+      { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+    ]);
+
+    // 3. Monthly Revenue (Combined Bookings and Subscriptions)
+    const monthlyBookings = await Booking.aggregate([
       { $match: { status: 'completed', paymentStatus: 'paid', createdAt: { $gte: dateFilter } } },
       {
         $group: {
           _id: { $month: '$createdAt' },
           total: { $sum: '$totalPrice' },
-          bookings: { $sum: 1 }
+          count: { $sum: 1 }
         }
-      },
-      { $sort: { _id: 1 } }
+      }
     ]);
 
+    const monthlySubscriptions = await Subscription.aggregate([
+      { $match: { createdAt: { $gte: dateFilter } } },
+      {
+        $group: {
+          _id: { $month: '$createdAt' },
+          total: { $sum: '$amount' },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Merge monthly data
+    const months = [];
+    const now = new Date();
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(d.getMonth() + 1);
+    }
+    
+    const combinedMonthly = months.map(month => {
+      const b = monthlyBookings.find(m => m._id === month) || { total: 0, count: 0 };
+      const s = monthlySubscriptions.find(m => m._id === month) || { total: 0, count: 0 };
+      return {
+        _id: month,
+        total: b.total + s.total,
+        bookings: b.total,
+        subscriptions: s.total,
+        bookingsCount: b.count,
+        subsCount: s.count
+      };
+    }).sort((a, b) => a._id - b._id);
+
+    // 4. Top Providers by Earnings (Jobs + Subscriptions - wait, usually just jobs)
     const topProviders = await ServiceProvider.find()
       .populate('userId', 'email')
       .sort({ totalEarnings: -1 })
       .limit(5);
 
-    const recentTransactions = await Booking.find({ paymentStatus: 'paid' })
-      .populate('providerId', 'businessName')
-      .populate('serviceId', 'name')
+    // 5. Recent Transactions (Combined)
+    const recentBookings = await Booking.find({ paymentStatus: 'paid' })
+      .populate('providerId', 'businessName email phone city')
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    const recentSubs = await Subscription.find()
+      .populate('providerId', 'businessName email phone city')
       .sort({ createdAt: -1 })
       .limit(10);
 
-    const planDistribution = [
-      { name: 'Basic', value: 150 },
-      { name: 'Professional', value: 85 },
-      { name: 'Business', value: 42 },
-      { name: 'Enterprise', value: 15 }
-    ];
+    const transactions = [
+      ...recentBookings.map(b => ({
+        _id: b._id,
+        type: 'booking',
+        amount: b.totalPrice,
+        status: b.status,
+        providerId: b.providerId,
+        paymentDetails: {
+          transactionId: `BK-${b._id.toString().slice(-6)}`,
+          method: 'online'
+        },
+        createdAt: b.createdAt
+      })),
+      ...recentSubs.map(s => ({
+        _id: s._id,
+        type: 'subscription',
+        amount: s.amount,
+        status: s.status,
+        plan: s.plan,
+        duration: s.duration,
+        providerId: s.providerId,
+        paymentDetails: s.paymentDetails,
+        startDate: s.startDate,
+        endDate: s.endDate,
+        createdAt: s.createdAt
+      }))
+    ].sort((a, b) => b.createdAt - a.createdAt).slice(0, 15);
+
+    // 6. Plan Distribution
+    const planDist = await Subscription.aggregate([
+      { $group: { _id: '$plan', value: { $sum: 1 } } }
+    ]);
 
     res.json({
       success: true,
       data: {
-        totalRevenue: bookingRevenue[0]?.total || 0,
-        monthlyRevenue,
+        totalRevenue: (bookingRevenue[0]?.total || 0),
+        subscriptionRevenue: (subscriptionRevenue[0]?.total || 0),
+        monthlyRevenue: combinedMonthly,
         topProviders,
-        recentTransactions,
-        planDistribution
+        recentTransactions: transactions,
+        planDistribution: planDist.map(p => ({ name: p._id, value: p.value }))
       }
     });
   } catch (error) {
+    console.error('Revenue Data Error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

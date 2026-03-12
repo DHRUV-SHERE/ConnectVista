@@ -12,6 +12,7 @@ export default function Revenue() {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [revenueData, setRevenueData] = useState({
     totalRevenue: 0,
+    subscriptionRevenue: 0,
     monthlyRevenue: [],
     topProviders: [],
     recentTransactions: [],
@@ -27,12 +28,14 @@ export default function Revenue() {
       setLoading(true);
       const response = await getRevenue();
       if (response.data.success) {
+        const data = response.data.data;
         setRevenueData({
-          totalRevenue: response.data.totalRevenue || 0,
-          monthlyRevenue: response.data.monthlyRevenue || [],
-          topProviders: [],
-          recentTransactions: response.data.data || [],
-          planDistribution: []
+          totalRevenue: data.totalRevenue || 0,
+          subscriptionRevenue: data.subscriptionRevenue || 0,
+          monthlyRevenue: data.monthlyRevenue || [],
+          topProviders: data.topProviders || [],
+          recentTransactions: data.recentTransactions || [],
+          planDistribution: data.planDistribution || []
         });
       }
     } catch (err) {
@@ -42,26 +45,30 @@ export default function Revenue() {
     }
   };
 
-  const monthlyData = revenueData.monthlyRevenue.map(m => ({ 
-    month: months[m._id - 1], 
-    revenue: m.total, 
-    bookings: m.bookings 
+  const monthlyData = (revenueData.monthlyRevenue || []).map(m => ({ 
+    month: months[m._id - 1] || 'Unknown', 
+    total: m.total || 0,
+    bookings: m.bookings || 0,
+    subscriptions: m.subscriptions || 0,
+    bookingsCount: m.bookingsCount || 0,
+    subsCount: m.subsCount || 0
   }));
 
-  const planDistribution = revenueData.planDistribution;
+  const planDistribution = revenueData.planDistribution || [];
 
-  const topProviders = revenueData.topProviders.slice(0, 5).map((p, i) => ({
+  const topProviders = (revenueData.topProviders || []).slice(0, 5).map((p, i) => ({
     id: i + 1,
-    name: p.businessName,
+    name: p.businessName || 'N/A',
     service: p.service || 'N/A',
     totalRevenue: p.totalEarnings || 0,
     bookings: p.totalJobsCompleted || 0,
     plan: 'N/A'
   }));
 
-  const transactions = revenueData.recentTransactions.map((t, i) => ({
-    id: t.paymentDetails?.transactionId || `TXN-${i}`,
+  const transactions = (revenueData.recentTransactions || []).map((t, i) => ({
+    id: t.paymentDetails?.transactionId || (t.type === 'booking' ? `BK-${t._id.toString().slice(-6)}` : `TXN-${i}`),
     provider: t.providerId?.businessName || 'N/A',
+    type: t.type,
     providerId: t.providerId?._id,
     providerEmail: t.providerId?.email,
     providerPhone: t.providerId?.phone,
@@ -79,15 +86,31 @@ export default function Revenue() {
     rawData: t
   }));
 
-  const totalRevenue = revenueData.totalRevenue || 0;
-  const totalSubscriptions = monthlyData.reduce((acc, item) => acc + (item.subscriptions || 0), 0);
-  const totalBookingRevenue = monthlyData.reduce((acc, item) => acc + item.bookings, 0);
+  const totalBookingRevenue = revenueData.totalRevenue || 0;
+  const totalSubscriptionRevenue = revenueData.subscriptionRevenue || 0;
+  const totalRevenue = totalBookingRevenue + totalSubscriptionRevenue;
+  const totalBookingsCount = monthlyData.reduce((acc, item) => acc + (item.bookingsCount || 0), 0);
+  const totalSubsCount = monthlyData.reduce((acc, item) => acc + (item.subsCount || 0), 0);
 
   const columns = [
-    { key: 'id', header: 'Transaction ID' },
+    { key: 'id', header: 'ID' },
+    { 
+      key: 'type', 
+      header: 'Type',
+      render: (value) => (
+        <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded ${
+          value === 'subscription' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+        }`}>
+          {value}
+        </span>
+      )
+    },
     { key: 'provider', header: 'Provider' },
-    { key: 'plan', header: 'Plan' },
-    { key: 'duration', header: 'Duration' },
+    { 
+      key: 'plan', 
+      header: 'Plan/Service',
+      render: (value, row) => row.type === 'subscription' ? value : 'Booking'
+    },
     { 
       key: 'paymentMethod', 
       header: 'Payment',
@@ -100,20 +123,9 @@ export default function Revenue() {
     { 
       key: 'amount', 
       header: 'Amount',
-      render: (value) => <span className="font-medium">₹{value}</span>
+      render: (value) => <span className="font-medium text-green-600">₹{value}</span>
     },
     { key: 'date', header: 'Date' },
-    { 
-      key: 'status', 
-      header: 'Status',
-      render: (value) => (
-        <span className={`px-2 py-1 text-xs rounded-full ${
-          value === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-        }`}>
-          {value}
-        </span>
-      )
-    },
     {
       key: 'actions',
       header: 'Actions',
@@ -123,7 +135,7 @@ export default function Revenue() {
           className="flex items-center gap-1 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition"
         >
           <Eye className="w-4 h-4" />
-          View Details
+          Details
         </button>
       )
     }
@@ -167,7 +179,7 @@ export default function Revenue() {
               <DollarSign className="w-6 h-6 text-green-600" />
             </div>
           </div>
-          <p className="text-sm text-gray-500 mt-2">From subscriptions</p>
+          <p className="text-sm text-gray-500 mt-2">Combined Earnings</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
@@ -180,33 +192,33 @@ export default function Revenue() {
               <Wallet className="w-6 h-6 text-blue-600" />
             </div>
           </div>
-          <p className="text-sm text-blue-600 mt-2">From service bookings</p>
+          <p className="text-sm text-blue-600 mt-2">From {totalBookingsCount} bookings</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Subscription Revenue</p>
-              <p className="text-2xl font-bold text-gray-800">₹{totalSubscriptions.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-800">₹{totalSubscriptionRevenue.toLocaleString()}</p>
             </div>
             <div className="p-3 bg-purple-100 rounded-lg">
               <CreditCard className="w-6 h-6 text-purple-600" />
             </div>
           </div>
-          <p className="text-sm text-purple-600 mt-2">From plan purchases</p>
+          <p className="text-sm text-purple-600 mt-2">From {totalSubsCount} plans</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total Subscriptions</p>
-              <p className="text-2xl font-bold text-gray-800">{transactions.length}</p>
+              <p className="text-sm text-gray-500">Active Subscriptions</p>
+              <p className="text-2xl font-bold text-gray-800">{revenueData.recentTransactions.filter(t => t.type === 'subscription' && t.status === 'active').length}</p>
             </div>
             <div className="p-3 bg-orange-100 rounded-lg">
-              <CreditCard className="w-6 h-6 text-orange-600" />
+              <TrendingUp className="w-6 h-6 text-orange-600" />
             </div>
           </div>
-          <p className="text-sm text-gray-500 mt-2">Active plans</p>
+          <p className="text-sm text-gray-500 mt-2">Current active plans</p>
         </div>
       </div>
 
@@ -225,7 +237,9 @@ export default function Revenue() {
                   borderRadius: '8px'
                 }}
               />
-              <Line type="monotone" dataKey="revenue" stroke="#22c55e" strokeWidth={2} name="Revenue" />
+              <Line type="monotone" dataKey="total" stroke="#22c55e" strokeWidth={2} name="Total Revenue" />
+              <Line type="monotone" dataKey="bookings" stroke="#3b82f6" strokeWidth={2} name="Bookings" />
+              <Line type="monotone" dataKey="subscriptions" stroke="#a855f7" strokeWidth={2} name="Subscriptions" />
             </LineChart>
           </ResponsiveContainer>
         </div>
