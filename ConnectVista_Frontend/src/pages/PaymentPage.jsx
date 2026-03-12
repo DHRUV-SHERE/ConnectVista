@@ -7,7 +7,7 @@ import API from '../services/api';
 export default function PaymentPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { amount, plan, duration } = location.state || {};
+  const { amount, plan, duration, isPreSubscription, originalAmount } = location.state || {};
 
   const [step, setStep] = useState('method');
   const [method, setMethod] = useState('card');
@@ -122,6 +122,7 @@ export default function PaymentPage() {
         const response = await API.post('/subscriptions/subscribe', {
           plan,
           duration,
+          isPreSubscription,
           paymentDetails: {
             transactionId: txnId,
             method,
@@ -167,7 +168,18 @@ export default function PaymentPage() {
           {/* Amount Section */}
           <div className="p-8 text-center border-b" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-color)' }}>
             <p className="text-sm mb-2" style={{ color: 'var(--text-color)', opacity: 0.7 }}>Amount to Pay</p>
-            <p className="text-5xl font-bold mb-2" style={{ color: 'var(--accent-color)' }}>₹{amount?.toLocaleString()}</p>
+            {isPreSubscription ? (
+              <div className="flex flex-col items-center">
+                <p className="text-xl line-through text-red-500 opacity-60">₹{originalAmount?.toLocaleString()}</p>
+                <div className="flex items-center gap-3">
+                  <p className="text-5xl font-bold mb-2" style={{ color: 'var(--accent-color)' }}>₹{amount?.toLocaleString()}</p>
+                  <span className="bg-green-100 text-green-700 px-2 py-1 rounded-md text-sm font-bold animate-bounce">-20% OFF</span>
+                </div>
+                <p className="text-sm font-bold text-green-600 mb-2">Pre-subscription Discount Applied!</p>
+              </div>
+            ) : (
+              <p className="text-5xl font-bold mb-2" style={{ color: 'var(--accent-color)' }}>₹{amount?.toLocaleString()}</p>
+            )}
             <p className="text-sm" style={{ color: 'var(--text-color)', opacity: 0.6 }}>{plan} Plan - {duration}</p>
             <div className="mt-4 inline-block px-4 py-2 rounded-lg text-xs" style={{ backgroundColor: 'var(--hover-bg)', color: 'var(--accent-color)' }}>
               Demo Payment Gateway - No real transaction

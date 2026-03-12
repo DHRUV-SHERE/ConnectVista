@@ -16,6 +16,7 @@ export default function ServiceProviderSubscription() {
   const [duration, setDuration] = useState('monthly');
   const [currentSubscription, setCurrentSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [discountEligible, setDiscountEligible] = useState(false);
 
   useEffect(() => {
     fetchSubscription();
@@ -25,9 +26,12 @@ export default function ServiceProviderSubscription() {
     try {
       setLoading(true);
       const res = await API.get('/subscriptions/my-subscription');
-      if (res.data.success && res.data.data) {
+      if (res.data.success) {
         setCurrentSubscription(res.data.data);
-        setDuration(res.data.data.duration);
+        setDiscountEligible(res.data.discountEligible);
+        if (res.data.data) {
+          setDuration(res.data.data.duration);
+        }
       }
     } catch (err) {
       if (err.response?.status !== 401) {
@@ -44,6 +48,7 @@ export default function ServiceProviderSubscription() {
       await API.post('/subscriptions/cancel');
       toast.success('Subscription cancelled');
       setCurrentSubscription(null);
+      setDiscountEligible(false);
     } catch (err) {
       toast.error('Failed to cancel');
     }
@@ -51,10 +56,20 @@ export default function ServiceProviderSubscription() {
 
   const handleSelectPlan = (planName) => {
     const plan = plans.find(p => p.name === planName);
-    const amount = duration === 'yearly' ? plan.yearly : plan.monthly;
+    let amount = duration === 'yearly' ? plan.yearly : plan.monthly;
+    
+    if (discountEligible) {
+      amount = Math.round(amount * 0.8);
+    }
     
     navigate('/payment', {
-      state: { amount, plan: planName, duration }
+      state: { 
+        amount, 
+        plan: planName, 
+        duration, 
+        isPreSubscription: discountEligible,
+        originalAmount: duration === 'yearly' ? plan.yearly : plan.monthly
+      }
     });
   };
 
@@ -74,6 +89,25 @@ export default function ServiceProviderSubscription() {
     return (
       <div className="min-h-screen py-12 px-4" style={{ backgroundColor: 'var(--background)' }}>
         <div className="max-w-4xl mx-auto">
+          {discountEligible && (
+            <div className="mb-8 p-6 rounded-2xl border-2 border-dashed flex flex-col md:flex-row items-center justify-between gap-4 animate-pulse" style={{ backgroundColor: 'var(--success-light)', borderColor: 'var(--success-dark)' }}>
+              <div>
+                <h3 className="text-xl font-bold" style={{ color: 'var(--success-dark)' }}>Special Pre-subscription Offer! 🎁</h3>
+                <p className="mt-1" style={{ color: 'var(--success-dark)', opacity: 0.9 }}>Your subscription is expiring soon. Renew now and get <b>20% FLAT DISCOUNT</b> on any plan!</p>
+              </div>
+              <button
+                onClick={() => {
+                  setCurrentSubscription(null);
+                  setLoading(false);
+                }}
+                className="px-6 py-3 rounded-xl font-bold text-white shadow-lg whitespace-nowrap"
+                style={{ backgroundColor: 'var(--success-dark)' }}
+              >
+                Claim Discount Now
+              </button>
+            </div>
+          )}
+
           <div className="text-center mb-8">
             <h1 className="text-4xl font-extrabold mb-4" style={{ color: 'var(--text-color)' }}>
               Your Active Subscription

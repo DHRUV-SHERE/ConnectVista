@@ -4,10 +4,9 @@ const Payment = require('../models/Payment');
 
 const createSubscription = async (req, res) => {
   try {
-    const { plan, duration, paymentDetails } = req.body;
+    const { plan, duration, paymentDetails, isPreSubscription } = req.body;
     
-    console.log('📝 Create Subscription Request:', { plan, duration, paymentDetails });
-    console.log('👤 User from token:', req.user);
+    console.log('📝 Create Subscription Request:', { plan, duration, paymentDetails, isPreSubscription });
     
     if (!req.user.providerProfile || !req.user.providerProfile.providerId) {
       return res.status(400).json({ 
@@ -26,7 +25,20 @@ const createSubscription = async (req, res) => {
       Enterprise: { monthly: 4999, yearly: 49999 }
     };
 
-    const amount = plans[plan][duration];
+    let amount = plans[plan][duration];
+    
+    // Verify pre-subscription discount if requested
+    if (isPreSubscription) {
+      const currentSub = await Subscription.findOne({ providerId, status: 'active' });
+      if (currentSub) {
+        const diffInDays = (new Date(currentSub.endDate) - new Date()) / (1000 * 60 * 60 * 24);
+        if (diffInDays <= 3 && diffInDays >= -1) {
+          amount = Math.round(amount * 0.8); // 20% discount
+          console.log(`✅ Pre-subscription discount applied: ${amount}`);
+        }
+      }
+    }
+
     const months = duration === 'yearly' ? 12 : 1;
     const endDate = new Date();
     endDate.setMonth(endDate.getMonth() + months);
@@ -84,7 +96,20 @@ const getProviderSubscription = async (req, res) => {
     
     const providerId = req.user.providerProfile.providerId;
     const subscription = await Subscription.findOne({ providerId, status: 'active' });
-    res.json({ success: true, data: subscription });
+    
+    let discountEligible = false;
+    if (subscription) {
+      const diffInDays = (new Date(subscription.endDate) - new Date()) / (1000 * 60 * 60 * 24);
+      if (diffInDays <= 3 && diffInDays >= -1) {
+        discountEligible = true;
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      data: subscription,
+      discountEligible
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
