@@ -16,22 +16,42 @@ export default function Users() {
 
   useEffect(() => {
     fetchData();
-  }, [activeTab, statusFilter]);
+  }, [statusFilter]);
+
+  useEffect(() => {
+    if (activeTab === 'seekers' && seekers.length === 0) {
+      fetchSeekers();
+    } else if (activeTab === 'providers' && providers.length === 0) {
+      fetchProviders();
+    }
+  }, [activeTab]);
+
+  const fetchSeekers = async () => {
+    try {
+      const response = await getSeekers({ status: statusFilter !== 'all' ? statusFilter : undefined });
+      if (response.data.success) {
+        setSeekers(response.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch seekers:', err);
+    }
+  };
+
+  const fetchProviders = async () => {
+    try {
+      const response = await getProviders({ status: statusFilter !== 'all' ? statusFilter : undefined });
+      if (response.data.success) {
+        setProviders(response.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch providers:', err);
+    }
+  };
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      if (activeTab === 'seekers') {
-        const response = await getSeekers({ status: statusFilter !== 'all' ? statusFilter : undefined });
-        if (response.data.success) {
-          setSeekers(response.data.data);
-        }
-      } else {
-        const response = await getProviders({ status: statusFilter !== 'all' ? statusFilter : undefined });
-        if (response.data.success) {
-          setProviders(response.data.data);
-        }
-      }
+      await Promise.all([fetchSeekers(), fetchProviders()]);
     } catch (err) {
       console.error('Failed to fetch users:', err);
     } finally {
@@ -60,15 +80,17 @@ export default function Users() {
       key: 'name', 
       header: 'User',
       render: (value, row) => {
-        const userData = row.user || row.userId;
+        const userData = row.userId || row.user || {};
+        const email = userData.email || row.email || 'N/A';
+        const name = row.name || userData.name || 'N/A';
         return (
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
               <User className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="font-medium text-gray-800">{row.name || userData?.name || 'N/A'}</p>
-              <p className="text-sm text-gray-500">{userData?.email || 'N/A'}</p>
+              <p className="font-medium text-gray-800">{name}</p>
+              <p className="text-sm text-gray-500">{email}</p>
             </div>
           </div>
         );
@@ -77,7 +99,10 @@ export default function Users() {
     { 
       key: 'phone', 
       header: 'Phone',
-      render: (value, row) => (row.user || row.userId)?.phone || 'N/A'
+      render: (value, row) => {
+        const userData = row.userId || row.user || {};
+        return userData.phone || row.phone || 'N/A';
+      }
     },
     { 
       key: 'bookings', 
@@ -88,20 +113,22 @@ export default function Users() {
       key: 'joinedAt', 
       header: 'Joined',
       render: (value, row) => {
-        const userData = row.user || row.userId;
-        return userData?.createdAt ? new Date(userData.createdAt).toLocaleDateString() : 'N/A';
+        const userData = row.userId || row.user || {};
+        const createdAt = userData.createdAt || row.createdAt;
+        return createdAt ? new Date(createdAt).toLocaleDateString() : 'N/A';
       }
     },
     { 
       key: 'isActive', 
       header: 'Status',
       render: (value, row) => {
-        const userData = row.user || row.userId;
+        const userData = row.userId || row.user || {};
+        const isActive = userData.isActive !== undefined ? userData.isActive : row.isActive;
         return (
           <span className={`px-2 py-1 text-xs rounded-full ${
-            userData?.isActive !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+            isActive !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
           }`}>
-            {userData?.isActive !== false ? 'Active' : 'Inactive'}
+            {isActive !== false ? 'Active' : 'Inactive'}
           </span>
         );
       }
@@ -112,17 +139,20 @@ export default function Users() {
     { 
       key: 'name', 
       header: 'Provider',
-      render: (value, row) => (
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-            <Wrench className="w-5 h-5 text-purple-600" />
+      render: (value, row) => {
+        const userData = row.userId || row.user || {};
+        return (
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+              <Wrench className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
+              <p className="font-medium text-gray-800">{row.businessName || row.name || 'N/A'}</p>
+              <p className="text-sm text-gray-500">{userData.email || 'N/A'}</p>
+            </div>
           </div>
-          <div>
-            <p className="font-medium text-gray-800">{row.businessName || row.name || 'N/A'}</p>
-            <p className="text-sm text-gray-500">{row.userId?.email || 'N/A'}</p>
-          </div>
-        </div>
-      )
+        );
+      }
     },
     { 
       key: 'service', 
@@ -175,9 +205,10 @@ export default function Users() {
 
   const handleStatusToggle = async (user) => {
     try {
-      const userData = user.user || user.userId;
+      const rawUserData = user.userId || user.user;
+      const userData = rawUserData && typeof rawUserData === 'object' && rawUserData._id ? rawUserData : null;
       const newStatus = userData?.isActive === false;
-      await updateUserStatus(userData?._id || userData, { isActive: newStatus });
+      await updateUserStatus(userData?._id || rawUserData, { isActive: newStatus });
       fetchData();
     } catch (err) {
       console.error('Failed to update status:', err);
@@ -283,17 +314,17 @@ export default function Users() {
               <div>
                 <h3 className="text-xl font-semibold text-gray-800">
                   {activeTab === 'seekers' 
-                    ? (selectedUser.name || (selectedUser.user || selectedUser.userId)?.name)
-                    : (selectedUser.businessName || selectedUser.name)}
+                    ? (selectedUser.name || (selectedUser.userId || selectedUser.user)?.name || 'N/A')
+                    : (selectedUser.businessName || selectedUser.name || 'N/A')}
                 </h3>
-                <p className="text-gray-500">{(selectedUser.user || selectedUser.userId)?.email}</p>
+                <p className="text-gray-500">{(selectedUser.userId || selectedUser.user)?.email || selectedUser.email || 'N/A'}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
               <div>
                 <p className="text-sm text-gray-500">Phone</p>
-                <p className="font-medium text-gray-800">{(selectedUser.user || selectedUser.userId)?.phone || 'N/A'}</p>
+                <p className="font-medium text-gray-800">{(selectedUser.userId || selectedUser.user)?.phone || selectedUser.phone || 'N/A'}</p>
               </div>
               {activeTab === 'seekers' ? (
                 <>
@@ -304,8 +335,8 @@ export default function Users() {
                   <div>
                     <p className="text-sm text-gray-500">Joined</p>
                     <p className="font-medium text-gray-800">
-                      {(selectedUser.user || selectedUser.userId)?.createdAt 
-                        ? new Date((selectedUser.user || selectedUser.userId).createdAt).toLocaleDateString() 
+                      {((selectedUser.userId || selectedUser.user)?.createdAt || selectedUser.createdAt) 
+                        ? new Date((selectedUser.userId || selectedUser.user)?.createdAt || selectedUser.createdAt).toLocaleDateString() 
                         : 'N/A'}
                     </p>
                   </div>
@@ -341,7 +372,7 @@ export default function Users() {
                 onClick={() => handleStatusToggle(selectedUser)}
                 className="flex items-center gap-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
-                {(selectedUser.user || selectedUser.userId)?.isActive === false ? (
+                {((selectedUser.userId || selectedUser.user)?.isActive === false || selectedUser.isActive === false) ? (
                   <><CheckCircle className="w-4 h-4" /> Activate</>
                 ) : (
                   <><Ban className="w-4 h-4" /> Deactivate</>

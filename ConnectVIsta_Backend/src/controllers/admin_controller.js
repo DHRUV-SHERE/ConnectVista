@@ -69,12 +69,18 @@ const getAllUsers = async (req, res) => {
       .populate('userId', 'email phone');
 
     const enrichedUsers = users.map(user => {
-      const provider = providers.find(p => p.userId.toString() === user._id.toString());
-      const seeker = seekers.find(s => s.userId.toString() === user._id.toString());
+      const provider = providers.find(p => {
+        const pUserId = p.userId._id || p.userId;
+        return pUserId.toString() === user._id.toString();
+      });
+      const seeker = seekers.find(s => {
+        const sUserId = s.userId._id || s.userId;
+        return sUserId.toString() === user._id.toString();
+      });
       
       return {
         ...user.toObject(),
-        profile: provider || seeker || null
+        profile: provider ? provider.toObject() : (seeker ? seeker.toObject() : null)
       };
     });
 
@@ -129,7 +135,34 @@ const getAllSeekers = async (req, res) => {
   try {
     const { status, search, page = 1, limit = 20 } = req.query;
     
-    const seekers = await ServiceSeeker.find()
+    // We want to filter by status (User.isActive) and search (ServiceSeeker.name or User.email)
+    // For simplicity, we fetch seekers and populate user, then we can filter
+    // If we want efficient filtering, we should use aggregation or filter users first
+    
+    let userQuery = {};
+    if (status) {
+      userQuery.isActive = status === 'active';
+    }
+
+    // First find matching users if status or search-by-email is provided
+    let matchedUserIds = null;
+    if (status || (search && search.includes('@'))) {
+      if (search && search.includes('@')) {
+        userQuery.email = { $regex: search, $options: 'i' };
+      }
+      const users = await User.find(userQuery).select('_id');
+      matchedUserIds = users.map(u => u._id);
+    }
+
+    let seekerQuery = {};
+    if (matchedUserIds) {
+      seekerQuery.userId = { $in: matchedUserIds };
+    }
+    if (search && !search.includes('@')) {
+      seekerQuery.name = { $regex: search, $options: 'i' };
+    }
+
+    const seekers = await ServiceSeeker.find(seekerQuery)
       .populate('userId', 'email phone isActive createdAt')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
@@ -144,13 +177,15 @@ const getAllSeekers = async (req, res) => {
 
     const seekersWithBookings = seekers.map(seeker => {
       const bookingData = bookingCounts.find(b => b._id.toString() === seeker._id.toString());
+      const seekerObj = seeker.toObject();
+      
       return {
-        ...seeker.toObject(),
+        ...seekerObj,
         totalBookings: bookingData?.count || 0
       };
     });
 
-    const total = await ServiceSeeker.countDocuments();
+    const total = await ServiceSeeker.countDocuments(seekerQuery);
 
     res.json({
       success: true,
