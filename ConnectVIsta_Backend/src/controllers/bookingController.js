@@ -26,11 +26,11 @@ const createBooking = async (req, res) => {
     } = req.body;
 
     // Get seeker profile or create one if it doesn't exist
-    let seeker = await ServiceSeeker.findOne({ user: req.user.id });
+    let seeker = await ServiceSeeker.findOne({ userId: req.user.id });
     if (!seeker) {
       // Create a basic seeker profile
       seeker = new ServiceSeeker({
-        user: req.user.id,
+        userId: req.user.id,
         name: req.user.name || 'User',
         address: {
           street: '',
@@ -225,7 +225,7 @@ const getSeekerBookings = async (req, res) => {
   try {
     const { status, page = 1, limit = 10 } = req.query;
 
-    const seeker = await ServiceSeeker.findOne({ user: req.user.id });
+    const seeker = await ServiceSeeker.findOne({ userId: req.user.id });
     if (!seeker) {
       return res.status(404).json({
         success: false,
@@ -301,7 +301,7 @@ const getProviderBookings = async (req, res) => {
           path: 'seekerId',
           select: 'name address profileImage',
           populate: {
-            path: 'user',
+            path: 'userId',
             select: 'email phone'
           }
         })
@@ -384,7 +384,7 @@ const getBookingById = async (req, res) => {
         path: 'seekerId',
         select: 'name address profileImage',
         populate: {
-          path: 'user',
+          path: 'userId',
           select: 'email phone'
         }
       });
@@ -397,7 +397,7 @@ const getBookingById = async (req, res) => {
     }
 
     // Verify user has access to this booking
-    const seeker = await ServiceSeeker.findOne({ user: req.user.id });
+    const seeker = await ServiceSeeker.findOne({ userId: req.user.id });
     const provider = await ServiceProvider.findOne({ userId: req.user.id });
 
     const isSeekerOwner = seeker && booking.seekerId._id.toString() === seeker._id.toString();
@@ -442,7 +442,7 @@ const acceptBooking = async (req, res) => {
     }
 
     const booking = await Booking.findById(id)
-      .populate('seekerId', 'name user');
+      .populate('seekerId', 'name userId');
 
     if (!booking) {
       return res.status(404).json({
@@ -477,7 +477,7 @@ const acceptBooking = async (req, res) => {
 
     // Create notification for seeker
     const notification = new Notification({
-      userId: seekerDoc.user,
+      userId: seekerDoc.userId,
       bookingId: booking._id,
       title: 'Booking Accepted',
       message: `Your booking for ${new Date(booking.bookingDate).toLocaleDateString()} has been accepted by ${provider.businessName}`,
@@ -494,7 +494,7 @@ const acceptBooking = async (req, res) => {
     await notification.save();
 
     // Emit socket event to seeker
-    socketManager.emitToUser(seekerDoc.user.toString(), 'booking:accepted', {
+    socketManager.emitToUser(seekerDoc.userId.toString(), 'booking:accepted', {
       booking: {
         id: booking._id,
         status: 'accepted',
@@ -543,7 +543,7 @@ const rejectBooking = async (req, res) => {
     }
 
     const booking = await Booking.findById(id)
-      .populate('seekerId', 'name user');
+      .populate('seekerId', 'name userId');
 
     if (!booking) {
       return res.status(404).json({
@@ -580,7 +580,7 @@ const rejectBooking = async (req, res) => {
 
     // Create notification for seeker
     const notification = new Notification({
-      userId: seekerDoc.user,
+      userId: seekerDoc.userId,
       bookingId: booking._id,
       title: 'Booking Rejected',
       message: `Your booking for ${new Date(booking.bookingDate).toLocaleDateString()} has been rejected${reason ? ': ' + reason : ''}`,
@@ -598,7 +598,7 @@ const rejectBooking = async (req, res) => {
     await notification.save();
 
     // Emit socket event to seeker
-    socketManager.emitToUser(seekerDoc.user.toString(), 'booking:rejected', {
+    socketManager.emitToUser(seekerDoc.userId.toString(), 'booking:rejected', {
       booking: {
         id: booking._id,
         status: 'rejected',
@@ -655,7 +655,7 @@ const cancelBooking = async (req, res) => {
     }
 
     // Determine who is cancelling
-    const seeker = await ServiceSeeker.findOne({ user: req.user.id });
+    const seeker = await ServiceSeeker.findOne({ userId: req.user.id });
     const provider = await ServiceProvider.findOne({ userId: req.user.id });
 
     let cancelledBy;
@@ -672,7 +672,7 @@ const cancelBooking = async (req, res) => {
       cancelledBy = 'provider';
       // Notify seeker
       const seekerDoc = await ServiceSeeker.findById(booking.seekerId);
-      notifyUserId = seekerDoc.user;
+      notifyUserId = seekerDoc.userId;
       notifyUserName = provider.businessName;
     } else {
       return res.status(403).json({

@@ -4,7 +4,7 @@ const User = require('../models/User');
 // Get seeker profile
 const getSeekerProfile = async (req, res) => {
   try {
-    const seeker = await ServiceSeeker.findOne({ user: req.user.id });
+    const seeker = await ServiceSeeker.findOne({ userId: req.user.id });
     
     if (!seeker) {
       return res.status(404).json({
@@ -41,12 +41,12 @@ const updateSeekerProfile = async (req, res) => {
     } = req.body;
 
     // Check if seeker exists or create new one
-    let seeker = await ServiceSeeker.findOne({ user: req.user.id });
+    let seeker = await ServiceSeeker.findOne({ userId: req.user.id });
     
     if (!seeker) {
       // Create new seeker profile WITHOUT coordinates
       seeker = new ServiceSeeker({
-        user: req.user.id,
+        userId: req.user.id,
         name: name || req.user.name || 'User',
         gender: gender || 'other',
         address: {
@@ -110,7 +110,7 @@ const updateLocation = async (req, res) => {
       });
     }
 
-    const seeker = await ServiceSeeker.findOne({ user: req.user.id });
+    const seeker = await ServiceSeeker.findOne({ userId: req.user.id });
     
     if (!seeker) {
       return res.status(404).json({
@@ -147,7 +147,7 @@ const updateLocation = async (req, res) => {
 // In seekerProfileController.js - add this function
 const clearLocation = async (req, res) => {
   try {
-    const seeker = await ServiceSeeker.findOne({ user: req.user.id });
+    const seeker = await ServiceSeeker.findOne({ userId: req.user.id });
     
     if (!seeker) {
       return res.status(404).json({

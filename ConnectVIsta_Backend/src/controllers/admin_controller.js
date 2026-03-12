@@ -25,7 +25,7 @@ const getDashboardStats = async (req, res) => {
 
     const revenue = await Booking.aggregate([
       { $match: { status: 'completed', paymentStatus: 'paid' } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
+      { $group: { _id: null, total: { $sum: '$totalPrice' } } }
     ]);
 
     res.json({
@@ -130,7 +130,7 @@ const getAllSeekers = async (req, res) => {
     const { status, search, page = 1, limit = 20 } = req.query;
     
     const seekers = await ServiceSeeker.find()
-      .populate('user', 'email phone isActive createdAt')
+      .populate('userId', 'email phone isActive createdAt')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
@@ -222,7 +222,7 @@ const getRevenueData = async (req, res) => {
 
     const bookingRevenue = await Booking.aggregate([
       { $match: { status: 'completed', paymentStatus: 'paid', createdAt: { $gte: dateFilter } } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
+      { $group: { _id: null, total: { $sum: '$totalPrice' } } }
     ]);
 
     const monthlyRevenue = await Booking.aggregate([
@@ -230,7 +230,7 @@ const getRevenueData = async (req, res) => {
       {
         $group: {
           _id: { $month: '$createdAt' },
-          total: { $sum: '$amount' },
+          total: { $sum: '$totalPrice' },
           bookings: { $sum: 1 }
         }
       },

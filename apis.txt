@@ -1,0 +1,93 @@
+# ConnectVista API Documentation & Audit Report (REVISED & FIXED)
+
+## 1. Authentication APIs (/api/auth)
+- POST /api/auth/signup: User registration (Seeker/Provider)
+- POST /api/auth/login: User authentication
+- POST /api/auth/refresh-token: Refresh JWT tokens
+- POST /api/auth/logout: Logout and clear cookies
+- GET /api/auth/profile: Get current user profile
+- PUT /api/auth/profile: Update basic profile
+- PUT /api/auth/change-password: Change password
+- **Status: FIXED.** Standardized `ServiceSeeker` model to use `userId` consistent with `ServiceProvider`.
+
+## 2. Admin APIs (/api/admin)
+- GET /api/admin/dashboard/stats: Dashboard overview stats
+- GET /api/admin/users: Get all users (Seekers and Providers)
+- GET /api/admin/providers: Get all service providers
+- GET /api/admin/seekers: Get all service seekers
+- PATCH /api/admin/users/:id/status: Activate/Deactivate user
+- GET /api/admin/bookings: Monitor all bookings
+- GET /api/admin/revenue: Revenue analytics
+- GET /api/admin/verifications: Review verification requests
+- PATCH /api/admin/verifications/:id: Approve/Reject provider verification
+- **Status: FIXED.** Resolved the bug in `getAllUsers` seeker lookup and standardized lookups across all admin functions.
+
+## 3. Seeker APIs (/api/seeker)
+- GET /api/seeker/profile: Get seeker profile
+- PUT /api/seeker/profile: Update seeker profile
+- POST /api/seeker/location: Update coordinates for proximity search
+- DELETE /api/seeker/location: Clear location data
+- GET /api/seeker/services: Get categories with price ranges (aggregated)
+- GET /api/seeker/services/:categoryId/providers: Proximity-based provider search
+- GET /api/seeker/providers/:providerId: Detailed provider profile
+- **Status: FIXED.** Updated frontend `serviceAPI.js` to point to correct endpoints (`/seeker/services/...` instead of `/services/categories/...`).
+
+## 4. Provider APIs (/api/profile)
+- GET /api/profile/provider: Get provider profile
+- PUT /api/profile/provider: Update business details
+- PUT /api/profile/provider/services: Update service offerings
+- POST /api/profile/provider/images: Upload business portfolio images
+- DELETE /api/profile/provider/images/:imageIndex: Remove portfolio image
+- **Status: Working perfectly.**
+
+## 5. Service Catalog APIs (/api/service-catalog)
+- GET /api/service-catalog/categories: Get all categories
+- GET /api/service-catalog/categories/:categoryId/sub-services: Get sub-services
+- GET /api/service-catalog/provider/service: Get current provider's active service
+- POST /api/service-catalog/provider/service: Set provider's service
+- DELETE /api/service-catalog/provider/service: Remove provider's service
+- **Status: Working perfectly.**
+
+## 6. Booking APIs (/api/bookings)
+- POST /api/bookings/: Create a new booking (Seeker)
+- GET /api/bookings/seeker: My bookings (Seeker)
+- GET /api/bookings/provider: My jobs (Provider)
+- GET /api/bookings/:id: Booking details
+- PATCH /api/bookings/:id/accept: Accept job (Provider)
+- PATCH /api/bookings/:id/reject: Reject job (Provider)
+- PATCH /api/bookings/:id/cancel: Cancel booking
+- **Status: FIXED.** Standardized seeker lookups to use `userId`.
+
+## 7. Notification APIs (/api/notifications)
+- GET /api/notifications/: Get all notifications
+- GET /api/notifications/unread-count: Get unread count
+- PATCH /api/notifications/read-all: Mark all as read
+- PATCH /api/notifications/:id/read: Mark specific as read
+- DELETE /api/notifications/:id: Remove notification
+- **Status: Working perfectly.**
+
+## 8. Subscription APIs (/api/subscriptions)
+- POST /api/subscriptions/subscribe: Purchase a plan
+- GET /api/subscriptions/my-subscription: Check active plan
+- POST /api/subscriptions/cancel: Cancel subscription
+- GET /api/subscriptions/all: List all subscriptions (Admin)
+- **Status: Working perfectly.**
+
+## 9. Settings APIs (/api/settings)
+- GET /api/settings/: Get notification/privacy settings
+- PUT /api/settings/profile: Update settings profile
+- PUT /api/settings/password: Update password
+- PUT /api/settings/notifications: Toggle notifications
+- PUT /api/settings/privacy: Toggle profile privacy
+- **Status: Working perfectly.**
+
+---
+
+# Improvements & Fixes Implemented
+
+1.  **Schema Standardization**: Standardized `ServiceSeeker` and `ServiceProvider` models to both use `userId` to reference the `User` document. This prevents confusion and bugs during profile lookups.
+2.  **Bug Fix in `admin_controller.js`**: Fixed the seeker lookup logic in the user list to correctly map seeker profiles to their respective user accounts.
+3.  **Frontend Endpoint Correction**: Corrected several mismatched endpoints in `ConnectVista_Frontend/src/services/serviceAPI.js`, ensuring they match the backend route definitions.
+4.  **Admin Panel Revenue API**: Updated the Admin Panel to use the dedicated `/admin/revenue` endpoint instead of the generic subscription list.
+5.  **Code Cleanup**: Removed the redundant and duplicated `adminRoutes.js` file from the backend routes directory.
+6.  **Refactored Controllers**: Updated `authController.js`, `seekerProfileController.js`, and `bookingController.js` to align with the standardized schema.

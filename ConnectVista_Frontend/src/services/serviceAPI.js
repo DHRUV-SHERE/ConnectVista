@@ -124,7 +124,7 @@ export const serviceAPI = {
     if (lng) params.append('lng', lng);
     if (radius) params.append('radius', radius);
 
-    const response = await api.get(`/services/categories/${categoryId}/providers?${params}`);
+    const response = await api.get(`/seeker/services/${categoryId}/providers?${params}`);
     return response.data;
   },
 
@@ -141,14 +141,14 @@ export const serviceAPI = {
     if (lng) params.append('lng', lng);
     if (radius) params.append('radius', radius);
 
-    const response = await api.get(`/services/${serviceId}/providers?${params}`);
+    const response = await api.get(`/seeker/services/${serviceId}/providers?${params}`);
     return response.data;
   },
 
   // Get provider profile details
   getProviderProfile: async (providerId) => {
     await throttleRequest();
-    const response = await api.get(`/services/provider/${providerId}`);
+    const response = await api.get(`/seeker/providers/${providerId}`);
     return response.data;
   },
 

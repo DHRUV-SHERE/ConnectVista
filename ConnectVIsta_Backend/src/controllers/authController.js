@@ -44,7 +44,7 @@ const signup = async (req, res) => {
     // In authController.js, update the seeker creation part:
 if (role === 'seeker') {
   profile = await ServiceSeeker.create({
-    user: user._id,
+    userId: user._id,
     name: profileData.name,
     gender: profileData.gender,
     address: {
@@ -304,7 +304,7 @@ const login = async (req, res) => {
     // Get profile based on role (skip for admin)
     let profile = null;
     if (user.role === 'seeker') {
-      profile = await ServiceSeeker.findOne({ user: user._id });
+      profile = await ServiceSeeker.findOne({ userId: user._id });
     } else if (user.role === 'provider') {
       profile = await ServiceProvider.findOne({ userId: user._id });
     }
@@ -486,11 +486,11 @@ const getProfile = async (req, res) => {
 
     // If user is seeker, get seeker profile
     if (user.role === 'seeker') {
-      profile = await ServiceSeeker.findOne({ user: user._id });
+      profile = await ServiceSeeker.findOne({ userId: user._id });
 
       if (!profile) {
         profile = await ServiceSeeker.create({
-          user: user._id,
+          userId: user._id,
           name: user.name || 'User',
           gender: 'other',
           address: {
@@ -540,7 +540,7 @@ const updateProfile = async (req, res) => {
 
     if (user.role === 'seeker') {
       await ServiceSeeker.findOneAndUpdate(
-        { user: user._id },
+        { userId: user._id },
         updateData,
         { new: true, runValidators: true }
       );
