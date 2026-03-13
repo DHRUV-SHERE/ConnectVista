@@ -1,29 +1,34 @@
-import { User, Lock, Bell, CreditCard, Shield, Mail, Phone, Globe, Download, Trash2, Eye, EyeOff, Key, LogOut, Database, Smartphone, Tablet } from 'lucide-react';
+import { User, Lock, Bell, CreditCard, Shield, Mail, Phone, Globe, Download, Eye, EyeOff, Key, LogOut, Smartphone } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { settingsAPI } from '../../services/settingsAPI';
 import toast from 'react-hot-toast';
+import PageTransitionLoader from '../../components/PageTransitionLoader';
 
 const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsNotifications, setSmsNotifications] = useState(false);
   const [pushNotifications, setPushNotifications] = useState(true);
-  const [profileVisibility, setProfileVisibility] = useState('public');
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
     phone: '',
     businessName: '',
-    businessLocation: ''
+    businessLocation: '',
+    businessRegistration: ''
   });
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
+  });
+  const [billingInfo, setBillingInfo] = useState({
+    currentPlan: null,
+    paymentMethod: null,
+    recentInvoices: []
   });
 
   useEffect(() => {
@@ -34,18 +39,23 @@ const Settings = () => {
     try {
       const response = await settingsAPI.getSettings();
       if (response.success) {
-        const { user, provider, settings } = response.data;
+        const { user, provider, settings, billing } = response.data;
         setProfileData({
-          name: user.name || '',
+          name: provider.name || '',
           email: user.email || '',
           phone: user.phone || '',
           businessName: provider.businessName || '',
-          businessLocation: provider.businessAddress?.street || ''
+          businessLocation: provider.businessAddress?.street || '',
+          businessRegistration: provider.businessRegistration || 'BRN-123456789'
         });
-        setEmailNotifications(settings.notifications?.email ?? true);
-        setSmsNotifications(settings.notifications?.sms ?? false);
-        setPushNotifications(settings.notifications?.push ?? true);
-        setProfileVisibility(settings.privacy?.profileVisibility || 'public');
+        setEmailNotifications(settings?.notifications?.email ?? true);
+        setSmsNotifications(settings?.notifications?.sms ?? false);
+        setPushNotifications(settings?.notifications?.push ?? true);
+        setBillingInfo({
+          currentPlan: billing?.currentPlan || null,
+          paymentMethod: billing?.paymentMethod || null,
+          recentInvoices: billing?.recentInvoices || []
+        });
       }
     } catch (error) {
       console.error('Load settings error:', error);
@@ -88,10 +98,9 @@ const Settings = () => {
   const handleNotificationUpdate = async (type, value) => {
     try {
       const updates = {
-        email: emailNotifications,
-        sms: smsNotifications,
-        push: pushNotifications,
-        [type]: value
+        email: type === 'email' ? value : emailNotifications,
+        sms: type === 'sms' ? value : smsNotifications,
+        push: type === 'push' ? value : pushNotifications
       };
       const response = await settingsAPI.updateNotifications(updates);
       if (response.success) {
@@ -102,40 +111,30 @@ const Settings = () => {
     }
   };
 
-  const handlePrivacyUpdate = async (visibility) => {
-    try {
-      const response = await settingsAPI.updatePrivacy({ profileVisibility: visibility });
-      if (response.success) {
-        toast.success('Privacy settings updated');
-      }
-    } catch (error) {
-      toast.error('Failed to update privacy');
-    }
-  };
-
   const handleLogoutAllDevices = () => {
     if (confirm('Are you sure you want to logout from all devices?')) {
       alert('Logged out from all devices successfully!');
     }
   };
 
-  const handleDownloadData = () => {
-    alert('Your data download request has been submitted. You will receive an email with download instructions.');
-  };
-
-  const handleDeleteAccount = () => {
-    const confirmDelete = confirm('Are you sure you want to delete your account? This action cannot be undone.');
-    if (confirmDelete) {
-      const finalConfirm = confirm('All your data will be permanently deleted. Type DELETE to confirm:');
-      if (finalConfirm) {
-        alert('Account deletion scheduled. You will receive a confirmation email.');
-      }
+  const handleDownloadData = async () => {
+    try {
+      const response = await settingsAPI.downloadData();
+      const blob = new Blob([JSON.stringify(response, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `connectvista-data-${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success('Data downloaded successfully');
+    } catch (error) {
+      toast.error('Failed to download data');
     }
   };
 
-  const handleExportBackup = () => {
-    alert('Creating backup... Your backup will be available for download shortly.');
-  };
+  if (loading) return <PageTransitionLoader />;
 
   return (
     <div style={{ 
@@ -278,7 +277,9 @@ const Settings = () => {
                     backgroundColor: 'var(--background)',
                     color: 'var(--text-color)',
                     fontSize: '0.875rem',
-                    width: '100%'
+                    width: '100%',
+                    opacity: 0.7,
+                    cursor: 'not-allowed'
                   }}
                 />
               </div>
@@ -317,11 +318,12 @@ const Settings = () => {
                   alignItems: 'center',
                   gap: '0.5rem'
                 }}>
-                  <Database size={16} /> Business Registration
+                  <Smartphone size={16} /> Business Registration
                 </label>
                 <input 
                   type="text"
-                  defaultValue="BRN-123456789"
+                  value={profileData.businessRegistration}
+                  readOnly
                   style={{
                     padding: '0.75rem',
                     border: '1px solid var(--border-color)',
@@ -329,7 +331,9 @@ const Settings = () => {
                     backgroundColor: 'var(--background)',
                     color: 'var(--text-color)',
                     fontSize: '0.875rem',
-                    width: '100%'
+                    width: '100%',
+                    opacity: 0.7,
+                    cursor: 'not-allowed'
                   }}
                 />
               </div>
@@ -398,121 +402,136 @@ const Settings = () => {
               </h3>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div style={{ position: 'relative' }}>
+                <div>
                   <label style={{
                     fontSize: '0.875rem',
                     fontWeight: '500',
                     marginBottom: '0.25rem',
                     display: 'block'
                   }}>Current Password</label>
-                  <input 
-                    type={showCurrentPassword ? "text" : "password"}
-                    placeholder="Enter current password"
-                    value={passwordData.currentPassword}
-                    onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
-                    style={{
-                      padding: '0.75rem 2.5rem 0.75rem 0.75rem',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '0.5rem',
-                      backgroundColor: 'var(--background)',
-                      color: 'var(--text-color)',
-                      fontSize: '0.875rem',
-                      width: '100%'
-                    }}
-                  />
-                  <button
-                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '0.75rem',
-                      top: '1.75rem',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: 'var(--text-color)',
-                      opacity: 0.7
-                    }}
-                  >
-                    {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input 
+                      type={showCurrentPassword ? "text" : "password"}
+                      placeholder="Enter current password"
+                      value={passwordData.currentPassword}
+                      onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                      style={{
+                        padding: '0.75rem 2.5rem 0.75rem 0.75rem',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '0.5rem',
+                        backgroundColor: 'var(--background)',
+                        color: 'var(--text-color)',
+                        fontSize: '0.875rem',
+                        width: '100%'
+                      }}
+                    />
+                    <button
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '0.75rem',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-color)',
+                        opacity: 0.7,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0'
+                      }}
+                    >
+                      {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
 
-                <div style={{ position: 'relative' }}>
+                <div>
                   <label style={{
                     fontSize: '0.875rem',
                     fontWeight: '500',
                     marginBottom: '0.25rem',
                     display: 'block'
                   }}>New Password</label>
-                  <input 
-                    type={showNewPassword ? "text" : "password"}
-                    placeholder="Enter new password"
-                    value={passwordData.newPassword}
-                    onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
-                    style={{
-                      padding: '0.75rem 2.5rem 0.75rem 0.75rem',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '0.5rem',
-                      backgroundColor: 'var(--background)',
-                      color: 'var(--text-color)',
-                      fontSize: '0.875rem',
-                      width: '100%'
-                    }}
-                  />
-                  <button
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '0.75rem',
-                      top: '1.75rem',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: 'var(--text-color)',
-                      opacity: 0.7
-                    }}
-                  >
-                    {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input 
+                      type={showNewPassword ? "text" : "password"}
+                      placeholder="Enter new password"
+                      value={passwordData.newPassword}
+                      onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                      style={{
+                        padding: '0.75rem 2.5rem 0.75rem 0.75rem',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '0.5rem',
+                        backgroundColor: 'var(--background)',
+                        color: 'var(--text-color)',
+                        fontSize: '0.875rem',
+                        width: '100%'
+                      }}
+                    />
+                    <button
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '0.75rem',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-color)',
+                        opacity: 0.7,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0'
+                      }}
+                    >
+                      {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
 
-                <div style={{ position: 'relative' }}>
+                <div>
                   <label style={{
                     fontSize: '0.875rem',
                     fontWeight: '500',
                     marginBottom: '0.25rem',
                     display: 'block'
                   }}>Confirm New Password</label>
-                  <input 
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirm new password"
-                    value={passwordData.confirmPassword}
-                    onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
-                    style={{
-                      padding: '0.75rem 2.5rem 0.75rem 0.75rem',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '0.5rem',
-                      backgroundColor: 'var(--background)',
-                      color: 'var(--text-color)',
-                      fontSize: '0.875rem',
-                      width: '100%'
-                    }}
-                  />
-                  <button
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '0.75rem',
-                      top: '1.75rem',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: 'var(--text-color)',
-                      opacity: 0.7
-                    }}
-                  >
-                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input 
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirm new password"
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                      style={{
+                        padding: '0.75rem 2.5rem 0.75rem 0.75rem',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '0.5rem',
+                        backgroundColor: 'var(--background)',
+                        color: 'var(--text-color)',
+                        fontSize: '0.875rem',
+                        width: '100%'
+                      }}
+                    />
+                    <button
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '0.75rem',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-color)',
+                        opacity: 0.7,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0'
+                      }}
+                    >
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -536,58 +555,14 @@ const Settings = () => {
 
             <div style={{ borderTop: '1px solid var(--border-color)' }} />
 
-            {/* Two-Factor Authentication */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <div>
-                  <h4 style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Two-Factor Authentication</h4>
-                  <p style={{
-                    fontSize: '0.875rem',
-                    opacity: 0.7
-                  }}>
-                    Add an extra layer of security
-                  </p>
-                </div>
-                <button 
-                  onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
-                  style={{
-                    padding: '0.5rem 1.25rem',
-                    backgroundColor: twoFactorEnabled ? '#10b981' : 'transparent',
-                    color: twoFactorEnabled ? 'white' : 'var(--text-color)',
-                    border: twoFactorEnabled ? 'none' : '1px solid var(--border-color)',
-                    borderRadius: '0.375rem',
-                    cursor: 'pointer',
-                    fontWeight: '500',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  {twoFactorEnabled ? 'Enabled' : 'Enable'}
-                </button>
-              </div>
-            </div>
-
-            <div style={{ borderTop: '1px solid var(--border-color)' }} />
-
             {/* Active Sessions */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <h4 style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Active Sessions</h4>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <Smartphone size={20} style={{ opacity: 0.7 }} />
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: '0.875rem', fontWeight: '500' }}>Chrome on iPhone</p>
-                  <p style={{ fontSize: '0.75rem', opacity: 0.7 }}>Currently active • New York, US</p>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <Tablet size={20} style={{ opacity: 0.7 }} />
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: '0.875rem', fontWeight: '500' }}>Safari on iPad</p>
-                  <p style={{ fontSize: '0.75rem', opacity: 0.7 }}>Last active 2 hours ago</p>
+                  <p style={{ fontSize: '0.875rem', fontWeight: '500' }}>Current Session</p>
+                  <p style={{ fontSize: '0.75rem', opacity: 0.7 }}>Currently active</p>
                 </div>
               </div>
               <button 
@@ -813,55 +788,6 @@ const Settings = () => {
             gap: '1.5rem',
             flex: 1
           }}>
-            {/* Profile Visibility */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <h4 style={{ fontWeight: '600' }}>Profile Visibility</h4>
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.5rem'
-              }}>
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  cursor: 'pointer'
-                }}>
-                  <input 
-                    type="radio"
-                    name="visibility"
-                    checked={profileVisibility === 'public'}
-                    onChange={() => { setProfileVisibility('public'); handlePrivacyUpdate('public'); }}
-                    style={{ accentColor: 'var(--accent-color)' }}
-                  />
-                  <div>
-                    <p style={{ fontWeight: '500', fontSize: '0.875rem' }}>Public</p>
-                    <p style={{ fontSize: '0.75rem', opacity: 0.7 }}>Visible to everyone</p>
-                  </div>
-                </label>
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  cursor: 'pointer'
-                }}>
-                  <input 
-                    type="radio"
-                    name="visibility"
-                    checked={profileVisibility === 'private'}
-                    onChange={() => { setProfileVisibility('private'); handlePrivacyUpdate('private'); }}
-                    style={{ accentColor: 'var(--accent-color)' }}
-                  />
-                  <div>
-                    <p style={{ fontWeight: '500', fontSize: '0.875rem' }}>Private</p>
-                    <p style={{ fontSize: '0.75rem', opacity: 0.7 }}>Only visible to approved clients</p>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            <div style={{ borderTop: '1px solid var(--border-color)' }} />
-
             {/* Data Management */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <h4 style={{ fontWeight: '600' }}>Data Management</h4>
@@ -884,72 +810,6 @@ const Settings = () => {
               >
                 <Download size={18} /> Download Your Data
               </button>
-
-              <button 
-                onClick={handleExportBackup}
-                style={{
-                  padding: '0.75rem 1rem',
-                  backgroundColor: 'transparent',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '0.5rem',
-                  cursor: 'pointer',
-                  color: 'var(--text-color)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  justifyContent: 'flex-start',
-                  fontSize: '0.875rem'
-                }}
-              >
-                <Database size={18} /> Create Data Backup
-              </button>
-
-              <div style={{ borderTop: '1px solid var(--border-color)', marginTop: '0.5rem' }} />
-
-              {/* Delete Account */}
-              <div style={{ 
-                padding: '1rem',
-                backgroundColor: '#fee2e2',
-                border: '1px solid #fecaca',
-                borderRadius: '0.5rem',
-                marginTop: '0.5rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                  <Trash2 size={20} color="#dc2626" />
-                  <div style={{ flex: 1 }}>
-                    <h4 style={{ 
-                      fontWeight: '600', 
-                      color: '#dc2626',
-                      marginBottom: '0.25rem'
-                    }}>
-                      Delete Account
-                    </h4>
-                    <p style={{
-                      fontSize: '0.875rem',
-                      color: '#dc2626',
-                      opacity: 0.9
-                    }}>
-                      This will permanently delete your account and all data. This action cannot be undone.
-                    </p>
-                    <button 
-                      onClick={handleDeleteAccount}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        backgroundColor: '#dc2626',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '0.375rem',
-                        cursor: 'pointer',
-                        fontWeight: '600',
-                        fontSize: '0.875rem',
-                        marginTop: '0.75rem'
-                      }}
-                    >
-                      Delete My Account
-                    </button>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -998,141 +858,109 @@ const Settings = () => {
                     fontSize: '1.25rem', 
                     fontWeight: '700',
                     color: 'var(--accent-color)'
-                  }}>Professional</p>
-                  <p style={{ fontSize: '0.875rem', opacity: 0.7 }}>$29/month</p>
+                  }}>{billingInfo.currentPlan ? billingInfo.currentPlan.plan : 'No Active Plan'}</p>
+                  <p style={{ fontSize: '0.875rem', opacity: 0.7 }}>
+                    {billingInfo.currentPlan ? `₹${billingInfo.currentPlan.amount} / ${billingInfo.currentPlan.duration}` : 'Subscribe to a plan to start'}
+                  </p>
                 </div>
-                <button style={{
-                  padding: '0.5rem 1rem',
-                  backgroundColor: 'transparent',
-                  border: '1px solid var(--accent-color)',
-                  color: 'var(--accent-color)',
-                  borderRadius: '0.375rem',
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                  fontSize: '0.875rem'
-                }}>
-                  Upgrade
-                </button>
+                {!billingInfo.currentPlan && (
+                  <button style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: 'transparent',
+                    border: '1px solid var(--accent-color)',
+                    color: 'var(--accent-color)',
+                    borderRadius: '0.375rem',
+                    cursor: 'pointer',
+                    fontWeight: '500',
+                    fontSize: '0.875rem'
+                  }}>
+                    View Plans
+                  </button>
+                )}
               </div>
             </div>
 
             <div style={{ borderTop: '1px solid var(--border-color)' }} />
 
-            {/* Payment Methods */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <h4 style={{ fontWeight: '600' }}>Payment Methods</h4>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '1rem',
-                border: '1px solid var(--border-color)',
-                borderRadius: '0.5rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {/* Payment Method */}
+            {billingInfo.paymentMethod && (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <h4 style={{ fontWeight: '600' }}>Payment Method</h4>
                   <div style={{
-                    padding: '0.75rem',
-                    backgroundColor: 'var(--border-color)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '1rem',
+                    border: '1px solid var(--border-color)',
                     borderRadius: '0.5rem'
                   }}>
-                    <CreditCard size={24} />
-                  </div>
-                  <div>
-                    <p style={{ fontWeight: '500', fontSize: '0.875rem' }}>•••• •••• •••• 4242</p>
-                    <p style={{
-                      fontSize: '0.75rem',
-                      opacity: 0.7
-                    }}>Expires 12/25</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <div style={{
+                        padding: '0.75rem',
+                        backgroundColor: 'var(--border-color)',
+                        borderRadius: '0.5rem'
+                      }}>
+                        <CreditCard size={24} />
+                      </div>
+                      <div>
+                        <p style={{ fontWeight: '500', fontSize: '0.875rem' }}>•••• •••• •••• {billingInfo.paymentMethod.cardLast4}</p>
+                        <p style={{
+                          fontSize: '0.75rem',
+                          opacity: 0.7
+                        }}>{billingInfo.paymentMethod.cardType}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <button style={{
-                  padding: '0.5rem 1rem',
-                  backgroundColor: 'transparent',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '0.375rem',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  color: 'var(--text-color)'
-                }}>
-                  Update
-                </button>
-              </div>
-
-              <button style={{
-                padding: '0.75rem 1rem',
-                backgroundColor: 'transparent',
-                border: '1px solid var(--border-color)',
-                borderRadius: '0.5rem',
-                cursor: 'pointer',
-                color: 'var(--text-color)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                justifyContent: 'center',
-                fontSize: '0.875rem'
-              }}>
-                <CreditCard size={18} /> Add Payment Method
-              </button>
-            </div>
-
-            <div style={{ borderTop: '1px solid var(--border-color)' }} />
+                <div style={{ borderTop: '1px solid var(--border-color)' }} />
+              </>
+            )}
 
             {/* Billing History */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <h4 style={{ fontWeight: '600' }}>Recent Invoices</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {[
-                  { date: 'Jan 15, 2024', plan: 'Professional Plan', amount: '$29.00', status: 'Paid' },
-                  { date: 'Dec 15, 2023', plan: 'Professional Plan', amount: '$29.00', status: 'Paid' },
-                  { date: 'Nov 15, 2023', plan: 'Professional Plan', amount: '$29.00', status: 'Paid' }
-                ].map((invoice, index) => (
-                  <div 
-                    key={index}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      fontSize: '0.875rem',
-                      padding: '0.75rem',
-                      borderRadius: '0.375rem',
-                      cursor: 'pointer',
-                      transition: 'background-color 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--border-color)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  >
-                    <div>
-                      <span style={{ fontWeight: '500' }}>{invoice.date}</span>
-                      <span style={{ opacity: 0.7, marginLeft: '0.5rem' }}>• {invoice.plan}</span>
+                {billingInfo.recentInvoices.length > 0 ? (
+                  billingInfo.recentInvoices.map((invoice, index) => (
+                    <div 
+                      key={index}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        fontSize: '0.875rem',
+                        padding: '0.75rem',
+                        borderRadius: '0.375rem',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--border-color)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <div>
+                        <span style={{ fontWeight: '500' }}>{new Date(invoice.createdAt).toLocaleDateString()}</span>
+                        <span style={{ opacity: 0.7, marginLeft: '0.5rem' }}>• {invoice.plan}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <span style={{ fontWeight: '600' }}>₹{invoice.amount}</span>
+                        <span style={{
+                          padding: '0.25rem 0.5rem',
+                          backgroundColor: invoice.status === 'success' ? '#10b98120' : '#f59e0b20',
+                          color: invoice.status === 'success' ? '#10b981' : '#f59e0b',
+                          borderRadius: '0.25rem',
+                          fontSize: '0.75rem',
+                          fontWeight: '500'
+                        }}>
+                          {invoice.status === 'success' ? 'Paid' : invoice.status}
+                        </span>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <span style={{ fontWeight: '600' }}>{invoice.amount}</span>
-                      <span style={{
-                        padding: '0.25rem 0.5rem',
-                        backgroundColor: invoice.status === 'Paid' ? '#10b98120' : '#f59e0b20',
-                        color: invoice.status === 'Paid' ? '#10b981' : '#f59e0b',
-                        borderRadius: '0.25rem',
-                        fontSize: '0.75rem',
-                        fontWeight: '500'
-                      }}>
-                        {invoice.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p style={{ fontSize: '0.875rem', opacity: 0.7 }}>No invoices found</p>
+                )}
               </div>
-              <button style={{
-                width: '100%',
-                padding: '0.75rem',
-                backgroundColor: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                color: 'var(--accent-color)',
-                fontWeight: '500'
-              }}>
-                View All Invoices →
-              </button>
             </div>
           </div>
         </div>

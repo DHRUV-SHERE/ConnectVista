@@ -24,6 +24,11 @@ export const settingsAPI = {
   updatePrivacy: async (data) => {
     const response = await api.put('/settings/privacy', data);
     return response.data;
+  },
+
+  downloadData: async () => {
+    const response = await api.get('/settings/download-data');
+    return response.data;
   }
 };
 
