@@ -134,6 +134,13 @@ const bookingSchema = new mongoose.Schema({
   providerNotes: String,
   
   seekerFeedback: String,
+
+  isReviewed: {
+    type: Boolean,
+    default: false
+  },
+
+  reviewReminderDate: Date,
   
   // Timestamps
   createdAt: {

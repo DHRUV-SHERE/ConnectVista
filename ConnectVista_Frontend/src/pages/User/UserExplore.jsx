@@ -38,6 +38,7 @@ const UserExplore = () => {
   const [favorites, setFavorites] = useState(new Set());
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [userBookings, setUserBookings] = useState([]);
   const [userLocation, setUserLocation] = useState(null);
   const [searchParams] = useSearchParams();
   const categoryId = searchParams.get('categoryId') || searchParams.get('serviceId'); // Support both for backward compatibility
@@ -60,10 +61,35 @@ const UserExplore = () => {
       }
     };
 
+    const fetchUserBookings = async () => {
+      try {
+        const response = await serviceAPI.getSeekerBookings();
+        if (response.success) {
+          setUserBookings(response.data.bookings || []);
+        }
+      } catch (error) {
+        console.error('Error fetching user bookings:', error);
+      }
+    };
+
     // Add delay to prevent simultaneous calls
-    const timeoutId = setTimeout(getUserLocation, 50);
+    const timeoutId = setTimeout(() => {
+      getUserLocation();
+      fetchUserBookings();
+    }, 50);
     return () => clearTimeout(timeoutId);
   }, []);
+
+  // Check if user has an active booking in this category
+  const activeBookingInCategory = useMemo(() => {
+    if (!categoryId || userBookings.length === 0) return null;
+    
+    return userBookings.find(booking => {
+      const bCategoryId = booking.serviceId?._id || booking.serviceId?.id || booking.serviceId;
+      return bCategoryId === categoryId && 
+             !['completed', 'cancelled', 'rejected'].includes(booking.status);
+    });
+  }, [userBookings, categoryId]);
 
   // Fetch nearby providers for the selected category with geolocation
   useEffect(() => {
@@ -476,11 +502,15 @@ const UserExplore = () => {
           <div className="p-4 sm:p-6 border-t" style={{ borderColor: "var(--border-color)" }}>
             <div className="flex flex-col sm:flex-row gap-3">
               <button
-                className="flex-1 py-3 rounded-xl font-semibold transition-colors text-sm sm:text-base"
-                style={{ background: "var(--btn-bg)", color: "white" }}
-                onClick={() => handleBookService(profile)}
+                className={`flex-1 py-3 rounded-xl font-semibold transition-colors text-sm sm:text-base ${activeBookingInCategory ? 'cursor-not-allowed opacity-70' : ''}`}
+                style={{ 
+                  background: activeBookingInCategory ? "var(--border-color)" : "var(--btn-bg)", 
+                  color: activeBookingInCategory ? "var(--text-color)" : "white" 
+                }}
+                onClick={() => !activeBookingInCategory && handleBookService(profile)}
+                disabled={activeBookingInCategory}
               >
-                Book Service
+                {activeBookingInCategory ? 'Pending Booking in Category' : 'Book Service'}
               </button>
               <div className="flex gap-3 justify-center sm:justify-start">
                 <button
@@ -815,14 +845,15 @@ const UserExplore = () => {
                             View
                           </button>
                           <button
-                            onClick={() => handleBookService(provider)}
-                            className="px-3 sm:px-6 py-2 rounded-xl font-medium transition-colors text-xs sm:text-sm"
+                            onClick={() => !activeBookingInCategory && handleBookService(provider)}
+                            className={`px-3 sm:px-6 py-2 rounded-xl font-medium transition-colors text-xs sm:text-sm ${activeBookingInCategory ? 'cursor-not-allowed opacity-70' : ''}`}
                             style={{
-                              background: "var(--btn-bg)",
-                              color: "white",
+                              background: activeBookingInCategory ? "var(--border-color)" : "var(--btn-bg)",
+                              color: activeBookingInCategory ? "var(--text-color)" : "white",
                             }}
+                            disabled={activeBookingInCategory}
                           >
-                            Book Now
+                            {activeBookingInCategory ? 'Pending' : 'Book Now'}
                           </button>
                         </div>
                       </div>

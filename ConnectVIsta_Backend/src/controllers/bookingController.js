@@ -67,6 +67,22 @@ const createBooking = async (req, res) => {
       });
     }
 
+    // Check if seeker already has an active booking for this service category
+    if (serviceId) {
+      const activeBookingInCategory = await Booking.findOne({
+        seekerId: seeker._id,
+        serviceId: serviceId,
+        status: { $nin: ['completed', 'cancelled', 'rejected'] }
+      });
+
+      if (activeBookingInCategory) {
+        return res.status(400).json({
+          success: false,
+          message: 'You already have an active booking for this service category. Please complete or cancel it before booking another.'
+        });
+      }
+    }
+
     // Validate booking date is in the future
     const bookingDateObj = new Date(bookingDate);
     const today = new Date();
@@ -736,6 +752,106 @@ const cancelBooking = async (req, res) => {
   }
 };
 
+/**
+ * Complete a booking
+ * @route PATCH /api/bookings/:id/complete
+ * @access Private (provider only)
+ */
+const completeBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { providerNotes } = req.body;
+
+    const provider = await ServiceProvider.findOne({ userId: req.user.id });
+    if (!provider) {
+      return res.status(404).json({
+        success: false,
+        message: 'Provider profile not found'
+      });
+    }
+
+    const booking = await Booking.findById(id);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found'
+      });
+    }
+
+    // Verify booking belongs to this provider
+    if (booking.providerId.toString() !== provider._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this booking'
+      });
+    }
+
+    // Check if booking can be completed
+    if (!['accepted', 'confirmed', 'in-progress'].includes(booking.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot complete booking with status '${booking.status}'`
+      });
+    }
+
+    // Update booking
+    booking.status = 'completed';
+    booking.completedAt = new Date();
+    booking.providerNotes = providerNotes;
+    booking.updatedAt = new Date();
+    await booking.save();
+
+    // Get seeker's user ID for notification
+    const seekerDoc = await ServiceSeeker.findById(booking.seekerId);
+
+    // Create notification for seeker
+    const notification = new Notification({
+      userId: seekerDoc.userId,
+      bookingId: booking._id,
+      title: 'Service Completed',
+      message: `Your service for ${new Date(booking.bookingDate).toLocaleDateString()} has been marked as completed by ${provider.businessName}. Please provide your feedback.`,
+      category: 'booking',
+      type: 'success',
+      actionUrl: `/user/bookings`,
+      metadata: {
+        bookingId: booking._id,
+        providerName: provider.businessName,
+        status: 'completed'
+      }
+    });
+
+    await notification.save();
+
+    // Emit socket event to seeker
+    socketManager.emitToUser(seekerDoc.userId.toString(), 'booking:completed', {
+      booking: {
+        id: booking._id,
+        status: 'completed',
+        providerName: provider.businessName
+      },
+      notification: {
+        id: notification._id,
+        title: notification.title,
+        message: notification.message
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Booking marked as completed',
+      data: booking
+    });
+
+  } catch (error) {
+    console.error('Complete booking error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to complete booking'
+    });
+  }
+};
+
 module.exports = {
   createBooking,
   getSeekerBookings,
@@ -743,5 +859,6 @@ module.exports = {
   getBookingById,
   acceptBooking,
   rejectBooking,
-  cancelBooking
+  cancelBooking,
+  completeBooking
 };

@@ -404,13 +404,11 @@ const UserServices = () => {
     >
       {/* Hero Section */}
       <section 
-        className="relative py-12 md:py-16 lg:py-20 px-4"
+        className="relative py-12 md:py-16 lg:py-20 px-4 text-white"
         style={{
-          background: 'linear-gradient(135deg, var(--accent-color) 0%, var(--accent-dark) 100%)',
-          color: 'var(--foreground)'
+          background: 'linear-gradient(135deg, var(--accent-color), var(--accent-dark))',
         }}
       >
-        <div className="absolute inset-0 bg-black/10"></div>
         <div className="container mx-auto relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -418,7 +416,7 @@ const UserServices = () => {
             transition={{ duration: 0.8 }}
             className="max-w-4xl mx-auto text-center space-y-4 md:space-y-6"
           >
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight" style={{ fontFamily: "var(--font-secondary)" }}>
               Find Professional Services
             </h1>
             <p className="text-base sm:text-lg md:text-xl lg:text-2xl opacity-90 max-w-2xl mx-auto px-4">
@@ -430,15 +428,15 @@ const UserServices = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, delay: 0.3 }}
-              className="relative max-w-2xl mx-auto pt-4 px-4"
+              className="relative max-w-2xl mx-auto mt-4 px-4"
             >
-              <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 h-5 w-5 sm:h-6 sm:w-6 text-gray-500" />
+              <Search className="absolute left-10 top-1/2 -translate-y-1/2 h-5 w-5 sm:h-6 sm:w-6 text-gray-500 z-10" />
               <input
                 type="text"
                 placeholder="Search for services, professionals, or categories..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 sm:pl-14 pr-4 py-3 sm:py-4 rounded-2xl border-0 focus:ring-2 focus:outline-none text-base sm:text-lg shadow-xl bg-white text-gray-900"
+                className="w-full pl-12 sm:pl-16 pr-4 py-3 sm:py-4 rounded-2xl border-0 focus:ring-2 focus:ring-white/50 focus:outline-none text-base sm:text-lg shadow-xl bg-white text-gray-900"
               />
             </motion.div>
 

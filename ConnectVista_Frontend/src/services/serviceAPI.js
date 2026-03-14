@@ -396,6 +396,99 @@ export const serviceAPI = {
     await throttleRequest();
     const response = await api.put('/seeker/profile', profileData);
     return response.data;
+  },
+
+  // ==========================================
+  // REVIEW APIs
+  // ==========================================
+
+  /**
+   * Submit a review for a booking
+   * @param {object} reviewData - { bookingId, rating, reviewText }
+   */
+  submitReview: async (reviewData) => {
+    await throttleRequest();
+    const response = await api.post('/reviews', reviewData);
+    return response.data;
+  },
+
+  /**
+   * Get reviews for a provider
+   * @param {string} providerId - Provider ObjectId
+   * @param {object} options - { page, limit }
+   */
+  getProviderReviews: async (providerId, options = {}) => {
+    await throttleRequest();
+    const { page = 1, limit = 10 } = options;
+    const params = new URLSearchParams();
+    if (page) params.append('page', page);
+    if (limit) params.append('limit', limit);
+    const response = await api.get(`/reviews/provider/${providerId}?${params}`);
+    return response.data;
+  },
+
+  /**
+   * Get review for a specific booking
+   * @param {string} bookingId - Booking ObjectId
+   */
+  getReviewByBooking: async (bookingId) => {
+    await throttleRequest();
+    const response = await api.get(`/reviews/booking/${bookingId}`);
+    return response.data;
+  },
+
+  /**
+   * Reply to a review (provider only)
+   * @param {string} reviewId - Review ObjectId
+   * @param {string} replyText - Reply text
+   */
+  replyToReview: async (reviewId, replyText) => {
+    await throttleRequest();
+    const response = await api.patch(`/reviews/${reviewId}/reply`, { replyText });
+    return response.data;
+  },
+
+  /**
+   * Set a reminder to review later
+   * @param {string} bookingId - Booking ObjectId
+   */
+  setReviewReminder: async (bookingId) => {
+    await throttleRequest();
+    const response = await api.patch(`/reviews/reminder/${bookingId}`);
+    return response.data;
+  },
+
+  /**
+   * Mark a booking as completed (provider only)
+   * @param {string} bookingId - Booking ObjectId
+   * @param {string} providerNotes - Completion notes
+   */
+  completeBooking: async (bookingId, providerNotes = '') => {
+    await throttleRequest();
+    const response = await api.patch(`/bookings/${bookingId}/complete`, { providerNotes });
+    return response.data;
+  },
+
+  // ==========================================
+  // DASHBOARD APIs
+  // ==========================================
+
+  /**
+   * Get provider dashboard stats
+   */
+  getProviderDashboardStats: async () => {
+    await throttleRequest();
+    const response = await api.get('/profile/dashboard/stats');
+    return response.data;
+  },
+
+  /**
+   * Get provider recent services
+   */
+  getRecentServices: async () => {
+    await throttleRequest();
+    const response = await api.get('/profile/dashboard/recent-services');
+    return response.data;
   }
 };
 

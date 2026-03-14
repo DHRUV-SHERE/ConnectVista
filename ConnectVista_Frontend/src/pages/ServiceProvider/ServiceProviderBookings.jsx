@@ -231,6 +231,28 @@ const ServiceProviderBookings = () => {
     }
   }, [fetchBookings]);
 
+  const handleComplete = useCallback(async (id) => {
+    const notes = window.prompt('Optional: Add any completion notes for the customer:');
+    if (notes === null) return;
+
+    try {
+      setActionLoading(id);
+      const response = await serviceAPI.completeBooking(id, notes);
+
+      if (response.success) {
+        toast.success('Service marked as completed! Customer has been notified to review.');
+        fetchBookings();
+      } else {
+        toast.error(response.message || 'Failed to complete booking');
+      }
+    } catch (error) {
+      console.error('Complete booking error:', error);
+      toast.error(error.response?.data?.message || 'Failed to complete booking');
+    } finally {
+      setActionLoading(null);
+    }
+  }, [fetchBookings]);
+
   const handleContactCustomer = useCallback((phone, email) => {
     const choice = window.confirm('Contact customer:\n\nOK for Call\nCancel for Email');
     if (choice) {
@@ -743,6 +765,33 @@ const ServiceProviderBookings = () => {
 
                         {(booking.status === 'accepted' || booking.status === 'confirmed') && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            <button
+                              onClick={() => handleComplete(booking._id)}
+                              disabled={isActionLoading}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.5rem',
+                                padding: '0.75rem',
+                                backgroundColor: '#10b981',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '0.75rem',
+                                cursor: 'pointer',
+                                fontWeight: '600',
+                                fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+                                width: '100%',
+                                opacity: isActionLoading ? 0.7 : 1
+                              }}
+                            >
+                              {isActionLoading ? (
+                                <Loader2 size={18} className="animate-spin" />
+                              ) : (
+                                <CheckCircle size={18} />
+                              )}
+                              Complete Service
+                            </button>
                             {seeker?.user?.phone && (
                               <button
                                 onClick={() => handleContactCustomer(seeker.user.phone, seeker.user.email)}

@@ -26,6 +26,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import resources from "../../resources";
 import toast from "react-hot-toast";
 import serviceCategoriesData from "../../data/services.json";
+import MapLocationPicker from "../../components/Common/MapLocationPicker";
 
 export default function ServiceProviderSignup() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -60,8 +61,31 @@ export default function ServiceProviderSignup() {
     city: "",
     state: "",
     pinCode: "",
+    latitude: null,
+    longitude: null,
     languages: [],
   });
+
+  const handleAddressSelect = (addressData) => {
+    setFormData(prev => ({
+      ...prev,
+      street: addressData.street,
+      city: addressData.city,
+      state: addressData.state,
+      pinCode: addressData.pinCode,
+      latitude: addressData.latitude,
+      longitude: addressData.longitude
+    }));
+    
+    // Clear location errors
+    setErrors(prev => ({
+      ...prev,
+      street: "",
+      city: "",
+      state: "",
+      pinCode: ""
+    }));
+  };
 
   const [isLoading, setIsLoading] = useState(false);
   const [customLanguage, setCustomLanguage] = useState("");
@@ -146,6 +170,8 @@ export default function ServiceProviderSignup() {
         city: formData.city,
         state: formData.state,
         pinCode: formData.pinCode,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
         languages: formData.languages,
         selectedServices: formData.selectedServices,
         selectedSubServices: formData.selectedSubServices,
@@ -775,85 +801,45 @@ export default function ServiceProviderSignup() {
               {currentStep === 4 && (
                 <div className="space-y-4">
                   <div className="relative">
-                    <label htmlFor="street" className="block text-sm font-medium text-gray-700 mb-2">
-                      Street Address *
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Business Location *
                     </label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-4 h-5 w-5 text-gray-400" />
-                      <textarea
-                        id="street"
-                        name="street"
-                        rows={3}
-                        required
-                        value={formData.street}
-                        onChange={handleChange}
-                        className={`appearance-none relative block w-full px-12 py-4 border placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:border-[var(--accent-color)] transition-all duration-200 resize-none ${
-                          errors.street ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder="Complete street address"
-                      />
-                    </div>
+                    <MapLocationPicker 
+                      onLocationSelect={handleAddressSelect}
+                    />
                     {errors.street && <p className="mt-1 text-sm text-red-600">{errors.street}</p>}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="relative">
-                      <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">
-                        City *
-                      </label>
-                      <input
-                        id="city"
-                        name="city"
-                        type="text"
-                        required
-                        value={formData.city}
-                        onChange={handleChange}
-                        className={`appearance-none relative block w-full px-4 py-4 border placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:border-[var(--accent-color)] transition-all duration-200 ${
-                          errors.city ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder="City"
-                      />
-                      {errors.city && <p className="mt-1 text-sm text-red-600">{errors.city}</p>}
-                    </div>
-
-                    <div className="relative">
-                      <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-2">
-                        State *
-                      </label>
-                      <input
-                        id="state"
-                        name="state"
-                        type="text"
-                        required
-                        value={formData.state}
-                        onChange={handleChange}
-                        className={`appearance-none relative block w-full px-4 py-4 border placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:border-[var(--accent-color)] transition-all duration-200 ${
-                          errors.state ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder="State"
-                      />
-                      {errors.state && <p className="mt-1 text-sm text-red-600">{errors.state}</p>}
-                    </div>
-                  </div>
-
-                  <div className="relative">
-                    <label htmlFor="pinCode" className="block text-sm font-medium text-gray-700 mb-2">
-                      PIN Code *
-                    </label>
-                    <input
-                      id="pinCode"
-                      name="pinCode"
-                      type="text"
-                      required
-                      value={formData.pinCode}
-                      onChange={handleChange}
-                      className={`appearance-none relative block w-full px-4 py-4 border placeholder-gray-500 text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:border-[var(--accent-color)] transition-all duration-200 ${
-                        errors.pinCode ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      placeholder="PIN Code"
-                    />
-                    {errors.pinCode && <p className="mt-1 text-sm text-red-600">{errors.pinCode}</p>}
-                  </div>
+                  {formData.city && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100"
+                    >
+                      <div className="col-span-2">
+                        <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Detected Street/Area</p>
+                        <p className="text-sm font-semibold text-gray-700">{formData.street || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">City</p>
+                        <p className="text-sm font-semibold text-gray-700">{formData.city}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">State</p>
+                        <p className="text-sm font-semibold text-gray-700">{formData.state}</p>
+                      </div>
+                      <div className="mt-2">
+                        <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">PIN Code</p>
+                        <p className="text-sm font-semibold text-gray-700">{formData.pinCode || 'N/A'}</p>
+                      </div>
+                      <div className="mt-2">
+                        <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Coordinates</p>
+                        <p className="text-[10px] font-mono text-blue-600">
+                          {formData.latitude?.toFixed(4)}, {formData.longitude?.toFixed(4)}
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
 
                   <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 mb-2">

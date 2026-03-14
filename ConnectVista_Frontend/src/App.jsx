@@ -19,6 +19,7 @@ import ErrorPage from "./pages/Common/Error";
 import Layout from "./layout/CommonLayout";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { SocketProvider } from "./contexts/SocketContext";
+import ScrollToTop from "./components/Common/ScrollToTop";
 
 // Import layouts and components
 import UserLayout from "./layout/UserLayout";
@@ -45,6 +46,7 @@ function App() {
       <SocketProvider>
         <ThemeProvider>
           <Router>
+          <ScrollToTop />
           <Toaster position="top-center" reverseOrder={false} />
           <Routes>
             {/* ✅ Public Routes WITH Layout (Header/Footer) */}

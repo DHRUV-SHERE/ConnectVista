@@ -6,7 +6,9 @@ const {
   updateProviderServices,
   uploadBusinessImages,
   deleteBusinessImage,
-  getNearbyProviders
+  getNearbyProviders,
+  getProviderDashboardStats,
+  getRecentServices
 } = require('../controllers/providerProfileController');
 const auth = require('../middleware/auth');
 
@@ -34,5 +36,9 @@ router.delete('/provider/images/:imageIndex', auth(['provider']), deleteBusiness
 
 // NEW: Get nearby providers (accessible by seekers)
 router.get('/nearby', auth(['seeker']), getNearbyProviders);
+
+// Dashboard routes
+router.get('/dashboard/stats', auth(['provider']), getProviderDashboardStats);
+router.get('/dashboard/recent-services', auth(['provider']), getRecentServices);
 
 module.exports = router;

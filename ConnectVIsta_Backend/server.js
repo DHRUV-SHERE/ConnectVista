@@ -27,6 +27,7 @@ const bookingRoutes = require('./src/routes/bookingRoutes');
 const notificationRoutes = require('./src/routes/notificationRoutes');
 const settingsRoutes = require('./src/routes/settingsRoutes');
 const subscriptionRoutes = require('./src/routes/subscriptionRoutes');
+const reviewRoutes = require('./src/routes/reviewRoutes');
 const authController = require('./src/controllers/authController');
 const auth = require('./src/middleware/auth');
 const socketManager = require('./src/utils/socketManager');
@@ -138,6 +139,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/reviews', reviewRoutes);
 app.get('/api/auth/profile', auth(), authController.getProfile);
 
 // Health check

@@ -647,11 +647,120 @@ const getNearbyProviders = async (req, res) => {
   }
 };
 
+const Booking = require('../models/Booking');
+const Review = require('../models/Review');
+
+// Get provider dashboard stats
+const getProviderDashboardStats = async (req, res) => {
+  try {
+    const provider = await ServiceProvider.findOne({ userId: req.user.id });
+    if (!provider) {
+      return res.status(404).json({ success: false, message: 'Provider not found' });
+    }
+
+    const providerId = provider._id;
+
+    // Get current month and last month dates
+    const now = new Date();
+    const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    const [
+      totalServices,
+      activeBookings,
+      lastMonthServices,
+      currentMonthRevenue,
+      lastMonthRevenue
+    ] = await Promise.all([
+      Booking.countDocuments({ providerId, status: 'completed' }),
+      Booking.countDocuments({ providerId, status: { $in: ['pending', 'accepted', 'confirmed', 'in-progress'] } }),
+      Booking.countDocuments({ providerId, status: 'completed', createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } }),
+      Booking.aggregate([
+        { $match: { providerId, status: 'completed', createdAt: { $gte: startOfCurrentMonth } } },
+        { $group: { _id: null, total: { $sum: '$totalPrice' } } }
+      ]),
+      Booking.aggregate([
+        { $match: { providerId, status: 'completed', createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } } },
+        { $group: { _id: null, total: { $sum: '$totalPrice' } } }
+      ])
+    ]);
+
+    const currRev = currentMonthRevenue[0]?.total || 0;
+    const lastRev = lastMonthRevenue[0]?.total || 0;
+    const revChange = lastRev === 0 ? 100 : ((currRev - lastRev) / lastRev) * 100;
+
+    const servicesChange = lastMonthServices === 0 ? 100 : ((totalServices - lastMonthServices) / lastMonthServices) * 100;
+
+    res.json({
+      success: true,
+      data: {
+        totalServices: {
+          value: totalServices,
+          change: `${servicesChange >= 0 ? '+' : ''}${servicesChange.toFixed(1)}%`,
+          trend: servicesChange >= 0 ? 'up' : 'down'
+        },
+        activeBookings: {
+          value: activeBookings,
+          change: '+0%', // Can be calculated vs last month if needed
+          trend: 'up'
+        },
+        rating: {
+          value: provider.rating?.average || 0,
+          change: '+0.0', // Can be calculated vs last month if needed
+          trend: 'up'
+        },
+        monthlyRevenue: {
+          value: `₹${currRev}`,
+          change: `${revChange >= 0 ? '+' : ''}${revChange.toFixed(1)}%`,
+          trend: revChange >= 0 ? 'up' : 'down'
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const getRecentServices = async (req, res) => {
+  try {
+    const provider = await ServiceProvider.findOne({ userId: req.user.id });
+    if (!provider) {
+      return res.status(404).json({ success: false, message: 'Provider not found' });
+    }
+
+    const bookings = await Booking.find({ providerId: provider._id })
+      .populate('seekerId', 'name')
+      .populate('serviceId', 'name')
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    const formattedBookings = bookings.map(b => ({
+      id: b._id,
+      customer: b.seekerId?.name || 'Unknown Customer',
+      service: b.serviceId?.name || 'General Service',
+      date: new Date(b.bookingDate).toLocaleDateString(),
+      time: b.bookingTime,
+      status: b.status,
+      amount: `₹${b.totalPrice}`
+    }));
+
+    res.json({
+      success: true,
+      data: formattedBookings
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getProviderProfile,
   updateProviderProfile,
   updateProviderServices,
   uploadBusinessImages,
   deleteBusinessImage,
-  getNearbyProviders
+  getNearbyProviders,
+  getProviderDashboardStats,
+  getRecentServices
 };

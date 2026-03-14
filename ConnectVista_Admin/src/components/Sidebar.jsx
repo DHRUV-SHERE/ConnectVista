@@ -35,13 +35,20 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
         isOpen ? 'w-64' : 'w-20'
       }`}
     >
-      <div className="p-4 flex items-center justify-between border-b border-slate-700">
-        {isOpen && (
-          <h1 className="text-xl font-bold text-primary-400">ConnectVista</h1>
-        )}
+      <div className="p-4 flex items-center justify-between border-b border-slate-700 h-20">
+        <div className="flex items-center gap-3">
+          <img 
+            src="/ConnectVistaLogo.png" 
+            alt="Logo" 
+            className="w-10 h-10 object-contain rounded-lg"
+          />
+          {isOpen && (
+            <h1 className="text-xl font-bold text-primary-400">ConnectVista</h1>
+          )}
+        </div>
         <button 
           onClick={toggleSidebar}
-          className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+          className="p-2 hover:bg-slate-800 rounded-lg transition-colors ml-auto"
         >
           <ChevronLeft className={`w-5 h-5 transition-transform ${!isOpen ? 'rotate-180' : ''}`} />
         </button>

@@ -6,7 +6,8 @@ const {
   getBookingById,
   acceptBooking,
   rejectBooking,
-  cancelBooking
+  cancelBooking,
+  completeBooking
 } = require('../controllers/bookingController');
 const auth = require('../middleware/auth');
 
@@ -68,5 +69,13 @@ router.patch('/:id/reject', auth(['provider']), rejectBooking);
  * @body    reason - Optional cancellation reason
  */
 router.patch('/:id/cancel', auth(), cancelBooking);
+
+/**
+ * @route   PATCH /api/bookings/:id/complete
+ * @desc    Complete a booking
+ * @access  Private (provider only)
+ * @body    providerNotes - Optional completion notes
+ */
+router.patch('/:id/complete', auth(['provider']), completeBooking);
 
 module.exports = router;

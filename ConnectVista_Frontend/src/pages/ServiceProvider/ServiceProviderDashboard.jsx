@@ -1,10 +1,13 @@
 "use client";
-import { useState, useMemo, lazy, Suspense } from 'react';
+import { useState, useMemo, lazy, Suspense, useEffect } from 'react';
 import { 
   TrendingUp, Users, Calendar, Star, DollarSign, ArrowUpRight, ArrowDownRight, 
   Wrench, Clock, CheckCircle, AlertCircle, MoreVertical, Download, Filter,
   Search, ChevronRight, TrendingDown, Eye, Edit, Trash2, RefreshCw, BarChart3
 } from 'lucide-react';
+import { serviceAPI } from '../../services/serviceAPI';
+import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 // Lazy load charts for better performance
 const PerformanceChart = lazy(() => import('../../components/Service Provider/PerformanceChart'));
@@ -261,48 +264,78 @@ const ServiceCard = ({ service, onView, onEdit, onDelete }) => {
 };
 
 const ProviderDashboard = () => {
+  const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState('week');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [recentServicesData, setRecentServicesData] = useState([]);
+
+  const fetchDashboardData = async (showRefresh = false) => {
+    try {
+      if (showRefresh) setIsRefreshing(true);
+      else setLoading(true);
+
+      const [statsRes, servicesRes] = await Promise.all([
+        serviceAPI.getProviderDashboardStats(),
+        serviceAPI.getRecentServices()
+      ]);
+
+      if (statsRes.success) setDashboardStats(statsRes.data);
+      if (servicesRes.success) setRecentServicesData(servicesRes.data);
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
   // Memoized stats data
   const stats = useMemo(() => [
     {
       title: 'Total Services',
-      value: '47',
-      change: '+5.2%',
-      trend: 'up',
+      value: dashboardStats?.totalServices?.value || '0',
+      change: dashboardStats?.totalServices?.change || '+0%',
+      trend: dashboardStats?.totalServices?.trend || 'up',
       icon: Wrench,
       tooltip: 'Total services provided this month'
     },
     {
       title: 'Active Bookings',
-      value: '12',
-      change: '+15.8%',
-      trend: 'up',
+      value: dashboardStats?.activeBookings?.value || '0',
+      change: dashboardStats?.activeBookings?.change || '+0%',
+      trend: dashboardStats?.activeBookings?.trend || 'up',
       icon: Calendar,
       tooltip: 'Currently active bookings'
     },
     {
       title: 'Customer Rating',
-      value: '4.7',
-      change: '+0.2',
-      trend: 'up',
+      value: dashboardStats?.rating?.value || '0.0',
+      change: dashboardStats?.rating?.change || '+0.0',
+      trend: dashboardStats?.rating?.trend || 'up',
       icon: Star,
       tooltip: 'Average customer rating'
     },
     {
       title: 'Monthly Revenue',
-      value: '$8,240',
-      change: '+12.3%',
-      trend: 'up',
+      value: dashboardStats?.monthlyRevenue?.value || '₹0',
+      change: dashboardStats?.monthlyRevenue?.change || '+0%',
+      trend: dashboardStats?.monthlyRevenue?.trend || 'up',
       icon: DollarSign,
       tooltip: 'Revenue generated this month'
     },
-  ], []);
+  ], [dashboardStats]);
 
-  // Performance data with memoization
+  // Performance data with memoization (Placeholder - can be made dynamic later)
   const performanceData = useMemo(() => [
     { name: 'Mon', completed: 8, pending: 2 },
     { name: 'Tue', completed: 12, pending: 1 },
@@ -313,7 +346,7 @@ const ProviderDashboard = () => {
     { name: 'Sun', completed: 4, pending: 0 },
   ], []);
 
-  // Revenue data with memoization
+  // Revenue data with memoization (Placeholder - can be made dynamic later)
   const revenueData = useMemo(() => [
     { name: 'Jan', revenue: 5200 },
     { name: 'Feb', revenue: 6800 },
@@ -324,51 +357,14 @@ const ProviderDashboard = () => {
   ], []);
 
   // Recent services data
-  const recentServices = useMemo(() => [
-    {
-      id: 1,
-      customer: 'Robert Johnson',
-      service: 'Emergency Pipe Repair',
-      date: '2024-06-15',
-      time: '10:30 AM',
-      status: 'confirmed',
-      amount: '$280',
-    },
-    {
-      id: 2,
-      customer: 'Maria Garcia',
-      service: 'Water Heater Installation',
-      date: '2024-06-14',
-      time: '2:15 PM',
-      status: 'in-progress',
-      amount: '$450',
-    },
-    {
-      id: 3,
-      customer: 'James Wilson',
-      service: 'Leak Detection',
-      date: '2024-06-14',
-      time: '9:00 AM',
-      status: 'completed',
-      amount: '$120',
-    },
-    {
-      id: 4,
-      customer: 'Lisa Chen',
-      service: 'Bathroom Plumbing',
-      date: '2024-06-13',
-      time: '11:45 AM',
-      status: 'pending',
-      amount: '$195',
-    },
-  ], []);
+  const recentServices = useMemo(() => recentServicesData, [recentServicesData]);
 
   // Quick actions
   const quickActions = [
-    { icon: Users, label: 'Manage Clients', variant: 'default' },
-    { icon: Calendar, label: 'Schedule', variant: 'primary' },
-    { icon: Star, label: 'Reviews', variant: 'default' },
-    { icon: BarChart3, label: 'Analytics', variant: 'default' },
+    { icon: Users, label: 'Manage Clients', variant: 'default', path: '/service-provider/bookings' },
+    { icon: Calendar, label: 'Schedule', variant: 'primary', path: '/service-provider/bookings' },
+    { icon: Star, label: 'Reviews', variant: 'default', path: '/service-provider/reviews' },
+    { icon: BarChart3, label: 'Analytics', variant: 'default', path: '/service-provider/revenue' },
   ];
 
   // Filter services based on search and status
@@ -386,30 +382,21 @@ const ProviderDashboard = () => {
 
   // Handle refresh
   const handleRefresh = () => {
-    setIsRefreshing(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsRefreshing(false);
-      // In real app, you would fetch new data here
-    }, 1000);
+    fetchDashboardData(true);
   };
 
   // Handle service actions
   const handleViewService = (service) => {
-    console.log('View service:', service);
-    // Navigate to service details
+    navigate('/service-provider/bookings');
   };
 
   const handleEditService = (service) => {
-    console.log('Edit service:', service);
-    // Open edit modal
+    navigate('/service-provider/bookings');
   };
 
   const handleDeleteService = (service) => {
-    if (window.confirm(`Are you sure you want to delete service #${service.id}?`)) {
-      console.log('Delete service:', service);
-      // Delete from backend
-    }
+    // In dynamic mode, we just refer to bookings page
+    navigate('/service-provider/bookings');
   };
 
   // Export data
@@ -619,6 +606,7 @@ const ProviderDashboard = () => {
             Showing {filteredServices.length} of {recentServices.length} services
           </p>
           <button 
+            onClick={() => navigate('/service-provider/bookings')}
             className="flex items-center gap-1 text-sm font-medium transition hover:opacity-80"
             style={{ color: 'var(--accent-color)' }}
           >
@@ -644,7 +632,7 @@ const ProviderDashboard = () => {
               icon={action.icon}
               label={action.label}
               variant={action.variant}
-              onClick={() => console.log(`Clicked: ${action.label}`)}
+              onClick={() => navigate(action.path)}
             />
           ))}
         </div>

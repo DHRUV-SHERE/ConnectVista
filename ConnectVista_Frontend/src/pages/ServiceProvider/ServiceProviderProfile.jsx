@@ -7,6 +7,7 @@ import { serviceAPI } from "../../services/serviceAPI";
 import toast from "react-hot-toast";
 import resources from "../../resources";
 import SubscriptionBadge from "../../components/SubscriptionBadge";
+import GoogleAddressSearch from "../../components/Common/GoogleAddressSearch";
 
 // Memoized components for better performance
 const ServiceTag = memo(({ service, onRemove }) => (
@@ -228,6 +229,8 @@ const ServiceProviderProfile = () => {
       state: "",
       pinCode: "",
     },
+    latitude: null,
+    longitude: null,
     experienceYears: 0,
     languages: [],
     startingPrice: 0,
@@ -376,6 +379,20 @@ const ServiceProviderProfile = () => {
         ...prev.businessAddress,
         [field]: value,
       },
+    }));
+  }, []);
+
+  const handleAddressSelect = useCallback((addressData) => {
+    setFormData((prev) => ({
+      ...prev,
+      businessAddress: {
+        street: addressData.street,
+        city: addressData.city,
+        state: addressData.state,
+        pinCode: addressData.pinCode,
+      },
+      latitude: addressData.latitude,
+      longitude: addressData.longitude,
     }));
   }, []);
 
@@ -875,13 +892,13 @@ const ServiceProviderProfile = () => {
 
           {/* Address Section */}
           <div
-            style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+            style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}
           >
             <h3 style={{ fontSize: "1.1rem", fontWeight: "600", margin: 0 }}>
               Business Address
             </h3>
 
-            {/* Street Address */}
+            {/* Google Address Search */}
             <div
               style={{
                 display: "flex",
@@ -895,134 +912,73 @@ const ServiceProviderProfile = () => {
                   fontWeight: "500",
                 }}
               >
-                Street Address *
+                Search & Update Location *
               </label>
-              <input
-                type="text"
-                value={formData.businessAddress.street}
-                onChange={(e) => handleAddressChange("street", e.target.value)}
-                required
-                placeholder="123 Service Street"
-                style={{
-                  padding: "0.875rem 1rem",
-                  border: "1px solid var(--border-color)",
-                  borderRadius: "0.5rem",
-                  backgroundColor: "var(--background)",
-                  color: "var(--text-color)",
-                  fontSize: "1rem",
-                  width: "100%",
-                }}
-              />
+              <div style={{ maxWidth: "800px" }}>
+                <GoogleAddressSearch 
+                  onAddressSelect={handleAddressSelect}
+                  defaultValue={formData.businessAddress.street ? `${formData.businessAddress.street}, ${formData.businessAddress.city}, ${formData.businessAddress.state}` : ""}
+                />
+              </div>
             </div>
 
-            {/* City, State, Pincode Grid */}
+            {/* City, State, Pincode Grid (Read-only after selection) */}
             <div
               style={{
                 display: "grid",
                 gridTemplateColumns:
                   "repeat(auto-fit, minmax(min(200px, 100%), 1fr))",
                 gap: "1.5rem",
+                padding: "1.5rem",
+                backgroundColor: "var(--background)",
+                borderRadius: "0.75rem",
+                border: "1px solid var(--border-color)"
               }}
             >
               <div
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  gap: "0.75rem",
+                  gap: "0.5rem",
                 }}
               >
-                <label
-                  style={{
-                    fontSize: "1rem",
-                    fontWeight: "500",
-                  }}
-                >
-                  City *
-                </label>
-                <input
-                  type="text"
-                  value={formData.businessAddress.city}
-                  onChange={(e) => handleAddressChange("city", e.target.value)}
-                  required
-                  placeholder="Business City"
-                  style={{
-                    padding: "0.875rem 1rem",
-                    border: "1px solid var(--border-color)",
-                    borderRadius: "0.5rem",
-                    backgroundColor: "var(--background)",
-                    color: "var(--text-color)",
-                    fontSize: "1rem",
-                    width: "100%",
-                  }}
-                />
+                <label style={{ fontSize: "0.875rem", opacity: 0.6 }}>City</label>
+                <p style={{ fontSize: "1rem", fontWeight: "600", margin: 0 }}>{formData.businessAddress.city || "Not Selected"}</p>
               </div>
 
               <div
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  gap: "0.75rem",
+                  gap: "0.5rem",
                 }}
               >
-                <label
-                  style={{
-                    fontSize: "1rem",
-                    fontWeight: "500",
-                  }}
-                >
-                  State *
-                </label>
-                <input
-                  type="text"
-                  value={formData.businessAddress.state}
-                  onChange={(e) => handleAddressChange("state", e.target.value)}
-                  required
-                  placeholder="State"
-                  style={{
-                    padding: "0.875rem 1rem",
-                    border: "1px solid var(--border-color)",
-                    borderRadius: "0.5rem",
-                    backgroundColor: "var(--background)",
-                    color: "var(--text-color)",
-                    fontSize: "1rem",
-                    width: "100%",
-                  }}
-                />
+                <label style={{ fontSize: "0.875rem", opacity: 0.6 }}>State</label>
+                <p style={{ fontSize: "1rem", fontWeight: "600", margin: 0 }}>{formData.businessAddress.state || "Not Selected"}</p>
               </div>
 
               <div
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  gap: "0.75rem",
+                  gap: "0.5rem",
                 }}
               >
-                <label
-                  style={{
-                    fontSize: "1rem",
-                    fontWeight: "500",
-                  }}
-                >
-                  Pin Code *
-                </label>
-                <input
-                  type="text"
-                  value={formData.businessAddress.pinCode}
-                  onChange={(e) =>
-                    handleAddressChange("pinCode", e.target.value)
-                  }
-                  required
-                  placeholder="12345"
-                  style={{
-                    padding: "0.875rem 1rem",
-                    border: "1px solid var(--border-color)",
-                    borderRadius: "0.5rem",
-                    backgroundColor: "var(--background)",
-                    color: "var(--text-color)",
-                    fontSize: "1rem",
-                    width: "100%",
-                  }}
-                />
+                <label style={{ fontSize: "0.875rem", opacity: 0.6 }}>PIN Code</label>
+                <p style={{ fontSize: "1rem", fontWeight: "600", margin: 0 }}>{formData.businessAddress.pinCode || "Not Selected"}</p>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.5rem",
+                }}
+              >
+                <label style={{ fontSize: "0.875rem", opacity: 0.6 }}>Coordinates</label>
+                <p style={{ fontSize: "0.875rem", fontMono: "true", color: "var(--accent-color)", margin: 0 }}>
+                  {formData.latitude?.toFixed(4)}, {formData.longitude?.toFixed(4)}
+                </p>
               </div>
             </div>
           </div>
