@@ -1,5 +1,6 @@
 import { Calendar, Star, MessageSquare, TrendingUp, Bell, Check, X, Settings, Mail, DollarSign, AlertCircle, Clock, UserCheck, Loader2, RefreshCw, Shield } from 'lucide-react';
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { serviceAPI } from '../../services/serviceAPI';
 import { useSocket } from '../../contexts/SocketContext';
@@ -603,8 +604,9 @@ const Notifications = () => {
                           flexWrap: 'wrap'
                         }}>
                           {notification.actionUrl && (
-                            <a
-                              href={notification.actionUrl}
+                            <Link
+                              to={notification.actionUrl}
+                              onClick={() => !notification.isRead && markAsRead(notification._id)}
                               style={{
                                 padding: '0.5rem 1rem',
                                 backgroundColor: 'var(--accent-color)',
@@ -619,7 +621,7 @@ const Notifications = () => {
                               }}
                             >
                               View Details
-                            </a>
+                            </Link>
                           )}
 
                           {!notification.isRead && (

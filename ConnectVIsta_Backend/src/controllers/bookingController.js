@@ -140,10 +140,15 @@ const createBooking = async (req, res) => {
 
     // Calculate pricing
     const basePrice = providerService.minPrice || provider.startingPrice || 500;
+    const visitingCharge = provider.startingPrice || 200; // Use provider's starting price as visiting fee
     const priorityMultiplier = priority === 'urgent' ? 1.5 : 1;
     const extraCharge = priority === 'urgent' ? basePrice * 0.5 : 0;
-    const platformFee = Math.round(basePrice * 0.05); // 5% platform fee
-    const totalPrice = Math.round((basePrice + extraCharge + platformFee) * priorityMultiplier);
+    
+    // Platform fee calculation: 5% of visiting charge (for now)
+    const platformFee = Math.round(visitingCharge * 0.05); 
+    
+    // Seeker pays visitingCharge upfront
+    const totalPrice = Math.round(visitingCharge + platformFee); 
 
     // Build service address
     const finalAddress = serviceAddress || {
@@ -165,6 +170,7 @@ const createBooking = async (req, res) => {
       serviceAddress: finalAddress,
       additionalNote,
       basePrice,
+      visitingCharge,
       extraCharge,
       platformFee,
       totalPrice,

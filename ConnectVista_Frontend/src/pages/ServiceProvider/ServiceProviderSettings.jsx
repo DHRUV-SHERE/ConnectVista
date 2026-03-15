@@ -1,17 +1,20 @@
-import { User, Lock, Bell, CreditCard, Shield, Mail, Phone, Globe, Download, Eye, EyeOff, Key, LogOut, Smartphone } from 'lucide-react';
+import { User, Lock, Bell, CreditCard, Shield, Mail, Phone, Globe, Download, Eye, EyeOff, Key, LogOut, Smartphone, Building2, Landmark, RefreshCw } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { settingsAPI } from '../../services/settingsAPI';
+import { walletAPI } from '../../services/walletAPI';
 import toast from 'react-hot-toast';
 import PageTransitionLoader from '../../components/PageTransitionLoader';
 
 const Settings = () => {
   const [loading, setLoading] = useState(true);
+  const [saveLoading, setSaveLoading] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsNotifications, setSmsNotifications] = useState(false);
   const [pushNotifications, setPushNotifications] = useState(true);
+  
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
@@ -20,20 +23,55 @@ const Settings = () => {
     businessLocation: '',
     businessRegistration: ''
   });
+
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
+
   const [billingInfo, setBillingInfo] = useState({
     currentPlan: null,
     paymentMethod: null,
     recentInvoices: []
   });
 
+  const [bankDetails, setBankDetails] = useState({
+    accountHolder: '',
+    accountNumber: '',
+    bankName: '',
+    ifscCode: ''
+  });
+
   useEffect(() => {
     loadSettings();
+    loadBankDetails();
   }, []);
+
+  const loadBankDetails = async () => {
+    try {
+      const response = await walletAPI.getWalletDetails();
+      if (response.success && response.data.bankDetails) {
+        setBankDetails(response.data.bankDetails);
+      }
+    } catch (error) {
+      console.error('Load bank details error:', error);
+    }
+  };
+
+  const handleBankSave = async () => {
+    try {
+      setSaveLoading(true);
+      const response = await walletAPI.updateBankDetails(bankDetails);
+      if (response.success) {
+        toast.success('Bank details updated successfully!');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Failed to update bank details');
+    } finally {
+      setSaveLoading(false);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -134,7 +172,18 @@ const Settings = () => {
     }
   };
 
-  if (loading) return <PageTransitionLoader />;
+  if (loading) {
+    return (
+      <div style={{ 
+        height: 'calc(100vh - 10rem)', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center' 
+      }}>
+        <PageTransitionLoader />
+      </div>
+    );
+  }
 
   return (
     <div style={{ 
@@ -755,6 +804,132 @@ const Settings = () => {
                 </p>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Payout & Bank Details Card */}
+        <div style={{
+          backgroundColor: 'var(--card-bg)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '0.75rem',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <div style={{
+            padding: '1.25rem 1.5rem',
+            borderBottom: '1px solid var(--border-color)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            background: 'linear-gradient(135deg, var(--accent-color)10, transparent)'
+          }}>
+            <Landmark size={20} style={{ color: 'var(--accent-color)' }} />
+            <h2 style={{
+              fontSize: '1.125rem',
+              fontWeight: '600'
+            }}>Payout & Bank Details</h2>
+          </div>
+          <div style={{ 
+            padding: '1.5rem', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '1.25rem',
+            flex: 1
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>Account Holder Name</label>
+                <input 
+                  type="text"
+                  placeholder="Full name as per bank records"
+                  value={bankDetails.accountHolder}
+                  onChange={(e) => setBankDetails({...bankDetails, accountHolder: e.target.value})}
+                  style={{
+                    padding: '0.75rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '0.5rem',
+                    backgroundColor: 'var(--background)',
+                    color: 'var(--text-color)',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>Account Number</label>
+                <input 
+                  type="text"
+                  placeholder="Enter your account number"
+                  value={bankDetails.accountNumber}
+                  onChange={(e) => setBankDetails({...bankDetails, accountNumber: e.target.value})}
+                  style={{
+                    padding: '0.75rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '0.5rem',
+                    backgroundColor: 'var(--background)',
+                    color: 'var(--text-color)',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>Bank Name</label>
+                <input 
+                  type="text"
+                  placeholder="e.g. HDFC Bank"
+                  value={bankDetails.bankName}
+                  onChange={(e) => setBankDetails({...bankDetails, bankName: e.target.value})}
+                  style={{
+                    padding: '0.75rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '0.5rem',
+                    backgroundColor: 'var(--background)',
+                    color: 'var(--text-color)',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>IFSC Code</label>
+                <input 
+                  type="text"
+                  placeholder="Enter 11-digit IFSC code"
+                  value={bankDetails.ifscCode}
+                  onChange={(e) => setBankDetails({...bankDetails, ifscCode: e.target.value.toUpperCase()})}
+                  style={{
+                    padding: '0.75rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '0.5rem',
+                    backgroundColor: 'var(--background)',
+                    color: 'var(--text-color)',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+            </div>
+
+            <button 
+              onClick={handleBankSave}
+              disabled={saveLoading}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: 'var(--accent-color)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '0.875rem',
+                alignSelf: 'flex-start',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginTop: 'auto'
+              }}
+            >
+              {saveLoading ? <RefreshCw size={16} className="animate-spin" /> : null}
+              Update Bank Details
+            </button>
           </div>
         </div>
 

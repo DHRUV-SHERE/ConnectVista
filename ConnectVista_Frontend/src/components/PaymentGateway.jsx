@@ -126,8 +126,8 @@ const PaymentGateway = ({ amount, plan, duration, onSuccess, onClose }) => {
   const cardType = cardData.number ? getCardType(cardData.number.replace(/\s/g, '')) : '';
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-      <div className="rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-slideUp" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
+    <div className="fixed inset-0 bg-white flex items-center justify-center z-[9999] p-4 animate-fadeIn overflow-y-auto">
+      <div className="rounded-2xl shadow-2xl max-w-md w-full my-auto animate-slideUp" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
         {/* Header */}
         <div className="p-6 border-b flex justify-between items-center sticky top-0 z-10" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--card-bg)' }}>
           <div>

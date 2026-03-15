@@ -34,7 +34,7 @@ const UserBookings = () => {
         setBookings(fetchedBookings);
         setPagination(response.data.pagination);
 
-        // Fetch reviews for completed bookings
+        // Fetch reviews for completed bookings that don't have review data yet
         fetchedBookings.forEach(booking => {
           if (booking.isReviewed && !bookingReviews[booking._id]) {
             fetchReviewForBooking(booking._id);
@@ -47,9 +47,12 @@ const UserBookings = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, page, bookingReviews]);
+  }, [activeTab, page]); // Removed bookingReviews from dependencies to prevent loop
 
   const fetchReviewForBooking = async (bookingId) => {
+    // Double check before fetching to avoid race conditions
+    if (bookingReviews[bookingId]) return;
+    
     try {
       const response = await serviceAPI.getReviewByBooking(bookingId);
       if (response.success) {

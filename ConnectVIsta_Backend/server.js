@@ -28,6 +28,8 @@ const notificationRoutes = require('./src/routes/notificationRoutes');
 const settingsRoutes = require('./src/routes/settingsRoutes');
 const subscriptionRoutes = require('./src/routes/subscriptionRoutes');
 const reviewRoutes = require('./src/routes/reviewRoutes');
+const walletRoutes = require('./src/routes/walletRoutes');
+const invoiceRoutes = require('./src/routes/invoiceRoutes');
 const authController = require('./src/controllers/authController');
 const auth = require('./src/middleware/auth');
 const socketManager = require('./src/utils/socketManager');
@@ -114,7 +116,7 @@ app.use(cors(corsOptions));
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 1000, // increased for development/testing
   message: 'Too many requests from this IP, please try again later.'
 });
 app.use('/api', limiter);
@@ -140,6 +142,8 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/wallet', walletRoutes);
+app.use('/api/invoices', invoiceRoutes);
 app.get('/api/auth/profile', auth(), authController.getProfile);
 
 // Health check

@@ -126,6 +126,31 @@ const serviceProviderSchema = new mongoose.Schema({
     default: 0
   },
 
+  walletBalance: {
+    type: Number,
+    default: 0, // Pre-paid credit for cash payments
+    min: [0, 'Wallet balance cannot be negative']
+  },
+
+  pendingEarnings: {
+    type: Number,
+    default: 0, // Online earnings waiting for weekly payout
+    min: [0, 'Pending earnings cannot be negative']
+  },
+
+  bankDetails: {
+    accountHolder: { type: String, trim: true },
+    accountNumber: { type: String, trim: true },
+    bankName: { type: String, trim: true },
+    ifscCode: { type: String, trim: true }
+  },
+
+  payoutPreference: {
+    type: String,
+    enum: ['manual', 'automatic'],
+    default: 'automatic'
+  },
+
   platformEarnings: {
     type: Number,
     default: 0

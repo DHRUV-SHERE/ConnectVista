@@ -25,11 +25,14 @@ import ScrollToTop from "./components/Common/ScrollToTop";
 import UserLayout from "./layout/UserLayout";
 import ServiceProviderLayout from "./layout/ServiceProviderLayout";
 import UserHome from "./pages/User/UserHome";
+import UserDashboard from "./pages/User/UserDashboard";
 import UserServices from "./pages/User/UserServices";
 import UserExplore from "./pages/User/UserExplore";
 import UserProfile from "./pages/User/UserProfile";
 import UserNotification from "./pages/User/UserNotification";
 import UserBookings from "./pages/User/UserBookings";
+import UserInvoices from "./pages/User/UserInvoices";
+import UserAccountLayout from "./layout/UserAccountLayout";
 import ServiceProviderDashboard from "./pages/ServiceProvider/ServiceProviderDashboard";
 import ServiceProviderProfile from "./pages/ServiceProvider/ServiceProviderProfile";
 import ServiceManagement from "./pages/ServiceProvider/ServiceManagement";
@@ -38,6 +41,8 @@ import ServiceProviderBookings from "./pages/ServiceProvider/ServiceProviderBook
 import ServiceProviderReviews from "./pages/ServiceProvider/ServiceProviderReviews";
 import ServiceProviderSettings from "./pages/ServiceProvider/ServiceProviderSettings";
 import ServiceProviderSubscription from "./pages/ServiceProvider/ServiceProviderSubscription";
+import ServiceProviderWallet from "./pages/ServiceProvider/ServiceProviderWallet";
+import ServiceProviderInvoices from "./pages/ServiceProvider/ServiceProviderInvoices";
 import PaymentPage from "./pages/PaymentPage";
 
 function App() {
@@ -80,6 +85,7 @@ function App() {
               <Route path="profile" element={<UserProfile />} />
               <Route path="notifications" element={<UserNotification />} />
               <Route path="bookings" element={<UserBookings />} />
+              <Route path="invoices" element={<UserInvoices />} />
               <Route path="about" element={<CommonAbout />} />
               <Route path="contact" element={<CommonContact />} />
             </Route>
@@ -98,6 +104,8 @@ function App() {
               <Route path="reviews" element={<ServiceProviderReviews />} />
               <Route path="notifications" element={<ServiceProviderNotification />} />
               <Route path="subscription" element={<ServiceProviderSubscription />} />
+              <Route path="wallet" element={<ServiceProviderWallet />} />
+              <Route path="invoices" element={<ServiceProviderInvoices />} />
               <Route path="settings" element={<ServiceProviderSettings />} />
             </Route>
 

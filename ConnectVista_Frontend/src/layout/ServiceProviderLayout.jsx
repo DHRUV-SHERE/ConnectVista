@@ -4,6 +4,7 @@ import { Moon, Sun, Menu, X, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext'; // Add this import
 import PageTransitionLoader from '../components/PageTransitionLoader';
 import ServiceProviderSidebar from '../components/Service Provider/ServiceProviderSidebar';
+import ScrollToTop from '../components/Common/ScrollToTop';
 import resources from '../resources';
 
 const ServiceProviderLayout = () => {
@@ -255,6 +256,7 @@ const ServiceProviderLayout = () => {
         className="main-content custom-scrollbar fixed top-16 right-0 bg-[var(--background)] 
           transition-all duration-300"
       >
+        <ScrollToTop />
         <div className="p-4 lg:p-6 min-h-full">
           <PageTransitionLoader>
             <Outlet />

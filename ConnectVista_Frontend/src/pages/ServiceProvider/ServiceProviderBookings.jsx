@@ -1,8 +1,11 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Phone, Mail, CheckCircle, XCircle, CalendarClock, MessageCircle, DollarSign, Search, Filter, Download, Eye, MoreVertical, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, Phone, Mail, CheckCircle, XCircle, CalendarClock, MessageCircle, DollarSign, Search, Filter, Download, Eye, MoreVertical, Loader2, RefreshCw, AlertCircle, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { serviceAPI } from '../../services/serviceAPI';
+import { walletAPI } from '../../services/walletAPI';
 import { useSocket } from '../../contexts/SocketContext';
+import InvoiceBuilder from '../../components/ServiceProvider/InvoiceBuilder';
+import { AnimatePresence } from 'framer-motion';
 
 const ServiceProviderBookings = () => {
   const [activeTab, setActiveTab] = useState('all');
@@ -22,6 +25,27 @@ const ServiceProviderBookings = () => {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
   const { subscribe } = useSocket();
+
+  // Invoice Builder State
+  const [showInvoiceBuilder, setShowInvoiceBuilder] = useState(false);
+  const [selectedBookingForInvoice, setSelectedBookingForInvoice] = useState(null);
+  const [walletBalance, setWalletBalance] = useState(0);
+
+  // Fetch wallet balance
+  const fetchWallet = async () => {
+    try {
+      const response = await walletAPI.getWalletDetails();
+      if (response.success) {
+        setWalletBalance(response.data.walletBalance);
+      }
+    } catch (error) {
+      console.error('Error fetching wallet:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchWallet();
+  }, []);
 
   // Fetch bookings
   const fetchBookings = useCallback(async () => {
@@ -231,27 +255,17 @@ const ServiceProviderBookings = () => {
     }
   }, [fetchBookings]);
 
-  const handleComplete = useCallback(async (id) => {
-    const notes = window.prompt('Optional: Add any completion notes for the customer:');
-    if (notes === null) return;
+  const handleComplete = useCallback(async (booking) => {
+    setSelectedBookingForInvoice(booking);
+    setShowInvoiceBuilder(true);
+  }, []);
 
-    try {
-      setActionLoading(id);
-      const response = await serviceAPI.completeBooking(id, notes);
-
-      if (response.success) {
-        toast.success('Service marked as completed! Customer has been notified to review.');
-        fetchBookings();
-      } else {
-        toast.error(response.message || 'Failed to complete booking');
-      }
-    } catch (error) {
-      console.error('Complete booking error:', error);
-      toast.error(error.response?.data?.message || 'Failed to complete booking');
-    } finally {
-      setActionLoading(null);
-    }
-  }, [fetchBookings]);
+  const handleInvoiceSuccess = () => {
+    setShowInvoiceBuilder(false);
+    setSelectedBookingForInvoice(null);
+    fetchBookings();
+    fetchWallet();
+  };
 
   const handleContactCustomer = useCallback((phone, email) => {
     const choice = window.confirm('Contact customer:\n\nOK for Call\nCancel for Email');
@@ -304,17 +318,29 @@ const ServiceProviderBookings = () => {
   ];
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '1.5rem',
-      backgroundColor: 'var(--background)',
-      color: 'var(--text-color)',
-      padding: '1rem',
-      margin: '0 auto',
-      width: '100%',
-      boxSizing: 'border-box'
-    }}>
+    <>
+      <AnimatePresence>
+        {showInvoiceBuilder && selectedBookingForInvoice && (
+          <InvoiceBuilder
+            booking={selectedBookingForInvoice}
+            walletBalance={walletBalance}
+            onClose={() => setShowInvoiceBuilder(false)}
+            onSuccess={handleInvoiceSuccess}
+          />
+        )}
+      </AnimatePresence>
+
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1.5rem',
+        backgroundColor: 'var(--background)',
+        color: 'var(--text-color)',
+        padding: '1rem',
+        margin: '0 auto',
+        width: '100%',
+        boxSizing: 'border-box'
+      }}>
       {/* Header */}
       <div>
         <div style={{
@@ -766,7 +792,7 @@ const ServiceProviderBookings = () => {
                         {(booking.status === 'accepted' || booking.status === 'confirmed') && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             <button
-                              onClick={() => handleComplete(booking._id)}
+                              onClick={() => handleComplete(booking)}
                               disabled={isActionLoading}
                               style={{
                                 display: 'flex',
@@ -918,6 +944,7 @@ const ServiceProviderBookings = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

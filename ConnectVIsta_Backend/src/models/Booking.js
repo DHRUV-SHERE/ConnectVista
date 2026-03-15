@@ -64,47 +64,52 @@ const bookingSchema = new mongoose.Schema({
     trim: true,
     maxlength: [500, 'Note cannot exceed 500 characters']
   },
-  
   // Pricing Details
   basePrice: {
     type: Number,
     required: [true, 'Base price is required'],
     min: [0, 'Price cannot be negative']
   },
-  
+
+  visitingCharge: {
+    type: Number,
+    default: 0,
+    min: [0, 'Visiting charge cannot be negative']
+  },
+
   extraCharge: {
     type: Number,
     default: 0,
     min: [0, 'Extra charge cannot be negative']
   },
-  
+
   platformFee: {
     type: Number,
     default: 0,
     min: [0, 'Platform fee cannot be negative']
   },
-  
+
   totalPrice: {
     type: Number,
     required: [true, 'Total price is required'],
     min: [0, 'Total price cannot be negative']
   },
-  
+
   // Payment Status
   paymentStatus: {
     type: String,
-    enum: ['pending', 'paid', 'failed', 'refunded', 'partially-refunded'],
+    enum: ['pending', 'paid', 'failed', 'refunded', 'partially-refunded', 'visiting-paid', 'fully-paid'],
     default: 'pending'
   },
-  
+
   paymentMethod: {
     type: String,
-    enum: ['stripe', 'razorpay', 'cash', 'bank-transfer'],
+    enum: ['stripe', 'razorpay', 'cash', 'bank-transfer', 'online'],
     default: 'stripe'
   },
-  
+
   paymentId: String,
-  
+
   // Booking Status
   status: {
     type: String,
@@ -120,7 +125,7 @@ const bookingSchema = new mongoose.Schema({
     ],
     default: 'pending'
   },
-  
+
   cancellationReason: String,
   
   cancelledBy: {
@@ -131,6 +136,16 @@ const bookingSchema = new mongoose.Schema({
   // Completion Details
   completedAt: Date,
   
+  finalWorkDetails: [{
+    description: String,
+    amount: Number
+  }],
+
+  invoiceId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Invoice'
+  },
+
   providerNotes: String,
   
   seekerFeedback: String,

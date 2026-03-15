@@ -10,7 +10,9 @@ import {
   LogOut,
   CheckCircle,
   Clock,
-  XCircle
+  XCircle,
+  Wallet,
+  FileText
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
@@ -43,6 +45,8 @@ const ServiceProviderSidebar = ({ sidebarOpen, setSidebarOpen, currentPath }) =>
     { name: 'Reviews', href: '/service-provider/reviews', icon: Star },
     { name: 'Notifications', href: '/service-provider/notifications', icon: Bell },
     { name: 'Subscription', href: '/service-provider/subscription', icon: CreditCard },
+    { name: 'Wallet & Earnings', href: '/service-provider/wallet', icon: Wallet },
+    { name: 'Invoices', href: '/service-provider/invoices', icon: FileText },
     { name: 'Settings', href: '/service-provider/settings', icon: Settings },
   ];
 

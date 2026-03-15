@@ -1,7 +1,8 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Moon, Sun, Menu, X, User, Bell, MessageSquare } from "lucide-react";
+import { Moon, Sun, Menu, X, User, Bell, MessageSquare, LogOut } from "lucide-react";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useSocket } from "../../contexts/SocketContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { useState, useRef, useEffect } from "react";
 import { serviceAPI } from "../../services/serviceAPI";
 import resources from "../../resources";
@@ -9,6 +10,7 @@ import resources from "../../resources";
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
   const { unreadCount, setInitialUnreadCount, updateUnreadCount } = useSocket();
+  const { logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -53,11 +55,22 @@ const Navbar = () => {
     { to: "/user/home", label: "Home" },
     { to: "/user/services", label: "Services" },
     { to: "/user/bookings", label: "Bookings" },
+    { to: "/user/invoices", label: "Invoices" },
     { to: "/user/about", label: "About" },
     { to: "/user/contact", label: "Contact" },
   ];
 
   const isActive = (path) => location.pathname === path;
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
 
   // Handle hover on desktop
   const handleMouseEnter = () => {
@@ -86,7 +99,7 @@ const Navbar = () => {
     }, 100);
   };
 
-  // Handle click - navigate to notifications page
+  // Handle click - redirect directly to notifications page
   const handleNotificationClick = () => {
     // Clear any pending hover timeout
     if (hoverTimeout) {
@@ -94,16 +107,9 @@ const Navbar = () => {
       setHoverTimeout(null);
     }
     
-    if (window.innerWidth < 768) {
-      // On mobile, navigate directly
-      navigate("/user/notifications");
-      setMobileMenuOpen(false);
-    } else {
-      // On desktop, only navigate if dropdown is not open
-      if (!notificationsOpen) {
-        navigate("/user/notifications");
-      }
-    }
+    navigate("/user/notifications");
+    setMobileMenuOpen(false);
+    setNotificationsOpen(false);
   };
 
   // Handle notification item click
@@ -382,6 +388,19 @@ const Navbar = () => {
               </button>
             </Link>
 
+            {/* Logout Button (Desktop) */}
+            <button
+              onClick={handleLogout}
+              className="hidden md:flex p-2 sm:p-2.5 rounded-lg border transition cursor-pointer hover:scale-105 active:scale-95 items-center gap-2 font-medium text-red-500 hover:bg-red-50"
+              style={{
+                borderColor: "rgba(239, 68, 68, 0.2)",
+              }}
+              aria-label="Logout"
+            >
+              <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="hidden lg:inline text-sm">Logout</span>
+            </button>
+
             {/* Mobile Profile Button */}
             <Link to="/user/profile" className="md:hidden">
               <button
@@ -492,6 +511,17 @@ const Navbar = () => {
             >
               View Profile
             </Link>
+
+            {/* Logout Link Mobile */}
+            <div className="px-3 py-2.5 mx-2 border-t mt-2" style={{ borderColor: "var(--border-color)" }}>
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-sm font-bold text-red-500 w-full"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </button>
+            </div>
           </div>
         )}
       </div>

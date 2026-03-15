@@ -1,11 +1,13 @@
 "use client";
 import { useState, useMemo, lazy, Suspense, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { 
   TrendingUp, Users, Calendar, Star, DollarSign, ArrowUpRight, ArrowDownRight, 
   Wrench, Clock, CheckCircle, AlertCircle, MoreVertical, Download, Filter,
-  Search, ChevronRight, TrendingDown, Eye, Edit, Trash2, RefreshCw, BarChart3
+  Search, ChevronRight, TrendingDown, Eye, Edit, Trash2, RefreshCw, BarChart3, Wallet
 } from 'lucide-react';
 import { serviceAPI } from '../../services/serviceAPI';
+import { walletAPI } from '../../services/walletAPI';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -272,19 +274,22 @@ const ProviderDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [dashboardStats, setDashboardStats] = useState(null);
   const [recentServicesData, setRecentServicesData] = useState([]);
+  const [walletBalance, setWalletBalance] = useState(0);
 
   const fetchDashboardData = async (showRefresh = false) => {
     try {
       if (showRefresh) setIsRefreshing(true);
       else setLoading(true);
 
-      const [statsRes, servicesRes] = await Promise.all([
+      const [statsRes, servicesRes, walletRes] = await Promise.all([
         serviceAPI.getProviderDashboardStats(),
-        serviceAPI.getRecentServices()
+        serviceAPI.getRecentServices(),
+        walletAPI.getWalletDetails()
       ]);
 
       if (statsRes.success) setDashboardStats(statsRes.data);
       if (servicesRes.success) setRecentServicesData(servicesRes.data);
+      if (walletRes.success) setWalletBalance(walletRes.data.walletBalance);
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -318,12 +323,12 @@ const ProviderDashboard = () => {
       tooltip: 'Currently active bookings'
     },
     {
-      title: 'Customer Rating',
-      value: dashboardStats?.rating?.value || '0.0',
-      change: dashboardStats?.rating?.change || '+0.0',
-      trend: dashboardStats?.rating?.trend || 'up',
-      icon: Star,
-      tooltip: 'Average customer rating'
+      title: 'Wallet Balance',
+      value: `₹${walletBalance.toLocaleString()}`,
+      change: walletBalance < 100 ? 'Low Balance' : 'Available',
+      trend: walletBalance < 100 ? 'down' : 'up',
+      icon: Wallet,
+      tooltip: 'Prepaid credit for cash payments'
     },
     {
       title: 'Monthly Revenue',
@@ -333,7 +338,7 @@ const ProviderDashboard = () => {
       icon: DollarSign,
       tooltip: 'Revenue generated this month'
     },
-  ], [dashboardStats]);
+  ], [dashboardStats, walletBalance]);
 
   // Performance data with memoization (Placeholder - can be made dynamic later)
   const performanceData = useMemo(() => [
@@ -674,8 +679,5 @@ const ProviderDashboard = () => {
     </div>
   );
 };
-
-// Add motion import at the top
-import { motion } from 'framer-motion';
 
 export default ProviderDashboard;
