@@ -1302,7 +1302,7 @@ const ServiceProviderProfile = () => {
                   fontWeight: "500",
                 }}
               >
-                Starting Price *
+                Starting Price (₹) *
               </label>
               <div
                 style={{
@@ -1354,7 +1354,7 @@ const ServiceProviderProfile = () => {
                   fontWeight: "500",
                 }}
               >
-                Emergency Service Fee
+                Emergency Service Fee (₹)
               </label>
               <div
                 style={{

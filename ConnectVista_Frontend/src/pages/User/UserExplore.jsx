@@ -6,7 +6,7 @@ import {
   Search,
   MapPin,
   Star,
-  DollarSign,
+  IndianRupee,
   Map,
   List,
   Clock,
@@ -255,7 +255,7 @@ const UserExplore = () => {
                     ))}
                   </div>
                   <div className="mt-3 text-sm" style={{ color: "var(--text-color)", opacity: 0.7 }}>
-                    <span className="font-medium">Pricing:</span> Rs.{services.minPrice} - Rs.{services.maxPrice} ({services.pricingType})
+                    <span className="font-medium">Pricing:</span> ₹{services.minPrice} - ₹{services.maxPrice} ({services.pricingType})
                   </div>
                 </div>
               )}
@@ -801,8 +801,8 @@ const UserExplore = () => {
                           style={{ color: "var(--text-color)", opacity: 0.7 }}
                         >
                           <div className="flex items-center gap-1">
-                            <DollarSign className="h-3 w-3 sm:h-4 sm:w-4" />
-                            <span>₹{provider.serviceDetails?.minPrice || provider.startingPrice}</span>
+                            <IndianRupee className="h-3 w-3 sm:h-4 sm:w-4" />
+                            <span>{provider.serviceDetails?.minPrice || provider.startingPrice}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="h-3 w-3 sm:h-4 sm:w-4" />

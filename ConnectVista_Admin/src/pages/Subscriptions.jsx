@@ -24,7 +24,7 @@ export default function Subscriptions() {
     { 
       key: 'price', 
       header: 'Price',
-      render: (value) => <span className="font-medium">${value}{value > 0 ? '/mo' : ''}</span>
+      render: (value) => <span className="font-medium">₹{value}{value > 0 ? '/mo' : ''}</span>
     },
     { key: 'duration', header: 'Duration' },
     { 
@@ -87,7 +87,7 @@ export default function Subscriptions() {
               </span>
             </div>
             <div className="mb-4">
-              <span className="text-3xl font-bold text-gray-800">${plan.price}</span>
+              <span className="text-3xl font-bold text-gray-800">₹{plan.price}</span>
               <span className="text-gray-500">/{plan.duration === 'Forever' ? 'lifetime' : 'month'}</span>
             </div>
             <ul className="space-y-2 mb-4">
@@ -139,7 +139,7 @@ export default function Subscriptions() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Price ($)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹)</label>
                 <input
                   type="number"
                   defaultValue={selectedSubscription.price}
@@ -211,7 +211,7 @@ export default function Subscriptions() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Price ($)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹)</label>
               <input
                 type="number"
                 placeholder="0"

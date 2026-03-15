@@ -69,7 +69,7 @@ export default function Bookings() {
     { 
       key: 'amount', 
       header: 'Amount',
-      render: (value) => <span className="font-medium">${value || 0}</span>
+      render: (value) => <span className="font-medium">₹{value || 0}</span>
     },
     { 
       key: 'status', 
@@ -186,7 +186,7 @@ export default function Bookings() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Amount</p>
-                <p className="font-medium text-gray-800">${selectedBooking.amount || 0}</p>
+                <p className="font-medium text-gray-800">₹{selectedBooking.amount || 0}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Status</p>

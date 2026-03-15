@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Wrench, Calendar, DollarSign, Shield, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
+import { Users, Wrench, Calendar, IndianRupee, Shield, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import StatCard from '../components/StatCard';
 import { getDashboardStats, getVerifications } from '../services/api';
@@ -97,8 +97,8 @@ export default function Dashboard() {
         />
         <StatCard 
           title="Total Revenue" 
-          value={`$${(stats.totalRevenue || 0).toLocaleString()}`} 
-          icon={DollarSign} 
+          value={`₹${(stats.totalRevenue || 0).toLocaleString()}`} 
+          icon={IndianRupee} 
           color="green"
           trend={22}
         />
@@ -125,7 +125,7 @@ export default function Dashboard() {
               />
               <Line yAxisId="left" type="monotone" dataKey="users" stroke="#3b82f6" strokeWidth={2} name="Users" />
               <Line yAxisId="left" type="monotone" dataKey="providers" stroke="#8b5cf6" strokeWidth={2} name="Providers" />
-              <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#22c55e" strokeWidth={2} name="Revenue ($)" />
+              <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#22c55e" strokeWidth={2} name="Revenue (₹)" />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -214,7 +214,7 @@ export default function Dashboard() {
                   }`}>
                     {booking.status}
                   </span>
-                  <p className="text-sm font-medium text-gray-800 mt-1">${booking.amount}</p>
+                  <p className="text-sm font-medium text-gray-800 mt-1">₹{booking.amount}</p>
                 </div>
               </div>
             ))}

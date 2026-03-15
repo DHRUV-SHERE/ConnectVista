@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, CreditCard, Wallet, Eye, X } from 'lucide-react';
+import { IndianRupee, TrendingUp, CreditCard, Wallet, Eye, X } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import DataTable from '../components/DataTable';
 import { getRevenue } from '../services/api';
@@ -176,7 +176,7 @@ export default function Revenue() {
               <p className="text-2xl font-bold text-gray-800">₹{totalRevenue.toLocaleString()}</p>
             </div>
             <div className="p-3 bg-green-100 rounded-lg">
-              <DollarSign className="w-6 h-6 text-green-600" />
+              <IndianRupee className="w-6 h-6 text-green-600" />
             </div>
           </div>
           <p className="text-sm text-gray-500 mt-2">Combined Earnings</p>
