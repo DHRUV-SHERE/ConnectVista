@@ -144,8 +144,8 @@ const createBooking = async (req, res) => {
     const priorityMultiplier = priority === 'urgent' ? 1.5 : 1;
     const extraCharge = priority === 'urgent' ? basePrice * 0.5 : 0;
     
-    // Platform fee calculation: 5% of visiting charge (for now)
-    const platformFee = Math.round(visitingCharge * 0.05); 
+    // Platform fee calculation: 2% of visiting charge (for now)
+    const platformFee = Math.round(visitingCharge * 0.02); 
     
     // Seeker pays visitingCharge upfront
     const totalPrice = Math.round(visitingCharge + platformFee); 

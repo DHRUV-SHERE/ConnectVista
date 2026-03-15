@@ -297,6 +297,13 @@ const ServiceProviderBookings = () => {
     return `${hour12}:${minutes} ${ampm}`;
   };
 
+  // Get initials from name
+  const getInitials = (name) => {
+    if (!name) return 'C';
+    const parts = name.split(' ').filter(part => part.length > 0);
+    return parts.map(part => part[0]).join('').toUpperCase().slice(0, 3);
+  };
+
   // Filter bookings based on search
   const filteredBookings = useMemo(() => {
     if (!searchQuery) return bookings;
@@ -565,15 +572,15 @@ const ServiceProviderBookings = () => {
                           alignItems: 'center',
                           justifyContent: 'center'
                         }}>
-                          {seeker?.profileImage ? (
+                          {seeker?.profileImage && seeker.profileImage !== 'default-avatar.png' ? (
                             <img
                               src={seeker.profileImage}
                               alt={seeker?.name || 'Customer'}
                               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />
                           ) : (
-                            <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--accent-color)' }}>
-                              {seeker?.name?.charAt(0) || 'C'}
+                            <span style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--accent-color)' }}>
+                              {getInitials(seeker?.name)}
                             </span>
                           )}
                         </div>

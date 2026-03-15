@@ -25,8 +25,8 @@ const getDashboardStats = async (req, res) => {
     ]);
 
     const revenue = await Booking.aggregate([
-      { $match: { status: 'completed', paymentStatus: 'paid' } },
-      { $group: { _id: null, total: { $sum: '$totalPrice' } } }
+      { $match: { status: 'completed', paymentStatus: { $in: ['paid', 'fully-paid', 'visiting-paid'] } } },
+      { $group: { _id: null, total: { $sum: '$platformFee' } } }
     ]);
 
     res.json({
@@ -256,10 +256,10 @@ const getRevenueData = async (req, res) => {
     else if (period === '6months') dateFilter.setMonth(dateFilter.getMonth() - 6);
     else dateFilter.setFullYear(dateFilter.getFullYear() - 1);
 
-    // 1. Booking Revenue (Completed & Paid)
+    // 1. Booking Revenue (Completed & Paid - platform gets the platformFee)
     const bookingRevenue = await Booking.aggregate([
-      { $match: { status: 'completed', paymentStatus: 'paid', createdAt: { $gte: dateFilter } } },
-      { $group: { _id: null, total: { $sum: '$totalPrice' }, count: { $sum: 1 } } }
+      { $match: { status: 'completed', paymentStatus: { $in: ['paid', 'fully-paid', 'visiting-paid'] }, createdAt: { $gte: dateFilter } } },
+      { $group: { _id: null, total: { $sum: '$platformFee' }, count: { $sum: 1 } } }
     ]);
 
     // 2. Subscription Revenue
@@ -270,11 +270,11 @@ const getRevenueData = async (req, res) => {
 
     // 3. Monthly Revenue (Combined Bookings and Subscriptions)
     const monthlyBookings = await Booking.aggregate([
-      { $match: { status: 'completed', paymentStatus: 'paid', createdAt: { $gte: dateFilter } } },
+      { $match: { status: 'completed', paymentStatus: { $in: ['paid', 'fully-paid', 'visiting-paid'] }, createdAt: { $gte: dateFilter } } },
       {
         $group: {
           _id: { $month: '$createdAt' },
-          total: { $sum: '$totalPrice' },
+          total: { $sum: '$platformFee' },
           count: { $sum: 1 }
         }
       }
@@ -319,7 +319,7 @@ const getRevenueData = async (req, res) => {
       .limit(5);
 
     // 5. Recent Transactions (Combined)
-    const recentBookings = await Booking.find({ paymentStatus: 'paid' })
+    const recentBookings = await Booking.find({ paymentStatus: { $in: ['paid', 'fully-paid', 'visiting-paid'] } })
       .populate('providerId', 'businessName email phone city')
       .sort({ createdAt: -1 })
       .limit(5);
@@ -333,7 +333,7 @@ const getRevenueData = async (req, res) => {
       ...recentBookings.map(b => ({
         _id: b._id,
         type: 'booking',
-        amount: b.totalPrice,
+        amount: b.platformFee,
         status: b.status,
         providerId: b.providerId,
         paymentDetails: {
