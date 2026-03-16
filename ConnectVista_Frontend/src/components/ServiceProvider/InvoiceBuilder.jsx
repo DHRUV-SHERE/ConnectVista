@@ -1,3 +1,9 @@
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  FileText, X, Plus, IndianRupee, Trash2, Wallet, 
+  CreditCard, Loader2, CheckCircle, Download, QrCode, Smartphone 
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { invoiceAPI } from '../../services/invoiceAPI';
 import { generateInvoicePDF } from '../../utils/invoicePDF';
@@ -7,6 +13,41 @@ const InvoiceBuilder = ({ booking, walletBalance, onClose, onSuccess }) => {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generatedInvoice, setGeneratedInvoice] = useState(null);
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(25);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    if (showQRCode && timeLeft > 0) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+    } else if (timeLeft === 0 && showQRCode) {
+      handleOnlinePaymentSuccess();
+    }
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [showQRCode, timeLeft]);
+
+  const handleOnlinePaymentSuccess = async () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    try {
+      setIsSubmitting(true);
+      const response = await invoiceAPI.completeOnlinePayment(generatedInvoice._id);
+      if (response.success) {
+        toast.success('Payment Received! Job Completed.');
+        setGeneratedInvoice(response.data);
+        setShowQRCode(false);
+      }
+    } catch (error) {
+      toast.error('Failed to verify payment');
+      setShowQRCode(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const visitingCharge = booking.visitingCharge || 0;
   
@@ -59,8 +100,14 @@ const InvoiceBuilder = ({ booking, walletBalance, onClose, onSuccess }) => {
       });
 
       if (response.success) {
-        toast.success('Service completed successfully!');
-        setGeneratedInvoice(response.data);
+        if (paymentMethod === 'online') {
+          setGeneratedInvoice(response.data);
+          setShowQRCode(true);
+          setTimeLeft(25);
+        } else {
+          toast.success('Service completed successfully!');
+          setGeneratedInvoice(response.data);
+        }
       }
     } catch (error) {
       toast.error(error.message || 'Failed to generate invoice');
@@ -86,7 +133,7 @@ const InvoiceBuilder = ({ booking, walletBalance, onClose, onSuccess }) => {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-      onClick={generatedInvoice ? handleFinalClose : onClose}
+      onClick={(generatedInvoice && !showQRCode) ? handleFinalClose : (showQRCode ? null : onClose)}
     >
       <motion.div
         initial={{ scale: 0.95, opacity: 0, y: 20 }}
@@ -97,7 +144,48 @@ const InvoiceBuilder = ({ booking, walletBalance, onClose, onSuccess }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <AnimatePresence mode="wait">
-          {!generatedInvoice ? (
+          {showQRCode ? (
+            <motion.div
+              key="qrcode"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="p-8 flex flex-col items-center text-center space-y-6"
+            >
+              <div className="p-4 bg-white rounded-3xl shadow-xl border-8 border-blue-50">
+                <div className="relative">
+                  <QrCode size={200} className="text-gray-800" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-[1px] animate-pulse">
+                     <Loader2 size={40} className="text-blue-600 animate-spin" />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold">Scan to Pay ₹{generatedInvoice?.grandTotal}</h2>
+                <p className="opacity-60 flex items-center justify-center gap-2">
+                  <Smartphone size={18} /> Ask customer to scan this QR code
+                </p>
+              </div>
+
+              <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden max-w-xs">
+                <motion.div 
+                  className="bg-blue-600 h-full"
+                  initial={{ width: "100%" }}
+                  animate={{ width: "0%" }}
+                  transition={{ duration: 25, ease: "linear" }}
+                />
+              </div>
+              
+              <div className="text-sm font-medium text-blue-600 bg-blue-50 px-4 py-2 rounded-full border border-blue-100">
+                Waiting for payment confirmation... {timeLeft}s
+              </div>
+
+              <p className="text-xs opacity-50 max-w-xs">
+                Do not close this window. System will automatically detect the payment and finalize the booking.
+              </p>
+            </motion.div>
+          ) : !generatedInvoice || (generatedInvoice.paymentMethod === 'online' && generatedInvoice.paymentStatus === 'pending') ? (
             <motion.div 
               key="form"
               initial={{ opacity: 0, x: -20 }}
@@ -253,7 +341,7 @@ const InvoiceBuilder = ({ booking, walletBalance, onClose, onSuccess }) => {
                   ) : (
                     <CheckCircle size={20} />
                   )}
-                  {paymentMethod === 'cash' ? 'Confirm Cash & Deduct Fee' : 'Generate Payment Link'}
+                  {paymentMethod === 'cash' ? 'Confirm Cash & Deduct Fee' : 'Generate QR Code'}
                 </button>
               </div>
             </motion.div>

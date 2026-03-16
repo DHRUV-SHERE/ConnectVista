@@ -95,6 +95,63 @@ exports.generateInvoice = async (req, res) => {
   });
 };
 
+// Complete Online Payment (Simulated)
+exports.completeOnlinePayment = async (req, res) => {
+  console.log('💳 Completing online payment for invoice:', req.params.invoiceId);
+  const { invoiceId } = req.params;
+
+  const invoice = await Invoice.findById(invoiceId);
+  if (!invoice) {
+    return res.status(404).json({ success: false, message: 'Invoice not found' });
+  }
+
+  if (invoice.paymentStatus === 'paid') {
+    return res.status(400).json({ success: false, message: 'Invoice already paid' });
+  }
+
+  const provider = await ServiceProvider.findById(invoice.providerId);
+  if (!provider) {
+    return res.status(404).json({ success: false, message: 'Provider not found' });
+  }
+
+  const booking = await Booking.findById(invoice.bookingId);
+
+  // Update Invoice
+  invoice.paymentStatus = 'paid';
+  await invoice.save();
+
+  // Update Booking
+  if (booking) {
+    booking.paymentStatus = 'fully-paid';
+    await booking.save();
+  }
+
+  // Update Provider Stats & Earnings
+  // For online payment, net earnings go to pendingEarnings for weekly transfer
+  provider.pendingEarnings += invoice.netEarnings;
+  provider.totalEarnings += invoice.grandTotal;
+  provider.platformEarnings += invoice.platformFee;
+  provider.totalJobsCompleted += 1;
+  await provider.save();
+
+  // Record Transaction
+  await WalletTransaction.create({
+    providerId: provider._id,
+    type: 'online_earning',
+    amount: invoice.netEarnings,
+    balanceAfter: provider.walletBalance, // Wallet balance remains same as this is pending earnings
+    bookingId: invoice.bookingId,
+    invoiceId: invoice._id,
+    description: `Online payment received (Net: ₹${invoice.netEarnings.toFixed(2)}) for Invoice ${invoice.invoiceNumber}. Will be transferred weekly.`
+  });
+
+  res.status(200).json({
+    success: true,
+    message: 'Payment completed successfully',
+    data: invoice
+  });
+};
+
 // Get Invoices for Provider
 exports.getProviderInvoices = async (req, res) => {
   const provider = await ServiceProvider.findOne({ userId: req.user.id });

@@ -340,7 +340,15 @@ const getProviderBookings = async (req, res) => {
         $group: {
           _id: '$status',
           count: { $sum: 1 },
-          revenue: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'paid'] }, '$totalPrice', 0] } }
+          revenue: { 
+            $sum: { 
+              $cond: [
+                { $in: ['$paymentStatus', ['paid', 'fully-paid', 'visiting-paid']] }, 
+                '$totalPrice', 
+                0 
+              ] 
+            } 
+          }
         }
       }
     ]);

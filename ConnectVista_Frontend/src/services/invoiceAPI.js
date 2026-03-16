@@ -11,6 +11,16 @@ export const invoiceAPI = {
     }
   },
 
+  // Complete online payment (simulated)
+  completeOnlinePayment: async (invoiceId) => {
+    try {
+      const response = await API.post(`/invoices/complete-payment/${invoiceId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to complete payment' };
+    }
+  },
+
   // Get invoices for provider
   getProviderInvoices: async () => {
     try {
