@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
 const socketManager = require('../utils/socketManager');
 
@@ -79,6 +80,103 @@ const getUnreadCount = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch unread count'
+    });
+  }
+};
+
+/**
+ * Get category-specific unread counts
+ * @route GET /api/notifications/category-counts
+ * @access Private
+ */
+const getCategoryCounts = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const counts = await Notification.aggregate([
+      { $match: { userId: new mongoose.Types.ObjectId(userId), isRead: false } },
+      { $group: { _id: '$category', count: { $sum: 1 } } }
+    ]);
+
+    const countsMap = {
+      total: 0,
+      booking: 0,
+      payment: 0,
+      verification: 0,
+      system: 0,
+      promotion: 0,
+      review: 0
+    };
+
+    counts.forEach(c => {
+      countsMap[c._id] = c.count;
+      countsMap.total += c.count;
+    });
+
+    res.json({
+      success: true,
+      data: countsMap
+    });
+
+  } catch (error) {
+    console.error('Get category counts error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch category counts'
+    });
+  }
+};
+
+/**
+ * Mark all notifications in a category as read
+ * @route PATCH /api/notifications/read-category/:category
+ * @access Private
+ */
+const markByCategoryAsRead = async (req, res) => {
+  try {
+    const { category } = req.params;
+    const userId = req.user.id;
+
+    await Notification.updateMany(
+      { userId, category, isRead: false },
+      { isRead: true, readAt: new Date() }
+    );
+
+    // Get updated counts for all categories
+    const counts = await Notification.aggregate([
+      { $match: { userId: new mongoose.Types.ObjectId(userId), isRead: false } },
+      { $group: { _id: '$category', count: { $sum: 1 } } }
+    ]);
+
+    const countsMap = {
+      total: 0,
+      booking: 0,
+      payment: 0,
+      verification: 0,
+      system: 0,
+      promotion: 0,
+      review: 0
+    };
+
+    counts.forEach(c => {
+      countsMap[c._id] = c.count;
+      countsMap.total += c.count;
+    });
+
+    // Emit updated counts to user
+    socketManager.emitToUser(userId.toString(), 'notification:counts', countsMap);
+
+    res.json({
+      success: true,
+      message: `Notifications in ${category} marked as read`,
+      data: countsMap
+    });
+
+  } catch (error) {
+    console.error('Mark by category error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to mark category as read'
     });
   }
 };
@@ -198,6 +296,8 @@ const deleteNotification = async (req, res) => {
 module.exports = {
   getNotifications,
   getUnreadCount,
+  getCategoryCounts,
+  markByCategoryAsRead,
   markAsRead,
   markAllAsRead,
   deleteNotification

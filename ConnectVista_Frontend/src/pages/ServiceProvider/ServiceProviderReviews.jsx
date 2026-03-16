@@ -2,11 +2,18 @@ import { Star, ThumbsUp, MessageSquare, TrendingUp, TrendingDown, Download, Cale
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { serviceAPI } from '../../services/serviceAPI';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSocket } from '../../contexts/SocketContext';
 import toast from 'react-hot-toast';
 
 const Reviews = () => {
   const { profile } = useAuth();
+  const { markCategoryAsRead } = useSocket();
   const [replyingTo, setReplyingTo] = useState(null);
+
+  // Mark review notifications as read
+  useEffect(() => {
+    markCategoryAsRead('review');
+  }, [markCategoryAsRead]);
   const [replyText, setReplyText] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');

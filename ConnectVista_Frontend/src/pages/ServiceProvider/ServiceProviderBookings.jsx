@@ -8,23 +8,13 @@ import InvoiceBuilder from '../../components/ServiceProvider/InvoiceBuilder';
 import { AnimatePresence } from 'framer-motion';
 
 const ServiceProviderBookings = () => {
+  const { subscribe, markCategoryAsRead } = useSocket();
   const [activeTab, setActiveTab] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [bookings, setBookings] = useState([]);
-  const [stats, setStats] = useState({
-    total: 0,
-    pending: 0,
-    accepted: 0,
-    confirmed: 0,
-    completed: 0,
-    cancelled: 0,
-    totalRevenue: 0
-  });
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(null);
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState(null);
-  const { subscribe } = useSocket();
+
+  // Mark booking notifications as read
+  useEffect(() => {
+    markCategoryAsRead('booking');
+  }, [markCategoryAsRead]);
 
   // Invoice Builder State
   const [showInvoiceBuilder, setShowInvoiceBuilder] = useState(false);

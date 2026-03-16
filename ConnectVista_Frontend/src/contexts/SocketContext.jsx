@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
+import { notificationAPI } from '../services/notificationAPI';
 
 const SocketContext = createContext(null);
 
@@ -11,6 +12,14 @@ export const SocketProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [categoryCounts, setCategoryCounts] = useState({
+    booking: 0,
+    payment: 0,
+    verification: 0,
+    system: 0,
+    promotion: 0,
+    review: 0
+  });
   const socketRef = useRef(null);
   const listenersRef = useRef(new Map());
 
@@ -92,6 +101,16 @@ export const SocketProvider = ({ children }) => {
       setUnreadCount(data.count || 0);
     });
 
+    // Notification category counts update event
+    socket.on('notification:counts', (data) => {
+      console.log('Notification category counts update:', data);
+      setCategoryCounts(prev => ({
+        ...prev,
+        ...data
+      }));
+      if (data.total !== undefined) setUnreadCount(data.total);
+    });
+
     // Cleanup on unmount
     return () => {
       socket.disconnect();
@@ -99,6 +118,23 @@ export const SocketProvider = ({ children }) => {
       setIsConnected(false);
     };
   }, [isAuthenticated, user]);
+
+  // Fetch initial counts when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      const fetchCounts = async () => {
+        try {
+          const response = await notificationAPI.getCategoryCounts();
+          if (response.success) {
+            setInitialCounts(response.data);
+          }
+        } catch (error) {
+          console.error('Failed to fetch initial unread counts:', error);
+        }
+      };
+      fetchCounts();
+    }
+  }, [isAuthenticated, setInitialCounts]);
 
   // Handle new notification
   const handleNewNotification = useCallback((notification, eventType) => {
@@ -109,6 +145,14 @@ export const SocketProvider = ({ children }) => {
 
     // Increment unread count
     setUnreadCount(prev => prev + 1);
+
+    // Increment category count
+    if (notification.category) {
+      setCategoryCounts(prev => ({
+        ...prev,
+        [notification.category]: (prev[notification.category] || 0) + 1
+      }));
+    }
 
     // Notify all listeners for this event type
     const listeners = listenersRef.current.get(eventType);
@@ -142,22 +186,54 @@ export const SocketProvider = ({ children }) => {
   // Reset unread count
   const resetUnreadCount = useCallback(() => {
     setUnreadCount(0);
+    setCategoryCounts({
+      booking: 0,
+      payment: 0,
+      verification: 0,
+      system: 0,
+      promotion: 0,
+      review: 0
+    });
   }, []);
 
   // Clear notifications
   const clearNotifications = useCallback(() => {
     setNotifications([]);
-    setUnreadCount(0);
-  }, []);
+    resetUnreadCount();
+  }, [resetUnreadCount]);
 
-  // Set initial unread count (called when fetching from API)
+  // Set initial unread count and category counts
   const setInitialUnreadCount = useCallback((count) => {
     setUnreadCount(count);
+  }, []);
+
+  const setInitialCounts = useCallback((counts) => {
+    if (counts.total !== undefined) setUnreadCount(counts.total);
+    setCategoryCounts(prev => ({
+      ...prev,
+      ...counts
+    }));
   }, []);
 
   // Update unread count (called when marking as read)
   const updateUnreadCount = useCallback((count) => {
     setUnreadCount(count);
+  }, []);
+
+  // Mark category as read
+  const markCategoryAsRead = useCallback(async (category) => {
+    try {
+      const response = await notificationAPI.markByCategoryAsRead(category);
+      if (response.success) {
+        setCategoryCounts(prev => ({
+          ...prev,
+          ...response.data
+        }));
+        if (response.data.total !== undefined) setUnreadCount(response.data.total);
+      }
+    } catch (error) {
+      console.error('Failed to mark category as read:', error);
+    }
   }, []);
 
   // Emit event to socket
@@ -172,12 +248,15 @@ export const SocketProvider = ({ children }) => {
     isConnected,
     notifications,
     unreadCount,
+    categoryCounts,
     subscribe,
     emit,
     resetUnreadCount,
     clearNotifications,
     setInitialUnreadCount,
-    updateUnreadCount
+    setInitialCounts,
+    updateUnreadCount,
+    markCategoryAsRead
   };
 
   return (

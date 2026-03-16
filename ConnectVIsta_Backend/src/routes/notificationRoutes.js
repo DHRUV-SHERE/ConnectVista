@@ -2,6 +2,8 @@ const express = require('express');
 const {
   getNotifications,
   getUnreadCount,
+  getCategoryCounts,
+  markByCategoryAsRead,
   markAsRead,
   markAllAsRead,
   deleteNotification
@@ -27,6 +29,20 @@ router.get('/', auth(), getNotifications);
  * @access  Private
  */
 router.get('/unread-count', auth(), getUnreadCount);
+
+/**
+ * @route   GET /api/notifications/category-counts
+ * @desc    Get category-specific unread counts
+ * @access  Private
+ */
+router.get('/category-counts', auth(), getCategoryCounts);
+
+/**
+ * @route   PATCH /api/notifications/read-category/:category
+ * @desc    Mark all notifications in a category as read
+ * @access  Private
+ */
+router.patch('/read-category/:category', auth(), markByCategoryAsRead);
 
 /**
  * @route   PATCH /api/notifications/read-all

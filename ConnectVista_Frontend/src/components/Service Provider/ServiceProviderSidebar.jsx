@@ -17,38 +17,64 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
 import { useEffect } from 'react';
-import { serviceAPI } from '../../services/serviceAPI';
+import { notificationAPI } from '../../services/notificationAPI';
 
 const ServiceProviderSidebar = ({ sidebarOpen, setSidebarOpen, currentPath }) => {
   const { user, profile, logout } = useAuth();
-  const { unreadCount, setInitialUnreadCount } = useSocket();
+  const { unreadCount, categoryCounts, setInitialCounts } = useSocket();
   
   // Fetch unread count on mount
   useEffect(() => {
-    const fetchUnreadCount = async () => {
+    const fetchCounts = async () => {
       try {
-        const response = await serviceAPI.getUnreadCount();
+        const response = await notificationAPI.getCategoryCounts();
         if (response.success) {
-          setInitialUnreadCount(response.data.unreadCount);
+          setInitialCounts(response.data);
         }
       } catch (error) {
-        console.error('Failed to fetch unread count:', error);
+        console.error('Failed to fetch unread counts:', error);
       }
     };
-    fetchUnreadCount();
-  }, [setInitialUnreadCount]);
+    fetchCounts();
+  }, [setInitialCounts]);
   
   const navigation = [
     { name: 'Dashboard', href: '/service-provider/dashboard', icon: LayoutDashboard },
     { name: 'Profile', href: '/service-provider/profile', icon: User },
-    { name: 'Bookings', href: '/service-provider/bookings', icon: Calendar },
-    { name: 'Reviews', href: '/service-provider/reviews', icon: Star },
-    { name: 'Notifications', href: '/service-provider/notifications', icon: Bell },
+    { name: 'Bookings', href: '/service-provider/bookings', icon: Calendar, category: 'booking' },
+    { name: 'Reviews', href: '/service-provider/reviews', icon: Star, category: 'review' },
+    { name: 'Notifications', href: '/service-provider/notifications', icon: Bell, category: 'total' },
     { name: 'Subscription', href: '/service-provider/subscription', icon: CreditCard },
-    { name: 'Wallet & Earnings', href: '/service-provider/wallet', icon: Wallet },
+    { name: 'Wallet & Earnings', href: '/service-provider/wallet', icon: Wallet, category: 'payment' },
     { name: 'Invoices', href: '/service-provider/invoices', icon: FileText },
     { name: 'Settings', href: '/service-provider/settings', icon: Settings },
   ];
+
+  const getUnreadBadge = (item) => {
+    let count = 0;
+    if (item.category === 'total') {
+      count = unreadCount;
+    } else if (item.category) {
+      count = categoryCounts[item.category] || 0;
+    }
+
+    if (count <= 0) return null;
+
+    const active = isActive(item.href);
+
+    return (
+      <span 
+        className="ml-auto min-w-[20px] h-5 rounded-full flex items-center justify-center px-1.5 text-white font-medium shadow-sm"
+        style={{
+          backgroundColor: active ? 'white' : 'var(--accent-color)',
+          color: active ? 'var(--accent-color)' : 'white',
+          fontSize: '10px'
+        }}
+      >
+        {count > 99 ? '99+' : count}
+      </span>
+    );
+  };
 
   const isActive = (path) => {
     if (path === '/service-provider/dashboard') {
@@ -225,18 +251,7 @@ const ServiceProviderSidebar = ({ sidebarOpen, setSidebarOpen, currentPath }) =>
               >
                 <Icon size={22} />
                 <span>{item.name}</span>
-                {item.name === 'Notifications' && unreadCount > 0 && (
-                  <span 
-                    className="ml-auto w-5 h-5 rounded-full flex items-center justify-center text-white font-medium"
-                    style={{
-                      backgroundColor: active ? 'white' : 'var(--accent-color)',
-                      color: active ? 'var(--accent-color)' : 'white',
-                      fontSize: '10px'
-                    }}
-                  >
-                    {unreadCount}
-                  </span>
-                )}
+                {getUnreadBadge(item)}
               </Link>
             );
           })}

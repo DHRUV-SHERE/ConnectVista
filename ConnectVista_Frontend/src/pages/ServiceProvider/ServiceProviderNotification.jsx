@@ -2,7 +2,7 @@ import { Calendar, Star, MessageSquare, TrendingUp, Bell, Check, X, Settings, Ma
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { serviceAPI } from '../../services/serviceAPI';
+import { notificationAPI } from '../../services/notificationAPI';
 import { useSocket } from '../../contexts/SocketContext';
 
 const Notifications = () => {
@@ -11,8 +11,25 @@ const Notifications = () => {
   const [activeFilter, setActiveFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const { subscribe, setInitialUnreadCount } = useSocket();
+  const { subscribe, unreadCount, markCategoryAsRead, setInitialCounts } = useSocket();
+
+  // Mark all as read when visiting this page
+  useEffect(() => {
+    const markAll = async () => {
+      try {
+        const response = await notificationAPI.markAllAsRead();
+        if (response.success) {
+          setInitialCounts({ total: 0, booking: 0, review: 0, payment: 0, system: 0, verification: 0, promotion: 0 });
+        }
+      } catch (error) {
+        console.error("Error marking all as read on mount:", error);
+      }
+    };
+    
+    if (unreadCount > 0) {
+      markAll();
+    }
+  }, [unreadCount, setInitialCounts]);
 
   const [notificationSettings, setNotificationSettings] = useState({
     newBookings: true,
@@ -49,7 +66,7 @@ const Notifications = () => {
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await serviceAPI.getNotifications({
+      const response = await notificationAPI.getNotifications({
         page,
         limit: 20,
         category: activeFilter === 'all' || activeFilter === 'unread' ? undefined : activeFilter
@@ -75,15 +92,14 @@ const Notifications = () => {
   // Fetch unread count
   const fetchUnreadCount = useCallback(async () => {
     try {
-      const response = await serviceAPI.getUnreadCount();
+      const response = await notificationAPI.getUnreadCount();
       if (response.success) {
-        setUnreadCount(response.data.count);
-        setInitialUnreadCount(response.data.count);
+        setInitialCounts({ total: response.data.unreadCount });
       }
     } catch (error) {
       console.error("Error fetching unread count:", error);
     }
-  }, [setInitialUnreadCount]);
+  }, [setInitialCounts]);
 
   // Initial fetch
   useEffect(() => {
@@ -96,28 +112,26 @@ const Notifications = () => {
     const unsubscribeNew = subscribe('booking:new', (data) => {
       toast.success('New booking request received!', { icon: '📅', duration: 5000 });
       fetchNotifications();
-      fetchUnreadCount();
     });
 
     const unsubscribeCancelled = subscribe('booking:cancelled', () => {
       fetchNotifications();
-      fetchUnreadCount();
     });
 
     return () => {
       unsubscribeNew();
       unsubscribeCancelled();
     };
-  }, [subscribe, fetchNotifications, fetchUnreadCount]);
+  }, [subscribe, fetchNotifications]);
 
   const markAsRead = async (id) => {
     try {
-      const response = await serviceAPI.markNotificationAsRead(id);
+      const response = await notificationAPI.markAsRead(id);
       if (response.success) {
         setNotifications(prev =>
           prev.map(n => n._id === id ? { ...n, isRead: true, readAt: new Date() } : n)
         );
-        setUnreadCount(prev => Math.max(0, prev - 1));
+        // Socket will update the counts via notification:counts or notification:count event
       }
     } catch (error) {
       console.error("Error marking as read:", error);
@@ -127,12 +141,12 @@ const Notifications = () => {
 
   const markAllAsRead = async () => {
     try {
-      const response = await serviceAPI.markAllNotificationsAsRead();
+      const response = await notificationAPI.markAllAsRead();
       if (response.success) {
         setNotifications(prev =>
           prev.map(n => ({ ...n, isRead: true, readAt: new Date() }))
         );
-        setUnreadCount(0);
+        setInitialCounts({ total: 0, booking: 0, review: 0, payment: 0, system: 0, verification: 0, promotion: 0 });
         toast.success(`${response.data.modifiedCount} notifications marked as read`);
       }
     } catch (error) {
@@ -143,13 +157,9 @@ const Notifications = () => {
 
   const deleteNotification = async (id) => {
     try {
-      const response = await serviceAPI.deleteNotification(id);
+      const response = await notificationAPI.deleteNotification(id);
       if (response.success) {
-        const notif = notifications.find(n => n._id === id);
         setNotifications(prev => prev.filter(n => n._id !== id));
-        if (notif && !notif.isRead) {
-          setUnreadCount(prev => Math.max(0, prev - 1));
-        }
       }
     } catch (error) {
       console.error("Error deleting notification:", error);

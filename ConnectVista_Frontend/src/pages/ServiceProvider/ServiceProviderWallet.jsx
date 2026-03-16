@@ -7,10 +7,17 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { walletAPI } from '../../services/walletAPI';
+import { useSocket } from '../../contexts/SocketContext';
 import PaymentGateway from '../../components/PaymentGateway';
 
 const ServiceProviderWallet = () => {
+  const { markCategoryAsRead } = useSocket();
   const [loading, setLoading] = useState(true);
+
+  // Mark payment notifications as read
+  useEffect(() => {
+    markCategoryAsRead('payment');
+  }, [markCategoryAsRead]);
   const [walletDetails, setWalletDetails] = useState({
     walletBalance: 0,
     pendingEarnings: 0,
