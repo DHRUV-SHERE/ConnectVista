@@ -8,6 +8,8 @@ import CommonContact from "./pages/Common/CommonContact";
 
 import LoginPage from "./pages/Login";
 import SignupSelection from "./pages/SignupSelector";
+import ForgotPassword from "./pages/Common/ForgotPassword";
+import ResetPassword from "./pages/Common/ResetPassword";
 
 import UserSignup from "./pages/User/UserSignup";
 import ServiceProviderSignup from "./pages/ServiceProvider/ServiceProviderSignup";
@@ -64,6 +66,8 @@ function App() {
 
             {/* ✅ Auth Routes WITHOUT Layout */}
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
             <Route path="/signup" element={<SignupSelection />} />
             <Route path="/user/signup" element={<UserSignup />} />
             <Route path="/payment" element={<PaymentPage />} />

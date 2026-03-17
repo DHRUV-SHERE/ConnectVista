@@ -7,6 +7,8 @@ const { signupValidation, loginValidation } = require('../middleware/validation'
 // Public routes
 router.post('/signup', signupValidation, authController.signup);
 router.post('/login', loginValidation, authController.login);
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
 router.post('/refresh-token', authController.refreshToken);
 router.post('/logout', authController.logout);
 

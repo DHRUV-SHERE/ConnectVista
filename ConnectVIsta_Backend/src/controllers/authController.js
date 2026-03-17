@@ -5,7 +5,112 @@ const Service = require('../models/Service');
 const Token = require('../models/Token');
 const { generateTokens, verifyRefreshToken } = require('../utils/jwtUtils');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const geocodingService = require('../services/geocodingService');
+
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'No user found with that email address'
+      });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
+    // Token expires in 1 hour
+    const resetPasswordExpires = Date.now() + 3600000;
+
+    user.resetPasswordToken = resetPasswordToken;
+    user.resetPasswordExpires = resetPasswordExpires;
+    await user.save();
+
+    // Get user name for email
+    let userName = 'User';
+    if (user.role === 'provider') {
+      const provider = await ServiceProvider.findOne({ userId: user._id });
+      if (provider) userName = provider.name;
+    } else if (user.role === 'seeker') {
+      const seeker = await ServiceSeeker.findOne({ userId: user._id });
+      if (seeker) userName = seeker.name;
+    }
+
+    // Return the raw token and user info to frontend so it can send the email via EmailJS
+    // In a production app with a dedicated mail server, the backend would send the email.
+    // Since we're using EmailJS (client-side library), we'll let the frontend handle it
+    // BUT we'll provide the necessary data securely.
+    res.json({
+      success: true,
+      message: 'Reset token generated',
+      data: {
+        userName,
+        resetToken, // THIS IS THE UNHASHED TOKEN to be sent in the link
+        email: user.email
+      }
+    });
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error processing forgot password'
+    });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    // Hash the token from the URL to compare with the one in DB
+    const resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset token'
+      });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
+    
+    // Clear reset token fields
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully'
+    });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error resetting password'
+    });
+  }
+};
 
 const signup = async (req, res) => {
   try {
@@ -608,5 +713,7 @@ module.exports = {
   logout,
   getProfile,
   updateProfile,
-  changePassword
+  changePassword,
+  forgotPassword,
+  resetPassword
 };
