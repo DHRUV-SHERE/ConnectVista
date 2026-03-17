@@ -10,6 +10,13 @@ import { AnimatePresence } from 'framer-motion';
 const ServiceProviderBookings = () => {
   const { subscribe, markCategoryAsRead } = useSocket();
   const [activeTab, setActiveTab] = useState('all');
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [bookings, setBookings] = useState([]);
+  const [stats, setStats] = useState({ total: 0, pending: 0, accepted: 0, confirmed: 0, totalRevenue: 0 });
+  const [pagination, setPagination] = useState(null);
+  const [actionLoading, setActionLoading] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Mark booking notifications as read
   useEffect(() => {

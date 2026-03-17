@@ -121,20 +121,20 @@ export const SocketProvider = ({ children }) => {
 
   // Fetch initial counts when authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      const fetchCounts = async () => {
-        try {
-          const response = await notificationAPI.getCategoryCounts();
-          if (response.success) {
-            setInitialCounts(response.data);
-          }
-        } catch (error) {
-          console.error('Failed to fetch initial unread counts:', error);
+    if (!isAuthenticated) return;
+    const fetchCounts = async () => {
+      try {
+        const response = await notificationAPI.getCategoryCounts();
+        if (response.success) {
+          if (response.data.total !== undefined) setUnreadCount(response.data.total);
+          setCategoryCounts(prev => ({ ...prev, ...response.data }));
         }
-      };
-      fetchCounts();
-    }
-  }, [isAuthenticated, setInitialCounts]);
+      } catch (error) {
+        console.error('Failed to fetch initial unread counts:', error);
+      }
+    };
+    fetchCounts();
+  }, [isAuthenticated]);
 
   // Handle new notification
   const handleNewNotification = useCallback((notification, eventType) => {
