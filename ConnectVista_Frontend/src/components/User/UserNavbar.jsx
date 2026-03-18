@@ -1,6 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Moon, Sun, Menu, X, User, Bell, MessageSquare, LogOut } from "lucide-react";
-import { useTheme } from "../../contexts/ThemeContext";
+import { Menu, X, User, Bell, MessageSquare, LogOut } from "lucide-react";
 import { useSocket } from "../../contexts/SocketContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { useState, useRef, useEffect } from "react";
@@ -8,7 +7,6 @@ import { serviceAPI } from "../../services/serviceAPI";
 import resources from "../../resources";
 
 const Navbar = () => {
-  const { theme, toggleTheme } = useTheme();
   const { unreadCount, setInitialUnreadCount, updateUnreadCount } = useSocket();
   const { logout } = useAuth();
   const location = useLocation();
@@ -354,24 +352,6 @@ const Navbar = () => {
                 </div>
               )}
             </div>
-
-            {/* Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className="p-1.5 sm:p-2 rounded-full border transition cursor-pointer hover:scale-105 active:scale-95"
-              style={{
-                borderColor: "var(--border-color)",
-                backgroundColor: "var(--bg-color)",
-                color: "var(--text-color)",
-              }}
-              aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
-            >
-              {theme === "light" ? (
-                <Moon className="h-4 w-4 sm:h-5 sm:w-5" />
-              ) : (
-                <Sun className="h-4 w-4 sm:h-5 sm:w-5" />
-              )}
-            </button>
 
             {/* Profile Button */}
             <Link to="/user/profile" className="hidden md:block">

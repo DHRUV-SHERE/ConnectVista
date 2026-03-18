@@ -19,6 +19,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api";
 import resources from "../../resources";
 import toast from "react-hot-toast";
+import { useModal } from "../../contexts/ModalContext";
 
 const documentTypes = [
   {
@@ -91,6 +92,7 @@ const getStatusColor = (status) => {
 
 export default function ProviderVerification() {
   const { refreshProfile, profile, refreshAuth } = useAuth();
+  const { confirm } = useModal();
   const navigate = useNavigate();
   const [verificationData, setVerificationData] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -300,8 +302,8 @@ export default function ProviderVerification() {
   };
 
   const handleDeleteDocument = async (documentId) => {
-    if (!window.confirm("Are you sure you want to delete this document?"))
-      return;
+    const confirmed = await confirm("Delete Document", "Are you sure you want to delete this document?");
+    if (!confirmed) return;
 
     try {
       const response = await api.delete(`/verification/document/${documentId}`);

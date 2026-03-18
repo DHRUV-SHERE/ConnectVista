@@ -219,8 +219,22 @@ const createBooking = async (req, res) => {
 
     // Populate booking for response
     const populatedBooking = await Booking.findById(booking._id)
-      .populate('providerId', 'name businessName')
-      .populate('seekerId', 'name');
+      .populate({
+        path: 'providerId',
+        select: 'name businessName userId',
+        populate: {
+          path: 'userId',
+          select: 'email'
+        }
+      })
+      .populate({
+        path: 'seekerId',
+        select: 'name userId',
+        populate: {
+          path: 'userId',
+          select: 'email'
+        }
+      });
 
     res.status(201).json({
       success: true,
@@ -497,6 +511,14 @@ const acceptBooking = async (req, res) => {
       });
     }
 
+    // Verify provider is verified
+    if (!provider.isVerified) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account is not verified. You cannot accept bookings until verified by admin.'
+      });
+    }
+
     // Update booking status
     booking.status = 'accepted';
     booking.updatedAt = new Date();
@@ -539,10 +561,29 @@ const acceptBooking = async (req, res) => {
       }
     });
 
+    // Populate booking for response
+    const populatedBooking = await Booking.findById(booking._id)
+      .populate({
+        path: 'providerId',
+        select: 'name businessName userId',
+        populate: {
+          path: 'userId',
+          select: 'email'
+        }
+      })
+      .populate({
+        path: 'seekerId',
+        select: 'name userId',
+        populate: {
+          path: 'userId',
+          select: 'email'
+        }
+      });
+
     res.json({
       success: true,
       message: 'Booking accepted successfully',
-      data: booking
+      data: populatedBooking
     });
 
   } catch (error) {
@@ -642,10 +683,29 @@ const rejectBooking = async (req, res) => {
       }
     });
 
+    // Populate booking for response
+    const populatedBooking = await Booking.findById(booking._id)
+      .populate({
+        path: 'providerId',
+        select: 'name businessName userId',
+        populate: {
+          path: 'userId',
+          select: 'email'
+        }
+      })
+      .populate({
+        path: 'seekerId',
+        select: 'name userId',
+        populate: {
+          path: 'userId',
+          select: 'email'
+        }
+      });
+
     res.json({
       success: true,
       message: 'Booking rejected',
-      data: booking
+      data: populatedBooking
     });
 
   } catch (error) {
@@ -751,10 +811,29 @@ const cancelBooking = async (req, res) => {
       }
     });
 
+    // Populate booking for response
+    const populatedBooking = await Booking.findById(booking._id)
+      .populate({
+        path: 'providerId',
+        select: 'name businessName userId',
+        populate: {
+          path: 'userId',
+          select: 'email'
+        }
+      })
+      .populate({
+        path: 'seekerId',
+        select: 'name userId',
+        populate: {
+          path: 'userId',
+          select: 'email'
+        }
+      });
+
     res.json({
       success: true,
       message: 'Booking cancelled successfully',
-      data: booking
+      data: populatedBooking
     });
 
   } catch (error) {

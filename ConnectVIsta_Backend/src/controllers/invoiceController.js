@@ -2,6 +2,7 @@ const Invoice = require('../models/Invoice');
 const Booking = require('../models/Booking');
 const ServiceProvider = require('../models/ServiceProvider');
 const WalletTransaction = require('../models/WalletTransaction');
+const GlobalSettings = require('../models/GlobalSettings');
 
 // Create Invoice and finalize booking
 exports.generateInvoice = async (req, res) => {
@@ -18,11 +19,15 @@ exports.generateInvoice = async (req, res) => {
     return res.status(404).json({ success: false, message: 'Provider not found' });
   }
 
+  // Get global settings for commission
+  const settings = await GlobalSettings.findOne() || { commissionPercentage: 10 };
+  const commissionRate = settings.commissionPercentage / 100;
+
   // Calculate totals
   const subTotal = items.reduce((sum, item) => sum + parseFloat(item.amount), 0);
   const visitingCharge = booking.visitingCharge || 0;
   const grandTotal = subTotal + visitingCharge;
-  const platformFee = grandTotal * 0.02; // 2% platform fee
+  const platformFee = grandTotal * commissionRate; 
   const netEarnings = grandTotal - platformFee;
 
   // Check Wallet for Cash Payment
@@ -69,7 +74,7 @@ exports.generateInvoice = async (req, res) => {
 
   // Financial Transaction Logic
   if (paymentMethod === 'cash') {
-    // Deduct 2% from provider's prepaid wallet
+    // Deduct 10% from provider's prepaid wallet
     provider.walletBalance -= platformFee;
     provider.totalEarnings += grandTotal;
     provider.platformEarnings += platformFee;
@@ -84,7 +89,7 @@ exports.generateInvoice = async (req, res) => {
       balanceAfter: provider.walletBalance,
       bookingId: booking._id,
       invoiceId: invoice._id,
-      description: `Platform fee (2%) deducted for Cash Payment (Invoice ${invoice.invoiceNumber})`
+      description: `Platform fee (10%) deducted for Cash Payment (Invoice ${invoice.invoiceNumber})`
     });
   }
 

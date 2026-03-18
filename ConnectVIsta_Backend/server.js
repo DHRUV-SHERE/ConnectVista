@@ -25,11 +25,12 @@ const seekerServiceRoutes = require('./src/routes/seekerServiceRoutes');
 const serviceRoutes = require('./src/routes/serviceRoutes');
 const bookingRoutes = require('./src/routes/bookingRoutes');
 const notificationRoutes = require('./src/routes/notificationRoutes');
-const settingsRoutes = require('./src/routes/settingsRoutes');
 const subscriptionRoutes = require('./src/routes/subscriptionRoutes');
 const reviewRoutes = require('./src/routes/reviewRoutes');
 const walletRoutes = require('./src/routes/walletRoutes');
 const invoiceRoutes = require('./src/routes/invoiceRoutes');
+const chatRoutes = require('./src/routes/chatRoutes');
+const settingsRoutes = require('./src/routes/settingsRoutes');
 const authController = require('./src/controllers/authController');
 const auth = require('./src/middleware/auth');
 const socketManager = require('./src/utils/socketManager');
@@ -144,6 +145,7 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/invoices', invoiceRoutes);
+app.use('/api/chat', chatRoutes);
 app.get('/api/auth/profile', auth(), authController.getProfile);
 
 // Health check

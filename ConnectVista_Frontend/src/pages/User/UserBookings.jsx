@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, MapPin, Phone, Mail, XCircle, Loader2, RefreshCw, Search, Star, MessageSquare, CheckCircle, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { serviceAPI } from '../../services/serviceAPI';
 import { useSocket } from '../../contexts/SocketContext';
+import { useModal } from '../../contexts/ModalContext';
 import ReviewModal from '../../components/User/ReviewModal';
 
 const UserBookings = () => {
@@ -14,6 +16,8 @@ const UserBookings = () => {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
   const { subscribe } = useSocket();
+  const { prompt } = useModal();
+  const navigate = useNavigate();
 
   // Review State
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -110,8 +114,8 @@ const UserBookings = () => {
   }, [subscribe, fetchBookings]);
 
   const handleCancel = useCallback(async (id) => {
-    const reason = window.prompt('Please provide a reason for cancellation:');
-    if (reason === null) return;
+    const reason = await prompt('Cancel Booking', 'Please provide a reason for cancellation:', 'Reason for cancellation...');
+    if (!reason) return;
 
     try {
       setActionLoading(id);
@@ -308,6 +312,17 @@ const UserBookings = () => {
                           </div>
 
                           <div className="flex gap-2">
+                            {/* Message Button */}
+                            {['pending', 'accepted', 'confirmed', 'in-progress'].includes(booking.status) && (
+                              <button
+                                onClick={() => navigate(`/user/chat/${booking._id}`)}
+                                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all active:scale-95"
+                              >
+                                <MessageSquare size={16} />
+                                Chat
+                              </button>
+                            )}
+
                             {booking.status === 'completed' && !booking.isReviewed && (
                               <button
                                 onClick={() => {

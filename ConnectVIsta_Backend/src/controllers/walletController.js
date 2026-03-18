@@ -1,6 +1,7 @@
 const ServiceProvider = require('../models/ServiceProvider');
 const WalletTransaction = require('../models/WalletTransaction');
 const PayoutRequest = require('../models/PayoutRequest');
+const GlobalSettings = require('../models/GlobalSettings');
 const catchAsync = require('../utils/catchAsync'); // Assuming this exists, if not use try-catch
 
 // Get wallet balance and transactions
@@ -104,6 +105,17 @@ exports.requestPayout = async (req, res) => {
 
     if (!provider.bankDetails || !provider.bankDetails.accountNumber) {
       return res.status(400).json({ success: false, message: 'Please update bank details first' });
+    }
+
+    // Get global settings for min payout
+    const settings = await GlobalSettings.findOne() || { minPayoutAmount: 500 };
+    const minPayoutAmount = settings.minPayoutAmount;
+
+    if (provider.pendingEarnings < minPayoutAmount) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Minimum payout amount is ₹${minPayoutAmount}. Current pending: ₹${provider.pendingEarnings.toFixed(2)}` 
+      });
     }
 
     const amount = provider.pendingEarnings;

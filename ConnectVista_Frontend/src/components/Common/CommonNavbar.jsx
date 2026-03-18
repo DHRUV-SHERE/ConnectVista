@@ -1,11 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
-import { Moon, Sun, Menu, X, ChevronDown, User, Building } from "lucide-react";
-import { useTheme } from "../../contexts/ThemeContext";
+import { Menu, X, ChevronDown, User, Building } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import resources from "../../resources";
 
 const CommonNavbar = () => {
-  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showSignupDropdown, setShowSignupDropdown] = useState(false);
@@ -87,23 +85,6 @@ const CommonNavbar = () => {
 
           {/* Right Side */}
           <div className="flex items-center space-x-2">
-            {/* Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-full border transition"
-              style={{
-                borderColor: "var(--border-color)",
-                backgroundColor: "var(--bg-color)",
-                color: "var(--text-color)",
-              }}
-            >
-              {theme === "light" ? (
-                <Moon className="h-5 w-5" />
-              ) : (
-                <Sun className="h-5 w-5" />
-              )}
-            </button>
-
             {/* Auth Buttons (Desktop) */}
             <div className="hidden md:flex items-center space-x-2">
               <Link to="/login">

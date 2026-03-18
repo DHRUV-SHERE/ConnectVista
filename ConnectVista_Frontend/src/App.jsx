@@ -19,7 +19,7 @@ import UnauthorizedPage from "./pages/Common/Unauthorized";
 import ErrorPage from "./pages/Common/Error";
 
 import Layout from "./layout/CommonLayout";
-import { ThemeProvider } from "./contexts/ThemeContext";
+import { ModalProvider } from "./contexts/ModalContext";
 import { SocketProvider } from "./contexts/SocketContext";
 import ScrollToTop from "./components/Common/ScrollToTop";
 
@@ -46,15 +46,29 @@ import ServiceProviderSubscription from "./pages/ServiceProvider/ServiceProvider
 import ServiceProviderWallet from "./pages/ServiceProvider/ServiceProviderWallet";
 import ServiceProviderInvoices from "./pages/ServiceProvider/ServiceProviderInvoices";
 import PaymentPage from "./pages/PaymentPage";
+import Chat from "./pages/Common/Chat";
 
 function App() {
   return (
     <AuthProvider>
       <SocketProvider>
-        <ThemeProvider>
+        <ModalProvider>
           <Router>
           <ScrollToTop />
-          <Toaster position="top-center" reverseOrder={false} />
+          <Toaster 
+            position="bottom-right" 
+            reverseOrder={false}
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: '#fff',
+                color: '#363636',
+                borderRadius: '12px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                padding: '12px 24px',
+              },
+            }}
+          />
           <Routes>
             {/* ✅ Public Routes WITH Layout (Header/Footer) */}
             <Route element={<Layout />}>
@@ -90,6 +104,8 @@ function App() {
               <Route path="notifications" element={<UserNotification />} />
               <Route path="bookings" element={<UserBookings />} />
               <Route path="invoices" element={<UserInvoices />} />
+              <Route path="chat" element={<Chat />} />
+              <Route path="chat/:bookingId" element={<Chat />} />
               <Route path="about" element={<CommonAbout />} />
               <Route path="contact" element={<CommonContact />} />
             </Route>
@@ -110,6 +126,8 @@ function App() {
               <Route path="subscription" element={<ServiceProviderSubscription />} />
               <Route path="wallet" element={<ServiceProviderWallet />} />
               <Route path="invoices" element={<ServiceProviderInvoices />} />
+              <Route path="chat" element={<Chat />} />
+              <Route path="chat/:bookingId" element={<Chat />} />
               <Route path="settings" element={<ServiceProviderSettings />} />
             </Route>
 
@@ -124,7 +142,7 @@ function App() {
             <Route path="*" element={<ErrorPage />} />
           </Routes>
           </Router>
-        </ThemeProvider>
+        </ModalProvider>
       </SocketProvider>
     </AuthProvider>
   );

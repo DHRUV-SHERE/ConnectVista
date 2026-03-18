@@ -1,5 +1,8 @@
 const ProviderVerification = require('../models/ProviderVerification');
 const ServiceProvider = require('../models/ServiceProvider');
+const User = require('../models/User');
+const Notification = require('../models/Notification');
+const socketManager = require('../utils/socketManager');
 const { cloudinary } = require('../config/cloudinary');
 
 // 🔁 Map frontend field names → DB enum values
@@ -71,6 +74,27 @@ const uploadDocuments = async (req, res) => {
     provider.verificationStatus = 'pending';
     provider.isVerified = false;
     await provider.save();
+
+    // Notify Admins
+    try {
+      const admins = await User.find({ role: 'admin' });
+      const notificationPromises = admins.map(admin => {
+        const notification = new Notification({
+          userId: admin._id,
+          title: 'New Verification Request',
+          message: `Provider "${provider.businessName || req.user.name}" has uploaded new documents for verification.`,
+          category: 'admin',
+          type: 'info',
+          actionUrl: `/admin/verification`
+        });
+        return notification.save().then(notif => {
+          socketManager.emitToUser(admin._id.toString(), 'notification:new', notif);
+        });
+      });
+      await Promise.all(notificationPromises);
+    } catch (notifError) {
+      console.error('Failed to notify admins of verification upload:', notifError);
+    }
 
     return res.status(200).json({
       success: true,

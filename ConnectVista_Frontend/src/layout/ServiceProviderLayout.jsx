@@ -8,18 +8,11 @@ import ScrollToTop from '../components/Common/ScrollToTop';
 import resources from '../resources';
 
 const ServiceProviderLayout = () => {
-  const [theme, setTheme] = useState('light');
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Get user data from auth context
   const { user, profile } = useAuth();
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
-  };
 
   // Get display name - priority: profile business name > user name > fallback
   const getDisplayName = () => {
@@ -155,18 +148,6 @@ const ServiceProviderLayout = () => {
           </Link>
 
           <div className="flex-1" />
-
-          {/* Theme Toggle */}
-          <button 
-            onClick={toggleTheme}
-            className="p-2 rounded-lg hover:bg-[var(--hover-bg)] transition-colors"
-            aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-          >
-            {theme === 'light' ? 
-              <Moon size={22} style={{ color: 'var(--text-color)' }} /> : 
-              <Sun size={22} style={{ color: 'var(--text-color)' }} />
-            }
-          </button>
 
           {/* User Info */}
           <div className="flex items-center gap-3">

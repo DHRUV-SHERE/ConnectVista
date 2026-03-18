@@ -1,21 +1,12 @@
 const express = require('express');
-const {
-  getProviderSettings,
-  updateProfileInfo,
-  changePassword,
-  updateNotifications,
-  updatePrivacy,
-  downloadData
-} = require('../controllers/settingsController');
+const router = express.Router();
+const settingsController = require('../controllers/settingsController');
 const auth = require('../middleware/auth');
 
-const router = express.Router();
+// Get settings - Public (or at least all authenticated users)
+router.get('/', settingsController.getSettings);
 
-router.get('/', auth(['provider']), getProviderSettings);
-router.get('/download-data', auth(['provider']), downloadData);
-router.put('/profile', auth(['provider']), updateProfileInfo);
-router.put('/password', auth(['provider']), changePassword);
-router.put('/notifications', auth(['provider']), updateNotifications);
-router.put('/privacy', auth(['provider']), updatePrivacy);
+// Update settings - Admin only
+router.patch('/', auth('admin'), settingsController.updateSettings);
 
 module.exports = router;

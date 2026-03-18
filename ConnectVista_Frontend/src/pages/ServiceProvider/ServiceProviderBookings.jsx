@@ -1,14 +1,19 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, MapPin, Phone, Mail, CheckCircle, XCircle, CalendarClock, MessageCircle, DollarSign, Search, Filter, Download, Eye, MoreVertical, Loader2, RefreshCw, AlertCircle, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { serviceAPI } from '../../services/serviceAPI';
 import { walletAPI } from '../../services/walletAPI';
+import { sendBookingStatusUpdateEmail } from '../../services/emailService';
 import { useSocket } from '../../contexts/SocketContext';
+import { useModal } from '../../contexts/ModalContext';
 import InvoiceBuilder from '../../components/ServiceProvider/InvoiceBuilder';
 import { AnimatePresence } from 'framer-motion';
 
 const ServiceProviderBookings = () => {
   const { subscribe, markCategoryAsRead } = useSocket();
+  const { confirm, prompt } = useModal();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('all');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -188,7 +193,12 @@ const ServiceProviderBookings = () => {
   };
 
   const handleAccept = useCallback(async (id) => {
-    if (!window.confirm('Are you sure you want to accept this booking?')) return;
+    const isConfirmed = await confirm(
+      'Accept Booking',
+      'Are you sure you want to accept this booking request?',
+      'info'
+    );
+    if (!isConfirmed) return;
 
     try {
       setActionLoading(id);
@@ -196,6 +206,28 @@ const ServiceProviderBookings = () => {
 
       if (response.success) {
         toast.success('Booking accepted! Customer has been notified.');
+        
+        // Send email notification to seeker
+        try {
+          const booking = response.data;
+          const seekerEmail = booking.seekerId?.userId?.email;
+          const seekerName = booking.seekerId?.name;
+          
+          if (seekerEmail) {
+            await sendBookingStatusUpdateEmail({
+              seeker_name: seekerName,
+              seeker_email: seekerEmail,
+              provider_name: booking.providerId?.businessName || booking.providerId?.name,
+              status: 'Accepted',
+              booking_date: new Date(booking.bookingDate).toLocaleDateString(),
+              booking_time: booking.bookingTime,
+              view_booking_link: `${window.location.origin}/user/bookings`
+            });
+          }
+        } catch (emailError) {
+          console.error('Failed to send status email:', emailError);
+        }
+
         fetchBookings();
       } else {
         toast.error(response.message || 'Failed to accept booking');
@@ -209,8 +241,12 @@ const ServiceProviderBookings = () => {
   }, [fetchBookings]);
 
   const handleReject = useCallback(async (id) => {
-    const reason = window.prompt('Please provide a reason for rejection:');
-    if (reason === null) return;
+    const reason = await prompt(
+      'Reject Booking',
+      'Please provide a reason for rejecting this booking:',
+      'Reason for rejection...'
+    );
+    if (!reason) return;
 
     try {
       setActionLoading(id);
@@ -218,6 +254,28 @@ const ServiceProviderBookings = () => {
 
       if (response.success) {
         toast.success('Booking rejected. Customer has been notified.');
+        
+        // Send email notification to seeker
+        try {
+          const booking = response.data;
+          const seekerEmail = booking.seekerId?.userId?.email;
+          const seekerName = booking.seekerId?.name;
+          
+          if (seekerEmail) {
+            await sendBookingStatusUpdateEmail({
+              seeker_name: seekerName,
+              seeker_email: seekerEmail,
+              provider_name: booking.providerId?.businessName || booking.providerId?.name,
+              status: 'Rejected',
+              booking_date: new Date(booking.bookingDate).toLocaleDateString(),
+              booking_time: booking.bookingTime,
+              view_booking_link: `${window.location.origin}/user/bookings`
+            });
+          }
+        } catch (emailError) {
+          console.error('Failed to send status email:', emailError);
+        }
+
         fetchBookings();
       } else {
         toast.error(response.message || 'Failed to reject booking');
@@ -231,8 +289,12 @@ const ServiceProviderBookings = () => {
   }, [fetchBookings]);
 
   const handleCancel = useCallback(async (id) => {
-    const reason = window.prompt('Please provide a reason for cancellation:');
-    if (reason === null) return;
+    const reason = await prompt(
+      'Cancel Booking',
+      'Please provide a reason for cancellation:',
+      'Reason for cancellation...'
+    );
+    if (!reason) return;
 
     try {
       setActionLoading(id);
@@ -240,6 +302,28 @@ const ServiceProviderBookings = () => {
 
       if (response.success) {
         toast.success('Booking cancelled.');
+
+        // Send email notification to seeker
+        try {
+          const booking = response.data;
+          const seekerEmail = booking.seekerId?.userId?.email;
+          const seekerName = booking.seekerId?.name;
+          
+          if (seekerEmail) {
+            await sendBookingStatusUpdateEmail({
+              seeker_name: seekerName,
+              seeker_email: seekerEmail,
+              provider_name: booking.providerId?.businessName || booking.providerId?.name,
+              status: 'Cancelled',
+              booking_date: new Date(booking.bookingDate).toLocaleDateString(),
+              booking_time: booking.bookingTime,
+              view_booking_link: `${window.location.origin}/user/bookings`
+            });
+          }
+        } catch (emailError) {
+          console.error('Failed to send status email:', emailError);
+        }
+
         fetchBookings();
       } else {
         toast.error(response.message || 'Failed to cancel booking');
@@ -822,6 +906,28 @@ const ServiceProviderBookings = () => {
                               )}
                               Complete Service
                             </button>
+                            {/* Chat Button */}
+                            <button
+                                onClick={() => navigate(`/service-provider/chat/${booking._id}`)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '0.5rem',
+                                  padding: '0.75rem',
+                                  backgroundColor: 'var(--accent-fade)',
+                                  color: 'var(--accent-color)',
+                                  border: '1px solid var(--accent-color)',
+                                  borderRadius: '0.75rem',
+                                  cursor: 'pointer',
+                                  fontWeight: '600',
+                                  fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+                                  width: '100%'
+                                }}
+                              >
+                                <MessageCircle size={18} />
+                                Chat with Customer
+                              </button>
                             {seeker?.user?.phone && (
                               <button
                                 onClick={() => handleContactCustomer(seeker.user.phone, seeker.user.email)}

@@ -23,31 +23,6 @@
   --border-color: rgba(0, 0, 0, 0.1);
 }
 
-[data-theme="dark"] {
-  --bg-color: #0f0f0f;
-  --text-color: #f8f9fa;
-  
-  /* Modern Marketplace - Dark Mode */
-  --accent-color: #38BDF8;      /* Brighter Sky Blue for dark mode */
-  --accent-dark: #0EA5E9;       /* Sky Blue */
-  --accent-fade: #7DD3FC;       /* Light Sky Blue */
-  
-  /* Secondary Colors - Dark Mode */
-  --secondary-color: #F472B6;   /* Bright Pink */
-  --secondary-dark: #EC4899;    /* Vibrant Pink */
-  --secondary-fade: #F9A8D4;    /* Soft Pink */
-  
-  --foreground: #ffffff;
-  --background: #0f0f0f;
-  --card-bg: rgba(30, 30, 30, 0.7);
-  --btn-bg: linear-gradient(90deg, #38BDF8, #0EA5E9);
-  --btn-hover: 0 0 20px rgba(56, 189, 248, 0.4);
-  --glow-color: rgba(56, 189, 248, 0.25);
-  --overlay-bg: rgba(15, 15, 15, 0.9);
-  --overlay-text: #f1f1f1;
-  --border-color: rgba(255, 255, 255, 0.1);
-}
-
 .btn-primary {
   background: var(--btn-bg);
   color: #fff;

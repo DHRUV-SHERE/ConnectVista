@@ -3,6 +3,7 @@ import { Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import API from '../../services/api';
+import { useModal } from '../../contexts/ModalContext';
 
 const plans = [
   { name: 'Basic', monthly: 499, yearly: 4999, features: ['10 Bookings/month', 'Basic Support', 'Profile Listing'] },
@@ -13,6 +14,7 @@ const plans = [
 
 export default function ServiceProviderSubscription() {
   const navigate = useNavigate();
+  const { confirm } = useModal();
   const [duration, setDuration] = useState('monthly');
   const [currentSubscription, setCurrentSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -43,7 +45,8 @@ export default function ServiceProviderSubscription() {
   };
 
   const handleCancel = async () => {
-    if (!confirm('Cancel subscription?')) return;
+    const confirmed = await confirm('Cancel Subscription', 'Are you sure you want to cancel your subscription?');
+    if (!confirmed) return;
     try {
       await API.post('/subscriptions/cancel');
       toast.success('Subscription cancelled');

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Calendar, Clock, MapPin, DollarSign, User, Phone, MessageCircle, X, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { serviceAPI } from "../../services/serviceAPI";
+import { sendNewBookingEmail } from "../../services/emailService";
 
 const BookingModal = ({ provider, onClose, onSuccess }) => {
   const [bookingData, setBookingData] = useState({
@@ -82,6 +83,29 @@ const BookingModal = ({ provider, onClose, onSuccess }) => {
 
       if (response.success) {
         toast.success('Booking request sent successfully!');
+        
+        // Send email notification to provider
+        try {
+          const booking = response.data;
+          const providerEmail = booking.providerId?.userId?.email;
+          const seekerName = booking.seekerId?.name;
+          
+          if (providerEmail) {
+            await sendNewBookingEmail({
+              provider_name: provider.businessName || provider.name,
+              provider_email: providerEmail,
+              seeker_name: seekerName,
+              service_type: mainService,
+              booking_date: new Date(booking.bookingDate).toLocaleDateString(),
+              booking_time: booking.bookingTime,
+              view_booking_link: `${window.location.origin}/service-provider/bookings`
+            });
+          }
+        } catch (emailError) {
+          console.error('Failed to send booking email:', emailError);
+          // Don't show error toast for email failure, as booking was successful
+        }
+
         if (onSuccess) {
           onSuccess(response.data);
         }

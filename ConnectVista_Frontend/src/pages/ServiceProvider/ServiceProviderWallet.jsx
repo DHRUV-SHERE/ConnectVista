@@ -8,10 +8,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { walletAPI } from '../../services/walletAPI';
 import { useSocket } from '../../contexts/SocketContext';
+import { useModal } from '../../contexts/ModalContext';
 import PaymentGateway from '../../components/PaymentGateway';
 
 const ServiceProviderWallet = () => {
   const { markCategoryAsRead } = useSocket();
+  const { confirm } = useModal();
   const [loading, setLoading] = useState(true);
 
   // Mark payment notifications as read
@@ -74,7 +76,8 @@ const ServiceProviderWallet = () => {
       return;
     }
 
-    if (!window.confirm(`Request payout for ₹${walletDetails.pendingEarnings}?`)) return;
+    const confirmed = await confirm('Request Payout', `Are you sure you want to request a payout for ₹${walletDetails.pendingEarnings}?`);
+    if (!confirmed) return;
 
     try {
       setIsProcessing(true);
