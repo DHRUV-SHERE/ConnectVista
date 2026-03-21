@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   Star,
@@ -8,8 +10,67 @@ import {
   Clock,
   Play,
 } from "lucide-react";
+import toast from "react-hot-toast";
+import { serviceAPI } from "../../services/serviceAPI";
 
 const Home = () => {
+  const navigate = useNavigate();
+  const [serviceQuery, setServiceQuery] = useState("");
+  const [location, setLocation] = useState("");
+  const [loadingLocation, setLoadingLocation] = useState(false);
+
+  // Get current location on component mount
+  useEffect(() => {
+    getCurrentLocation();
+  }, []);
+
+  const getCurrentLocation = async () => {
+    setLoadingLocation(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            // Use reverse geocoding to get city name
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+            );
+            const data = await response.json();
+            const city = data.address?.city || data.address?.town || "Your Location";
+            setLocation(city);
+          } catch (error) {
+            console.error('Error getting location name:', error);
+            setLocation("Current Location");
+          } finally {
+            setLoadingLocation(false);
+          }
+        },
+        () => {
+          setLoadingLocation(false);
+          setLocation("Use current location");
+        }
+      );
+    }
+  };
+
+  const handleSearch = () => {
+    if (!serviceQuery.trim()) {
+      toast.error("Please enter a service");
+      return;
+    }
+    if (!location.trim()) {
+      toast.error("Please enter a location");
+      return;
+    }
+    navigate(`/user/explore?serviceName=${encodeURIComponent(serviceQuery)}&location=${encodeURIComponent(location)}`);
+  };
+
+  const handleQuickSearch = (service) => {
+    setServiceQuery(service);
+    // Navigate with the quick search service
+    navigate(`/user/explore?serviceName=${encodeURIComponent(service)}&location=${encodeURIComponent(location || "Current Location")}`);
+  };
+
   const services = [
     {
       title: "Plumbing",
@@ -154,7 +215,7 @@ const Home = () => {
               </p>
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-6 max-w-4xl mx-auto">
+            <div className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto">
               {/* Service Input */}
               <div className="relative flex-1">
                 <Search
@@ -164,24 +225,9 @@ const Home = () => {
                 <input
                   type="text"
                   placeholder="What service do you need?"
-                  className="pl-12 h-16 w-full rounded-xl border focus:ring-2 text-lg"
-                  style={{
-                    backgroundColor: "var(--bg-color)",
-                    borderColor: "var(--border-color)",
-                    color: "var(--text-color)",
-                  }}
-                />
-              </div>
-
-              {/* Location Input */}
-              <div className="relative flex-1">
-                <MapPin
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6"
-                  style={{ color: "var(--text-color)", opacity: 0.6 }}
-                />
-                <input
-                  type="text"
-                  placeholder="Your location or use current location"
+                  value={serviceQuery}
+                  onChange={(e) => setServiceQuery(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                   className="pl-12 h-16 w-full rounded-xl border focus:ring-2 text-lg"
                   style={{
                     backgroundColor: "var(--bg-color)",
@@ -193,6 +239,7 @@ const Home = () => {
 
               {/* Search Button */}
               <button
+                onClick={handleSearch}
                 className="h-16 px-8 font-semibold rounded-xl text-white flex items-center justify-center space-x-3 text-lg hover:opacity-95 transition-opacity"
                 style={{
                   background: "var(--btn-bg)",
@@ -215,6 +262,7 @@ const Home = () => {
               ].map((tag) => (
                 <button
                   key={tag}
+                  onClick={() => handleQuickSearch(tag)}
                   className="px-6 py-3 rounded-full border text-lg hover:opacity-90 transition-opacity"
                   style={{
                     backgroundColor: "var(--bg-color)",

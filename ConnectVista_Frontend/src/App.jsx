@@ -17,6 +17,12 @@ import ServiceProviderVerification from "./pages/ServiceProvider/ServiceProvider
 
 import UnauthorizedPage from "./pages/Common/Unauthorized";
 import ErrorPage from "./pages/Common/Error";
+import Error500 from "./pages/Common/Error500";
+import Error503 from "./pages/Common/Error503";
+import TermsOfService from "./pages/Common/TermsOfService";
+import PrivacyPolicy from "./pages/Common/PrivacyPolicy";
+import RefundPolicy from "./pages/Common/RefundPolicy";
+import CookiePolicy from "./pages/Common/CookiePolicy";
 
 import Layout from "./layout/CommonLayout";
 import { ModalProvider } from "./contexts/ModalContext";
@@ -77,6 +83,16 @@ function App() {
               <Route path="/contact" element={<CommonContact />} />
               <Route path="/unauthorized" element={<UnauthorizedPage />} />
             </Route>
+
+            {/* ✅ Legal Pages (WITHOUT Layout for full screen) */}
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/refund" element={<RefundPolicy />} />
+            <Route path="/cookies" element={<CookiePolicy />} />
+
+            {/* ✅ Error Pages (WITHOUT Layout for full screen) */}
+            <Route path="/error/500" element={<Error500 />} />
+            <Route path="/error/503" element={<Error503 />} />
 
             {/* ✅ Auth Routes WITHOUT Layout */}
             <Route path="/login" element={<LoginPage />} />

@@ -1,0 +1,11 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+Disallow: /user/
+Disallow: /service-provider/
+Disallow: /admin/
+Disallow: /api/
+Disallow: /payment
+Disallow: /error/
+
+Sitemap: https://connectvista.com/sitemap.xml

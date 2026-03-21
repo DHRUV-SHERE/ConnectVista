@@ -31,10 +31,21 @@ const walletRoutes = require('./src/routes/walletRoutes');
 const invoiceRoutes = require('./src/routes/invoiceRoutes');
 const chatRoutes = require('./src/routes/chatRoutes');
 const settingsRoutes = require('./src/routes/settingsRoutes');
+const favouriteRoutes = require('./src/routes/favouriteRoutes');
 const authController = require('./src/controllers/authController');
 const auth = require('./src/middleware/auth');
 const socketManager = require('./src/utils/socketManager');
 const User = require('./src/models/User');
+
+// Import cron jobs (optional - will gracefully fail if not installed)
+let startSubscriptionCron = null;
+try {
+  const cronModule = require('./src/services/subscriptionCron');
+  startSubscriptionCron = cronModule.startSubscriptionCron;
+} catch (error) {
+  console.log('⚠️  node-cron not installed. Subscription cron job disabled.');
+  console.log('💡 To enable: cd ConnectVIsta_Backend && npm install node-cron');
+}
 
 // Initialize express
 const app = express();
@@ -146,6 +157,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/favorites', favouriteRoutes);
 app.get('/api/auth/profile', auth(), authController.getProfile);
 
 // Health check
@@ -197,4 +209,9 @@ server.listen(PORT, () => {
   console.log(`   - Provider Profile: http://localhost:${PORT}/api/profile/provider`);
   console.log(`   - Bookings: http://localhost:${PORT}/api/bookings`);
   console.log(`   - Notifications: http://localhost:${PORT}/api/notifications`);
+  
+  // Start cron jobs (if available)
+  if (startSubscriptionCron) {
+    startSubscriptionCron();
+  }
 });

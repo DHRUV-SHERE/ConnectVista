@@ -118,15 +118,49 @@ const signup = async (req, res) => {
 
     console.log('Signup attempt:', { email, phone, role, hasPassword: !!password });
 
-    // Check if user exists
+    // Validate required fields
+    if (!email || !phone || !password || !role) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: email, phone, password, and role are required'
+      });
+    }
+
+    // Check if user exists (case-insensitive email check)
     const existingUser = await User.findOne({
-      $or: [{ email }, { phone }]
+      $or: [
+        { email: { $regex: new RegExp(`^${email}$`, 'i') } },
+        { phone: phone }
+      ]
     });
 
     if (existingUser) {
+      console.log('Existing user found:', { 
+        email: existingUser.email, 
+        phone: existingUser.phone,
+        id: existingUser._id 
+      });
+      
+      // Determine which field conflicts
+      const emailConflict = existingUser.email?.toLowerCase() === email?.toLowerCase();
+      const phoneConflict = existingUser.phone === phone;
+      
+      let conflictMessage = 'User with this ';
+      if (emailConflict && phoneConflict) {
+        conflictMessage += 'email and phone already exists';
+      } else if (emailConflict) {
+        conflictMessage += 'email already exists';
+      } else {
+        conflictMessage += 'phone number already exists';
+      }
+      
       return res.status(400).json({
         success: false,
-        message: 'User with this email or phone already exists'
+        message: conflictMessage,
+        conflicts: {
+          email: emailConflict,
+          phone: phoneConflict
+        }
       });
     }
 
@@ -136,8 +170,8 @@ const signup = async (req, res) => {
 
     // Create user with already hashed password
     const user = await User.create({
-      email,
-      phone,
+      email: email.toLowerCase().trim(), // Normalize email
+      phone: phone.trim(),
       password: hashedPassword, // Already hashed
       role
     });

@@ -93,7 +93,7 @@ export default function ServiceProviderSubscription() {
       <div className="min-h-screen py-12 px-4" style={{ backgroundColor: 'var(--background)' }}>
         <div className="max-w-4xl mx-auto">
           {discountEligible && (
-            <div className="mb-8 p-6 rounded-2xl border-2 border-dashed flex flex-col md:flex-row items-center justify-between gap-4 animate-pulse" style={{ backgroundColor: 'var(--success-light)', borderColor: 'var(--success-dark)' }}>
+            <div className="mb-8 p-6 rounded-2xl border-2 border-dashed flex flex-col md:flex-row items-center justify-between gap-4" style={{ backgroundColor: 'var(--success-light)', borderColor: 'var(--success-dark)' }}>
               <div>
                 <h3 className="text-xl font-bold" style={{ color: 'var(--success-dark)' }}>Special Pre-subscription Offer! 🎁</h3>
                 <p className="mt-1" style={{ color: 'var(--success-dark)', opacity: 0.9 }}>Your subscription is expiring soon. Renew now and get <b>20% FLAT DISCOUNT</b> on any plan!</p>
@@ -103,8 +103,12 @@ export default function ServiceProviderSubscription() {
                   setCurrentSubscription(null);
                   setLoading(false);
                 }}
-                className="px-6 py-3 rounded-xl font-bold text-white shadow-lg whitespace-nowrap"
-                style={{ backgroundColor: 'var(--success-dark)' }}
+                className="px-8 py-4 rounded-xl font-bold text-white shadow-xl hover:shadow-2xl transition-all duration-300 whitespace-nowrap hover:scale-105 transform"
+                style={{ 
+                  backgroundColor: '#16a34a',
+                  border: '3px solid #15803d',
+                  minWidth: '200px'
+                }}
               >
                 Claim Discount Now
               </button>

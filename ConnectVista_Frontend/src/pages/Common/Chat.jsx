@@ -132,7 +132,9 @@ const Chat = () => {
   const handleSelectChat = (chat) => {
     setActiveBookingId(chat.bookingId);
     setActiveChat(chat);
-    navigate(`/chat/${chat.bookingId}`);
+    // Navigate with the correct role prefix
+    const rolePrefix = user?.role === 'provider' ? 'service-provider' : user?.role === 'admin' ? 'admin' : 'user';
+    navigate(`/${rolePrefix}/chat/${chat.bookingId}`);
   };
 
   const filteredConversations = conversations.filter(c => 
@@ -142,6 +144,16 @@ const Chat = () => {
   const formatTime = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Get initials from name (e.g., "Dhruv Prashant Shere" -> "DPS")
+  const getInitials = (name) => {
+    if (!name) return '?';
+    return name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase())
+      .join('')
+      .substring(0, 3); // Limit to 3 characters
   };
 
   return (
@@ -184,13 +196,13 @@ const Chat = () => {
                   borderBottom: '1px solid var(--border-color)'
                 }}
               >
-                <div className="relative h-12 w-12 flex-shrink-0 bg-gray-200 rounded-full flex items-center justify-center">
-                  {chat.otherUser.profileImage ? (
-                    <img src={chat.otherUser.profileImage} alt={chat.otherUser.name} className="h-12 w-12 rounded-full object-cover" />
-                  ) : (
-                    <UserIcon className="text-gray-400" />
-                  )}
-                  {/* Status dot could go here */}
+                <div className="relative h-12 w-12 flex-shrink-0 rounded-full flex items-center justify-center font-bold text-lg"
+                  style={{
+                    backgroundColor: 'var(--accent-color)',
+                    color: 'white'
+                  }}
+                >
+                  {getInitials(chat.otherUser.name)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-1">
@@ -215,12 +227,13 @@ const Chat = () => {
                 <button onClick={() => setActiveBookingId(null)} className="md:hidden p-2 hover:bg-gray-100 rounded-full">
                   <ArrowLeft className="h-5 w-5" style={{ color: 'var(--text-color)' }} />
                 </button>
-                <div className="h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
-                  {activeChat.otherUser.profileImage ? (
-                    <img src={activeChat.otherUser.profileImage} alt={activeChat.otherUser.name} className="h-10 w-10 object-cover" />
-                  ) : (
-                    <UserIcon className="text-gray-400" />
-                  )}
+                <div className="h-10 w-10 rounded-full flex items-center justify-center overflow-hidden font-bold"
+                  style={{
+                    backgroundColor: 'var(--accent-color)',
+                    color: 'white'
+                  }}
+                >
+                  {getInitials(activeChat.otherUser.name)}
                 </div>
                 <div>
                   <h3 className="font-bold text-lg" style={{ color: 'var(--text-color)' }}>{activeChat.otherUser.name}</h3>

@@ -327,12 +327,15 @@ export default function Footer() {
             <div className="text-xs text-muted-foreground">
               © {currentYear} ConnectVista. All rights reserved.
             </div>
-            <div className="flex space-x-4 text-xs">
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs">
               <AnimatedLink to="/terms" className="text-muted-foreground hover:text-[var(--accent-color)]">
                 Terms of Service
               </AnimatedLink>
               <AnimatedLink to="/privacy" className="text-muted-foreground hover:text-[var(--accent-color)]">
                 Privacy Policy
+              </AnimatedLink>
+              <AnimatedLink to="/refund" className="text-muted-foreground hover:text-[var(--accent-color)]">
+                Refund Policy
               </AnimatedLink>
               <AnimatedLink to="/cookies" className="text-muted-foreground hover:text-[var(--accent-color)]">
                 Cookie Policy

@@ -1,0 +1,73 @@
+# ConnectVista - Project Structural & Architectural Analysis
+
+## 1. Project Overview
+- **Project Type:** Full-stack MERN Platform (MongoDB, Express, React, Node.js)
+- **Architecture Style:** 
+    - **Backend:** Layered MVC (Model-View-Controller)
+    - **Frontend:** Component-based with Context API for state management
+- **Core Purpose:** A smart marketplace connecting verified service providers with seekers, featuring real-time communication, location-based discovery, and automated booking/payment lifecycles.
+
+## 2. Folder Structure (Detailed)
+
+### Backend (ConnectVIsta_Backend)
+- `src/models/`: Database schemas (User, ServiceProvider, ServiceSeeker, Booking, Review, etc.)
+- `src/controllers/`: Business logic and request handling.
+- `src/routes/`: API route definitions.
+- `src/middleware/`: Authentication (JWT), role-based access, and file uploads.
+- `src/services/`: External integrations (Email, Cron jobs).
+- `src/utils/`: Utilities (Socket.IO manager, geocoding, logging).
+- `server.js`: Application entry point and Socket.IO initialization.
+
+### Frontend (ConnectVista_Frontend)
+- `src/contexts/`: Global state (AuthContext, SocketContext).
+- `src/pages/`: Role-specific screens (User, ServiceProvider).
+- `src/components/`: Reusable UI (Leaflet Maps, Payment Gateways, Modals).
+- `src/services/`: API calling abstractions.
+- `src/hooks/`: Custom React hooks (e.g., InspectProtection).
+
+### Admin (ConnectVista_Admin)
+- Specialized portal for platform monitoring and provider verification.
+
+## 3. Backend Analysis
+- **Models & Relationships:** 
+    - `User` is the base identity linked to `ServiceProvider` or `ServiceSeeker`.
+    - `Booking` links `Seeker`, `Provider`, and `Service`.
+    - `ProviderVerification` manages KYC documents for admin approval.
+- **Middleware:** 
+    - `auth.js`: Handles JWT verification and role-based authorization.
+    - `upload.js`: Manages image uploads to Cloudinary.
+- **Real-time Logic:** Socket.IO is used for instant notifications (booking updates, chat, and status changes).
+- **Geo-location:** MongoDB `2dsphere` indexes allow `lat/lng` queries to find nearby providers.
+
+## 4. Frontend Analysis
+- **Navigation:** `react-router-dom` with protected route wrappers for Seeker, Provider, and Admin roles.
+- **Map Integration:** Leaflet for interactive provider discovery; Google Maps for address autocomplete.
+- **State Management:** `AuthContext` handles session persistence; `SocketContext` manages real-time event listeners.
+- **Payment Handling:** Integration with Stripe and Razorpay for secure transactions.
+
+## 5. Technology Stack
+- **Frontend:** React (Vite), Tailwind CSS (v4), Framer Motion, Leaflet, Lucide React.
+- **Backend:** Node.js, Express (v5), MongoDB (Mongoose), Socket.IO.
+- **AI Utility:** Google Gemini AI integration.
+- **Security:** JWT, BcryptJS, Helmet, Express-Rate-Limit.
+- **Services:** Cloudinary (Media), Stripe/Razorpay (Payments), Node-Cron (Subscriptions).
+
+## 6. Data Flow
+- **Authentication:** JWT is issued upon login and stored in LocalStorage. It is used for both REST API calls and the Socket.IO handshake.
+- **Service Discovery:** Seekers search by category → Backend performs geospatial query → Frontend renders results on Leaflet map.
+- **Booking Lifecycle:** `Pending` → `Accepted/Rejected` → `In-Progress` → `Completed/Cancelled`. Every step triggers a real-time Socket event and a DB notification.
+
+## 7. Security Analysis
+- **JWT Handling:** Secure token verification with role-based restrictions.
+- **Route Protection:** Frontend and Backend both verify user permissions before allowing access to specific modules.
+- **Validation:** Input sanitized using `express-validator` and `Joi`.
+- **Data Safety:** Sensitive fields like passwords are excluded from JSON responses (`select: false` in Mongoose).
+
+## 8. System Strength Analysis
+- **Scalability:** Modular folder structure allows for easy addition of new services or features.
+- **Modularity:** High. Clear separation of concerns between backend layers and frontend portals.
+- **Production Readiness:** High. Includes security headers, rate limiting, and centralized error handling.
+- **Improvements Possible:** Introduction of Redis for caching frequently accessed service catalogs; migration to TypeScript for enhanced type safety.
+
+---
+*Analysis generated on March 19, 2026*

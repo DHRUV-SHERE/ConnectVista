@@ -804,39 +804,149 @@ export default function ServiceProviderSignup() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Business Location *
                     </label>
+                    <p className="text-xs text-gray-500 mb-3">
+                      You can use the map picker below or enter your address manually
+                    </p>
                     <MapLocationPicker 
                       onLocationSelect={handleAddressSelect}
                     />
                     {errors.street && <p className="mt-1 text-sm text-red-600">{errors.street}</p>}
                   </div>
 
-                  {formData.city && (
+                  {/* Manual Address Entry */}
+                  <div className="mt-6 space-y-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Or Enter Address Manually
+                      </label>
+                    </div>
+
+                    {/* Street Address */}
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Home className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="text"
+                        value={formData.street}
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, street: e.target.value }));
+                          setErrors(prev => ({ ...prev, street: "" }));
+                        }}
+                        className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-transparent"
+                        placeholder="Street address / Area"
+                      />
+                    </div>
+
+                    {/* City and State in a row */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Building className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <input
+                          type="text"
+                          value={formData.city}
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, city: e.target.value }));
+                            setErrors(prev => ({ ...prev, city: "" }));
+                          }}
+                          className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-transparent"
+                          placeholder="City"
+                        />
+                      </div>
+
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <MapPin className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <input
+                          type="text"
+                          value={formData.state}
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, state: e.target.value }));
+                            setErrors(prev => ({ ...prev, state: "" }));
+                          }}
+                          className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-transparent"
+                          placeholder="State"
+                        />
+                      </div>
+                    </div>
+
+                    {/* PIN Code */}
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Mail className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="text"
+                        value={formData.pinCode}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                          setFormData(prev => ({ ...prev, pinCode: value }));
+                          setErrors(prev => ({ ...prev, pinCode: "" }));
+                        }}
+                        className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-transparent"
+                        placeholder="PIN Code (6 digits)"
+                        maxLength={6}
+                      />
+                      {errors.pinCode && <p className="mt-1 text-sm text-red-600">{errors.pinCode}</p>}
+                    </div>
+
+                    {/* Coordinates (optional) */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="any"
+                          value={formData.latitude || ''}
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, latitude: parseFloat(e.target.value) || null }));
+                          }}
+                          className="block w-full px-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-transparent"
+                          placeholder="Latitude (optional)"
+                        />
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="any"
+                          value={formData.longitude || ''}
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, longitude: parseFloat(e.target.value) || null }));
+                          }}
+                          className="block w-full px-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-transparent"
+                          placeholder="Longitude (optional)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Display Summary when filled */}
+                  {(formData.city || formData.street) && (
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100"
+                      className="p-4 bg-green-50 rounded-xl border border-green-100"
                     >
-                      <div className="col-span-2">
-                        <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Detected Street/Area</p>
-                        <p className="text-sm font-semibold text-gray-700">{formData.street || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">City</p>
-                        <p className="text-sm font-semibold text-gray-700">{formData.city}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">State</p>
-                        <p className="text-sm font-semibold text-gray-700">{formData.state}</p>
-                      </div>
-                      <div className="mt-2">
-                        <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">PIN Code</p>
-                        <p className="text-sm font-semibold text-gray-700">{formData.pinCode || 'N/A'}</p>
-                      </div>
-                      <div className="mt-2">
-                        <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Coordinates</p>
-                        <p className="text-[10px] font-mono text-blue-600">
-                          {formData.latitude?.toFixed(4)}, {formData.longitude?.toFixed(4)}
-                        </p>
+                      <div className="flex items-start gap-3">
+                        <div className="mt-1">
+                          <MapPin className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-green-900 mb-1">Address Summary</p>
+                          <p className="text-sm text-green-800">
+                            {formData.street && <span>{formData.street}, </span>}
+                            {formData.city && <span>{formData.city}, </span>}
+                            {formData.state && <span>{formData.state} </span>}
+                            {formData.pinCode && <span>- {formData.pinCode}</span>}
+                          </p>
+                          {(formData.latitude && formData.longitude) && (
+                            <p className="text-xs font-mono text-green-600 mt-1">
+                              📍 {formData.latitude.toFixed(4)}, {formData.longitude.toFixed(4)}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </motion.div>
                   )}

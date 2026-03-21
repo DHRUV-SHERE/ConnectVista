@@ -13,14 +13,96 @@ const mongoose = require('mongoose');
  */
 const getServicesWithPriceRange = async (req, res) => {
   try {
+    // Get location parameters for filtering
+    const { lat, lng, radius = 15 } = req.query;
+    const hasLocation = lat && lng;
+    const radiusInMeters = parseInt(radius) * 1000; // Convert km to meters
+
     // Get categories from static catalog
     const categories = serviceCatalog.serviceCategories.filter(cat => cat.id !== 'other');
 
-    // Aggregate price data from ProviderService collection
-    const priceAggregation = await ProviderService.aggregate([
+    // Build aggregation pipeline
+    let aggregationPipeline = [
       {
         $match: { isAvailable: true }
-      },
+      }
+    ];
+
+    // Add location-based filtering if coordinates provided
+    if (hasLocation) {
+      // First, we need to lookup the provider profile to get location
+      aggregationPipeline.push(
+        {
+          $lookup: {
+            from: 'serviceproviders',
+            localField: 'provider',
+            foreignField: '_id',
+            as: 'providerProfile'
+          }
+        },
+        {
+          $unwind: '$providerProfile'
+        },
+        {
+          $match: {
+            'providerProfile.isVerified': true,
+            'providerProfile.businessAddress.coordinates': { $exists: true }
+          }
+        },
+        {
+          $addFields: {
+            distance: {
+              $let: {
+                vars: {
+                  distance: {
+                    $sqrt: {
+                      $add: [
+                        {
+                          $pow: [
+                            {
+                              $multiply: [
+                                { $subtract: [{ $arrayElemAt: ['$providerProfile.businessAddress.coordinates.coordinates', 1] }, parseFloat(lat)] },
+                                111.12 // Approximate km per degree latitude
+                              ]
+                            },
+                            2
+                          ]
+                        },
+                        {
+                          $pow: [
+                            {
+                              $multiply: [
+                                {
+                                  $multiply: [
+                                    { $subtract: [{ $arrayElemAt: ['$providerProfile.businessAddress.coordinates.coordinates', 0] }, parseFloat(lng)] },
+                                    { $cos: { $multiply: [parseFloat(lat), 0.0174533] } } // Convert lat to radians
+                                  ]
+                                },
+                                111.12
+                              ]
+                            },
+                            2
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                },
+                in: '$$distance'
+              }
+            }
+          }
+        },
+        {
+          $match: {
+            distance: { $lte: parseFloat(radius) }
+          }
+        }
+      );
+    }
+
+    // Group by service category to get counts and price ranges
+    aggregationPipeline.push(
       {
         $group: {
           _id: '$mainService.name',
@@ -29,9 +111,12 @@ const getServicesWithPriceRange = async (req, res) => {
           providerCount: { $sum: 1 }
         }
       }
-    ]);
+    );
 
-    // Create a map for quick lookup
+    // Aggregate price data from ProviderService collection
+    const priceAggregation = await ProviderService.aggregate(aggregationPipeline);
+
+    // Create a map for quick lookup by service name
     const priceMap = {};
     priceAggregation.forEach(item => {
       priceMap[item._id] = {
@@ -41,9 +126,9 @@ const getServicesWithPriceRange = async (req, res) => {
       };
     });
 
-    // Combine categories with price data
+    // Combine categories with price data - match by name instead of id
     const servicesWithPrices = categories.map(category => {
-      const priceData = priceMap[category.id] || { minPrice: 0, maxPrice: 0, providerCount: 0 };
+      const priceData = priceMap[category.name] || { minPrice: 0, maxPrice: 0, providerCount: 0 };
 
       // Format price range
       let formattedPrice = 'Prices vary';
@@ -71,7 +156,14 @@ const getServicesWithPriceRange = async (req, res) => {
 
     res.json({
       success: true,
-      data: servicesWithPrices
+      data: servicesWithPrices,
+      ...(hasLocation && { 
+        location: { 
+          lat: parseFloat(lat), 
+          lng: parseFloat(lng), 
+          radius: parseFloat(radius) 
+        } 
+      })
     });
 
   } catch (error) {

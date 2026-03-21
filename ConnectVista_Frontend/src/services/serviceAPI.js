@@ -166,10 +166,23 @@ export const serviceAPI = {
   /**
    * Get all service categories with aggregated price ranges
    * Returns services with min/max prices from all providers
+   * @param {object} options - Query options
+   * @param {number} options.lat - User latitude (optional, for location-based counts)
+   * @param {number} options.lng - User longitude (optional, for location-based counts)
+   * @param {number} options.radius - Search radius in km (optional, default: 15)
    */
-  getSeekerServices: async () => {
+  getSeekerServices: async (options = {}) => {
     await throttleRequest();
-    const response = await api.get('/seeker/services');
+    const { lat, lng, radius = 15 } = options;
+    const params = new URLSearchParams();
+    
+    if (lat) params.append('lat', lat);
+    if (lng) params.append('lng', lng);
+    if (radius) params.append('radius', radius);
+    
+    const queryString = params.toString();
+    const url = queryString ? `/seeker/services?${queryString}` : '/seeker/services';
+    const response = await api.get(url);
     return response.data;
   },
 
@@ -488,6 +501,59 @@ export const serviceAPI = {
   getRecentServices: async () => {
     await throttleRequest();
     const response = await api.get('/profile/dashboard/recent-services');
+    return response.data;
+  },
+
+  // ==========================================
+  // FAVORITES APIs
+  // ==========================================
+
+  /**
+   * Get all favorite providers for logged-in seeker
+   */
+  getFavoriteProviders: async () => {
+    await throttleRequest();
+    const response = await api.get('/favorites');
+    return response.data;
+  },
+
+  /**
+   * Add a provider to favorites
+   * @param {string} providerId - Provider ObjectId
+   */
+  addFavoriteProvider: async (providerId) => {
+    await throttleRequest();
+    const response = await api.post('/favorites', { providerId });
+    return response.data;
+  },
+
+  /**
+   * Remove a provider from favorites
+   * @param {string} providerId - Provider ObjectId
+   */
+  removeFavoriteProvider: async (providerId) => {
+    await throttleRequest();
+    const response = await api.delete(`/favorites/${providerId}`);
+    return response.data;
+  },
+
+  /**
+   * Check if a provider is in favorites
+   * @param {string} providerId - Provider ObjectId
+   */
+  isFavoriteProvider: async (providerId) => {
+    await throttleRequest();
+    const response = await api.get(`/favorites/check/${providerId}`);
+    return response.data;
+  },
+
+  /**
+   * Bulk check favorite statuses for multiple providers
+   * @param {Array<string>} providerIds - Array of Provider ObjectIds
+   */
+  checkFavoriteStatuses: async (providerIds) => {
+    await throttleRequest();
+    const response = await api.post('/favorites/check-bulk', { providerIds });
     return response.data;
   }
 };

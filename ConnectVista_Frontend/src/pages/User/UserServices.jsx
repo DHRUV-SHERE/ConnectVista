@@ -7,7 +7,7 @@ import {
   BookOpen, Scissors, Hammer, Code, Calendar, Map as MapIcon, Users, Navigation
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { serviceAPI, getCurrentLocation } from '../../services/serviceAPI';
+import { serviceAPI, getCurrentLocation, calculateDistance, formatDistance } from '../../services/serviceAPI';
 
 const UserServices = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -15,28 +15,50 @@ const UserServices = () => {
   const [viewMode, setViewMode] = useState("grid");
   const [sortBy, setSortBy] = useState("popular");
   const [favorites, setFavorites] = useState(new Set());
-  const [userLocation, setUserLocation] = useState({ lat: 20.5937, lng: 78.9629 });
+  const [userLocation, setUserLocation] = useState(null);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchRadius, setSearchRadius] = useState(15);
+  const [locationError, setLocationError] = useState(null);
   const navigate = useNavigate();
 
-  // Fetch services from API with price ranges
+  // Get user location on component mount
+  useEffect(() => {
+    const getUserLocation = async () => {
+      try {
+        const location = await getCurrentLocation();
+        setUserLocation(location);
+        setLocationError(null);
+      } catch (error) {
+        console.log('Could not get user location:', error);
+        setLocationError('Location access denied. Showing all services.');
+        // Set default location (India center)
+        setUserLocation({ lat: 23.0225, lng: 72.5714 });
+      }
+    };
+
+    const timeoutId = setTimeout(getUserLocation, 50);
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  // Fetch services from API with price ranges and location-based counts
   useEffect(() => {
     const fetchServicesWithPriceRanges = async () => {
+      if (!userLocation) {
+        setLoading(true);
+        return;
+      }
+
       try {
         setLoading(true);
 
-        // Get user location first
-        let location = userLocation;
-        try {
-          location = await getCurrentLocation();
-          setUserLocation(location);
-        } catch (locationError) {
-          console.log('Could not get user location, using default:', locationError);
-        }
-
-        // Fetch services with aggregated price ranges
-        const response = await serviceAPI.getSeekerServices();
+        // Fetch services with aggregated price ranges and location-based provider counts
+        const response = await serviceAPI.getSeekerServices({
+          lat: userLocation.lat,
+          lng: userLocation.lng,
+          radius: searchRadius
+        });
+        
         if (response.success) {
           // Transform the data to include price info
           const transformedServices = (response.data || []).map(service => ({
@@ -65,25 +87,7 @@ const UserServices = () => {
     // Add delay to prevent rate limiting
     const timeoutId = setTimeout(fetchServicesWithPriceRanges, 100);
     return () => clearTimeout(timeoutId);
-  }, []);
-
-  // Get user's location on component mount and when map view is selected
-  useEffect(() => {
-    const updateLocation = async () => {
-      if (navigator.geolocation && viewMode === "map" && !userLocation) {
-        try {
-          const location = await getCurrentLocation();
-          setUserLocation(location);
-        } catch (error) {
-          console.log("Geolocation error:", error);
-        }
-      }
-    };
-    
-    // Add delay to prevent multiple simultaneous calls
-    const timeoutId = setTimeout(updateLocation, 200);
-    return () => clearTimeout(timeoutId);
-  }, [viewMode, userLocation]);
+  }, [userLocation, searchRadius]);
 
   const serviceCategories = useMemo(() => {
     if (!services.length) return [];
@@ -264,8 +268,8 @@ const UserServices = () => {
                       {service.priceFormatted || `₹${service.minPrice || 0} - ₹${service.maxPrice || 0}`}
                     </div>
                     <div className="flex items-center gap-1 text-xs mt-1" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
-                      <Users className="h-3 w-3" />
-                      {service.providerCount || 0} providers available
+                      <MapPin className="h-3 w-3" />
+                      {service.providerCount || 0} providers within {searchRadius} km
                     </div>
                   </div>
                   {service.subServicesCount > 0 && (
@@ -375,8 +379,8 @@ const UserServices = () => {
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-color)', opacity: 0.7 }}>
-                    <Users className="h-3 w-3" />
-                    {service.providerCount || 0} providers
+                    <MapPin className="h-3 w-3" />
+                    {service.providerCount || 0} nearby
                   </div>
                   {service.subServicesCount > 0 && (
                     <div className="text-xs" style={{ color: 'var(--text-color)', opacity: 0.6 }}>
@@ -566,6 +570,55 @@ const UserServices = () => {
                     ))}
                   </div>
                 </div>
+
+                {/* Radius Filter */}
+                <div 
+                  className="rounded-2xl shadow-lg p-4 sm:p-6 mt-6"
+                  style={{
+                    backgroundColor: 'var(--card-bg)',
+                    border: '1px solid var(--border-color)'
+                  }}
+                >
+                  <h3 
+                    className="text-lg font-semibold mb-4 flex items-center"
+                    style={{ color: 'var(--text-color)' }}
+                  >
+                    <MapPin className="h-5 w-5 mr-2" style={{ color: 'var(--accent-color)' }} />
+                    Search Radius
+                  </h3>
+                  
+                  {locationError && (
+                    <div className="mb-3 text-xs text-yellow-600 bg-yellow-50 p-2 rounded-lg flex items-center gap-2">
+                      <Navigation className="h-4 w-4" />
+                      <span>{locationError}</span>
+                    </div>
+                  )}
+                  
+                  <select
+                    value={searchRadius}
+                    onChange={(e) => setSearchRadius(parseInt(e.target.value))}
+                    className="w-full px-3 py-2 sm:py-3 rounded-xl focus:ring-2 focus:outline-none text-sm sm:text-base"
+                    style={{
+                      backgroundColor: 'var(--background)',
+                      color: 'var(--text-color)',
+                      border: '1px solid var(--border-color)',
+                      focusRingColor: 'var(--accent-color)'
+                    }}
+                  >
+                    <option value={5}>Within 5 km</option>
+                    <option value={10}>Within 10 km</option>
+                    <option value={15}>Within 15 km</option>
+                    <option value={20}>Within 20 km</option>
+                    <option value={30}>Within 30 km</option>
+                  </select>
+                  
+                  {userLocation && (
+                    <p className="mt-3 text-xs" style={{ color: 'var(--text-color)', opacity: 0.6 }}>
+                      <Navigation className="h-3 w-3 inline mr-1" />
+                      Using your current location
+                    </p>
+                  )}
+                </div>
               </motion.div>
             </div>
           </div>
@@ -579,8 +632,13 @@ const UserServices = () => {
                   {selectedCategory === 'all' ? 'All Services' : 
                    serviceCategories.find(c => c.id === selectedCategory)?.name}
                 </h2>
-                <p style={{ color: 'var(--text-color)', opacity: 0.7 }} className="mt-1 text-sm sm:text-base">
-                  Showing {filteredServices.length} services • {filteredServices.reduce((sum, s) => sum + (s.providerCount || 0), 0)} providers available
+                <p style={{ color: 'var(--text-color)', opacity: 0.7 }} className="mt-1 text-sm sm:text-base flex items-center gap-2 flex-wrap">
+                  <span>Showing {filteredServices.length} services</span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    {filteredServices.reduce((sum, s) => sum + (s.providerCount || 0), 0)} providers within {searchRadius} km
+                  </span>
                 </p>
               </div>
               <div className="flex gap-2 self-end sm:self-auto">

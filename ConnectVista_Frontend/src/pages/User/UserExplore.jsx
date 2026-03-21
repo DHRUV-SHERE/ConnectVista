@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import BookingModal from "./UserBookingModel";
 import SimpleMapExplore from "../../components/User/SimpleMapExplore";
 import { motion, AnimatePresence } from "framer-motion";
+import toast from "react-hot-toast";
 import {
   Search,
   MapPin,
@@ -72,10 +73,23 @@ const UserExplore = () => {
       }
     };
 
+    const fetchFavorites = async () => {
+      try {
+        const response = await serviceAPI.getFavoriteProviders();
+        if (response.success) {
+          const favoriteIds = new Set(response.data.map(fav => fav.provider.id));
+          setFavorites(favoriteIds);
+        }
+      } catch (error) {
+        console.error('Error fetching favorites:', error);
+      }
+    };
+
     // Add delay to prevent simultaneous calls
     const timeoutId = setTimeout(() => {
       getUserLocation();
       fetchUserBookings();
+      fetchFavorites();
     }, 50);
     return () => clearTimeout(timeoutId);
   }, []);
@@ -149,14 +163,41 @@ const UserExplore = () => {
     return filtered;
   }, [providers, searchQuery]);
 
-  const toggleFavorite = (providerId) => {
-    const newFavorites = new Set(favorites);
-    if (newFavorites.has(providerId)) {
-      newFavorites.delete(providerId);
-    } else {
-      newFavorites.add(providerId);
+  const toggleFavorite = async (providerId, e) => {
+    if (e) {
+      e.stopPropagation(); // Prevent card click
     }
-    setFavorites(newFavorites);
+    
+    const isFavorite = favorites.has(providerId);
+    
+    try {
+      if (isFavorite) {
+        // Remove from favorites
+        const response = await serviceAPI.removeFavoriteProvider(providerId);
+        if (response.success) {
+          const newFavorites = new Set(favorites);
+          newFavorites.delete(providerId);
+          setFavorites(newFavorites);
+          toast.success('Removed from favorites');
+        }
+      } else {
+        // Add to favorites
+        const response = await serviceAPI.addFavoriteProvider(providerId);
+        if (response.success) {
+          const newFavorites = new Set(favorites);
+          newFavorites.add(providerId);
+          setFavorites(newFavorites);
+          toast.success('Added to favorites');
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error('Failed to update favorites');
+      }
+    }
   };
 
   const handleBookService = (provider) => {
@@ -514,7 +555,7 @@ const UserExplore = () => {
               </button>
               <div className="flex gap-3 justify-center sm:justify-start">
                 <button
-                  onClick={() => toggleFavorite(profile._id || profile.id)}
+                  onClick={(e) => toggleFavorite(profile._id || profile.id, e)}
                   className="p-3 rounded-xl transition-colors"
                   style={{
                     backgroundColor: isFavorite ? "var(--accent-fade)" : "var(--card-bg)",
@@ -815,7 +856,7 @@ const UserExplore = () => {
                         </div>
                         <div className="flex gap-2 self-end sm:self-auto">
                           <button
-                            onClick={() => toggleFavorite(provider._id)}
+                            onClick={(e) => toggleFavorite(provider._id, e)}
                             className="p-2 rounded-xl transition-colors"
                             style={{
                               backgroundColor: isFavorite
