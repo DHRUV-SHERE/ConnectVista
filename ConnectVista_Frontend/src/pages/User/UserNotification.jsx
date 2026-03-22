@@ -78,6 +78,28 @@ const UserNotifications = () => {
     fetchUnreadCount();
   }, [fetchNotifications, fetchUnreadCount]);
 
+  // Auto mark all notifications as read when page is viewed
+  useEffect(() => {
+    const markAllNotificationsAsRead = async () => {
+      try {
+        const response = await serviceAPI.markAllNotificationsAsRead();
+        if (response.success) {
+          setNotifications(prev =>
+            prev.map(n => ({ ...n, isRead: true, readAt: new Date() }))
+          );
+          setUnreadCount(0);
+        }
+      } catch (error) {
+        console.error("Error auto-marking notifications as read:", error);
+      }
+    };
+
+    // Mark all as read only if there are unread notifications
+    if (unreadCount > 0) {
+      markAllNotificationsAsRead();
+    }
+  }, []);
+
   // Subscribe to real-time events
   useEffect(() => {
     const unsubscribe = subscribe('all', (event) => {

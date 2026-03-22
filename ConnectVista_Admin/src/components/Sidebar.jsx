@@ -10,7 +10,9 @@ import {
   ChevronLeft,
   UserCheck,
   UserX,
-  ChevronDown
+  ChevronDown,
+  MessageSquare,
+  HeadsetIcon
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -20,6 +22,8 @@ const menuItems = [
   { icon: Shield, label: 'Verification', path: '/admin/verification' },
   { icon: Calendar, label: 'Bookings', path: '/admin/bookings' },
   { icon: DollarSign, label: 'Revenue', path: '/admin/revenue' },
+  { icon: MessageSquare, label: 'Contacts', path: '/admin/contacts' },
+  { icon: HeadsetIcon, label: 'Support Requests', path: '/admin/support' },
   { icon: Settings, label: 'Settings', path: '/admin/settings' },
 ];
 

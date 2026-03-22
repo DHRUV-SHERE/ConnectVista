@@ -10,11 +10,14 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { useState } from "react";
+import toast from "react-hot-toast";
+import { contactService } from "../../services/contactService";
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phone: "",
     subject: "",
     message: "",
   });
@@ -23,10 +26,25 @@ export default function ContactPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setIsSubmitting(false);
-    alert("Message sent successfully!");
-    setFormData({ name: "", email: "", subject: "", message: "" });
+    
+    try {
+      const response = await contactService.submitContact({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        subject: formData.subject,
+        message: formData.message,
+      });
+
+      if (response.success) {
+        toast.success(response.message);
+        setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to submit form. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const contactMethods = [
@@ -263,17 +281,13 @@ export default function ContactPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-lg font-medium mb-3" style={{ color: "var(--text-color)" }}>
-                        Your Name
+                        Full Name <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
                         required
                         className="w-full rounded-xl border px-5 py-4 text-lg"
-                        style={{
-                          backgroundColor: "var(--bg-color)",
-                          borderColor: "var(--border-color)",
-                          color: "var(--text-color)",
-                        }}
+                        style={{ backgroundColor: "var(--bg-color)", borderColor: "var(--border-color)", color: "var(--text-color)" }}
                         placeholder="Enter your full name"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -281,23 +295,33 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <label className="block text-lg font-medium mb-3" style={{ color: "var(--text-color)" }}>
-                        Email Address
+                        Email Address <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="email"
                         required
                         className="w-full rounded-xl border px-5 py-4 text-lg"
-                        style={{
-                          backgroundColor: "var(--bg-color)",
-                          borderColor: "var(--border-color)",
-                          color: "var(--text-color)",
-                        }}
+                        style={{ backgroundColor: "var(--bg-color)", borderColor: "var(--border-color)", color: "var(--text-color)" }}
                         placeholder="Enter your email address"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       />
                     </div>
                   </div>
+
+                  <div>
+                      <label className="block text-lg font-medium mb-3" style={{ color: "var(--text-color)" }}>
+                        Phone Number
+                      </label>
+                      <input
+                        type="tel"
+                        className="w-full rounded-xl border px-5 py-4 text-lg"
+                        style={{ backgroundColor: "var(--bg-color)", borderColor: "var(--border-color)", color: "var(--text-color)" }}
+                        placeholder="Enter your phone number"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      />
+                    </div>
 
                   <div>
                     <label className="block text-lg font-medium mb-3" style={{ color: "var(--text-color)" }}>

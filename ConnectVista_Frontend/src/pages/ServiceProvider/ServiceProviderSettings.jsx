@@ -77,14 +77,14 @@ const Settings = () => {
     try {
       const response = await settingsAPI.getSettings();
       if (response.success) {
-        const { user, provider, settings, billing } = response.data;
+        const { user = {}, provider = {}, settings = {}, billing = {} } = response.data;
         setProfileData({
-          name: provider.name || '',
-          email: user.email || '',
-          phone: user.phone || '',
-          businessName: provider.businessName || '',
-          businessLocation: provider.businessAddress?.street || '',
-          businessRegistration: provider.businessRegistration || 'BRN-123456789'
+          name: provider?.name || '',
+          email: user?.email || '',
+          phone: user?.phone || '',
+          businessName: provider?.businessName || '',
+          businessLocation: provider?.businessAddress?.street || '',
+          businessRegistration: provider?.businessRegistration || 'BRN-123456789'
         });
         setEmailNotifications(settings?.notifications?.email ?? true);
         setSmsNotifications(settings?.notifications?.sms ?? false);

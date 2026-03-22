@@ -53,6 +53,7 @@ import ServiceProviderWallet from "./pages/ServiceProvider/ServiceProviderWallet
 import ServiceProviderInvoices from "./pages/ServiceProvider/ServiceProviderInvoices";
 import PaymentPage from "./pages/PaymentPage";
 import Chat from "./pages/Common/Chat";
+import ServiceProviderSupportRequests from "./pages/ServiceProvider/ServiceProviderSupportRequests";
 
 function App() {
   return (
@@ -142,6 +143,7 @@ function App() {
               <Route path="subscription" element={<ServiceProviderSubscription />} />
               <Route path="wallet" element={<ServiceProviderWallet />} />
               <Route path="invoices" element={<ServiceProviderInvoices />} />
+              <Route path="support-requests" element={<ServiceProviderSupportRequests />} />
               <Route path="chat" element={<Chat />} />
               <Route path="chat/:bookingId" element={<Chat />} />
               <Route path="settings" element={<ServiceProviderSettings />} />

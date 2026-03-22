@@ -304,6 +304,17 @@ const UserBookings = () => {
                           </div>
                         )}
 
+                        {/* Rejection Reason */}
+                        {booking.status === 'rejected' && (booking.rejectionReason || booking.cancellationReason) && (
+                          <div className="flex items-start gap-2.5 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl text-xs border border-red-100 dark:border-red-800">
+                            <XCircle size={16} className="text-red-600 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="font-bold text-red-800 dark:text-red-300 mb-1">Rejection Reason:</p>
+                              <p className="text-red-700 dark:text-red-200">{booking.rejectionReason || booking.cancellationReason}</p>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Pricing & Actions */}
                         <div className="flex items-center justify-between pt-3 border-t border-gray-50 dark:border-slate-800">
                           <div className="flex flex-col">

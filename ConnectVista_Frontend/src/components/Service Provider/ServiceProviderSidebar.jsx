@@ -12,7 +12,8 @@ import {
   Clock,
   XCircle,
   Wallet,
-  FileText
+  FileText,
+  HeadsetIcon
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
@@ -47,6 +48,7 @@ const ServiceProviderSidebar = ({ sidebarOpen, setSidebarOpen, currentPath }) =>
     { name: 'Subscription', href: '/service-provider/subscription', icon: CreditCard },
     { name: 'Wallet & Earnings', href: '/service-provider/wallet', icon: Wallet, category: 'payment' },
     { name: 'Invoices', href: '/service-provider/invoices', icon: FileText },
+    { name: 'Support Requests', href: '/service-provider/support-requests', icon: HeadsetIcon },
     { name: 'Settings', href: '/service-provider/settings', icon: Settings },
   ];
 

@@ -4,12 +4,13 @@ import { motion } from 'framer-motion';
 import { 
   TrendingUp, Users, Calendar, Star, DollarSign, ArrowUpRight, ArrowDownRight, 
   Wrench, Clock, CheckCircle, AlertCircle, MoreVertical, Download, Filter,
-  Search, ChevronRight, TrendingDown, Eye, Edit, Trash2, RefreshCw, BarChart3, Wallet
+  Search, ChevronRight, TrendingDown, Eye, Edit, Trash2, RefreshCw, BarChart3, Wallet, HelpCircle
 } from 'lucide-react';
 import { serviceAPI } from '../../services/serviceAPI';
 import { walletAPI } from '../../services/walletAPI';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import NeedSupportModal from '../../components/NeedSupportModal';
 
 // Lazy load charts for better performance
 const PerformanceChart = lazy(() => import('../../components/Service Provider/PerformanceChart'));
@@ -275,6 +276,7 @@ const ProviderDashboard = () => {
   const [dashboardStats, setDashboardStats] = useState(null);
   const [recentServicesData, setRecentServicesData] = useState([]);
   const [walletBalance, setWalletBalance] = useState(0);
+  const [showSupportModal, setShowSupportModal] = useState(false);
 
   const fetchDashboardData = async (showRefresh = false) => {
     try {
@@ -370,6 +372,7 @@ const ProviderDashboard = () => {
     { icon: Calendar, label: 'Schedule', variant: 'primary', path: '/service-provider/bookings' },
     { icon: Star, label: 'Reviews', variant: 'default', path: '/service-provider/reviews' },
     { icon: BarChart3, label: 'Analytics', variant: 'default', path: '/service-provider/revenue' },
+    { icon: HelpCircle, label: 'Need Support', variant: 'default', action: 'support' },
   ];
 
   // Filter services based on search and status
@@ -630,14 +633,20 @@ const ProviderDashboard = () => {
         }}
       >
         <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
           {quickActions.map((action, index) => (
             <QuickActionButton
               key={index}
               icon={action.icon}
               label={action.label}
               variant={action.variant}
-              onClick={() => navigate(action.path)}
+              onClick={() => {
+                if (action.action === 'support') {
+                  setShowSupportModal(true);
+                } else {
+                  navigate(action.path);
+                }
+              }}
             />
           ))}
         </div>
@@ -676,6 +685,15 @@ const ProviderDashboard = () => {
           ))}
         </div>
       </div>
+
+      {/* Support Modal */}
+      <NeedSupportModal 
+        isOpen={showSupportModal} 
+        onClose={() => setShowSupportModal(false)}
+        onSuccess={() => {
+          toast.success('Thank you! We will review your request soon.');
+        }}
+      />
     </div>
   );
 };

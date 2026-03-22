@@ -126,6 +126,8 @@ const bookingSchema = new mongoose.Schema({
     default: 'pending'
   },
 
+  rejectionReason: String,
+
   cancellationReason: String,
   
   cancelledBy: {

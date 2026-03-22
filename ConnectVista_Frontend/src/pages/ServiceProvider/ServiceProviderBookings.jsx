@@ -735,8 +735,7 @@ const ServiceProviderBookings = () => {
                           alignItems: 'center',
                           gap: '0.25rem'
                         }}>
-                          <DollarSign size={14} />
-                          ₹{booking.totalPrice}
+                          ₹ {booking.totalPrice}
                         </span>
                       </div>
                     </div>

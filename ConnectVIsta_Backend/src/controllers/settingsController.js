@@ -1,20 +1,62 @@
 const GlobalSettings = require('../models/GlobalSettings');
+const User = require('../models/User');
+const ServiceProvider = require('../models/ServiceProvider');
+const ProviderSettings = require('../models/ProviderSettings');
 const catchAsync = require('../utils/catchAsync');
 
 /**
- * Get global settings
+ * Get user/provider-specific settings along with global settings
  */
 exports.getSettings = catchAsync(async (req, res) => {
-  let settings = await GlobalSettings.findOne();
+  const userId = req.user.id;
   
-  if (!settings) {
-    // Create default settings if not exists
-    settings = await GlobalSettings.create({});
+  // Fetch user data
+  const user = await User.findById(userId).select('email phone');
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
+
+  // Fetch provider data if user is a provider
+  const provider = await ServiceProvider.findOne({ userId }).select(
+    'name businessName businessAddress businessRegistration'
+  );
+
+  // Fetch provider settings
+  let providerSettings = null;
+  if (provider) {
+    providerSettings = await ProviderSettings.findOne({ providerId: provider._id });
+    
+    // Create default provider settings if not exists
+    if (!providerSettings) {
+      providerSettings = await ProviderSettings.create({ providerId: provider._id });
+    }
+  }
+
+  // Fetch global settings
+  let globalSettings = await GlobalSettings.findOne();
+  if (!globalSettings) {
+    globalSettings = await GlobalSettings.create({});
   }
 
   res.status(200).json({
     success: true,
-    data: settings
+    data: {
+      user: {
+        email: user.email,
+        phone: user.phone
+      },
+      provider: provider || {},
+      settings: providerSettings || {},
+      billing: {
+        currentPlan: provider?.currentPlan || null,
+        paymentMethod: null,
+        recentInvoices: []
+      },
+      global: globalSettings
+    }
   });
 });
 

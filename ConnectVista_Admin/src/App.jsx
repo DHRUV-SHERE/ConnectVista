@@ -8,6 +8,8 @@ import Bookings from './pages/Bookings';
 import Revenue from './pages/Revenue';
 import Verification from './pages/Verification';
 import Settings from './pages/Settings';
+import Contacts from './pages/Contacts';
+import SupportRequests from './pages/SupportRequests';
 import Login from './pages/Login';
 
 export default function App() {
@@ -28,6 +30,8 @@ export default function App() {
             <Route path="bookings" element={<Bookings />} />
             <Route path="revenue" element={<Revenue />} />
             <Route path="verification" element={<Verification />} />
+            <Route path="contacts" element={<Contacts />} />
+            <Route path="support" element={<SupportRequests />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="/" element={<Navigate to="/admin" replace />} />

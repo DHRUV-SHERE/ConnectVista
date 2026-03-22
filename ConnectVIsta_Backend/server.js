@@ -32,6 +32,8 @@ const invoiceRoutes = require('./src/routes/invoiceRoutes');
 const chatRoutes = require('./src/routes/chatRoutes');
 const settingsRoutes = require('./src/routes/settingsRoutes');
 const favouriteRoutes = require('./src/routes/favouriteRoutes');
+const contactRoutes = require('./src/routes/contactRoutes');
+const supportRoutes = require('./src/routes/supportRoutes');
 const authController = require('./src/controllers/authController');
 const auth = require('./src/middleware/auth');
 const socketManager = require('./src/utils/socketManager');
@@ -158,6 +160,8 @@ app.use('/api/wallet', walletRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/favorites', favouriteRoutes);
+app.use('/api/contact', contactRoutes);
+app.use('/api/support', supportRoutes);
 app.get('/api/auth/profile', auth(), authController.getProfile);
 
 // Health check

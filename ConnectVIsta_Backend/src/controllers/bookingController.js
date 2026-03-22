@@ -641,8 +641,7 @@ const rejectBooking = async (req, res) => {
 
     // Update booking status
     booking.status = 'rejected';
-    booking.cancellationReason = reason || 'Provider declined the booking';
-    booking.cancelledBy = 'provider';
+    booking.rejectionReason = reason || 'Provider declined the booking';
     booking.updatedAt = new Date();
     await booking.save();
 
