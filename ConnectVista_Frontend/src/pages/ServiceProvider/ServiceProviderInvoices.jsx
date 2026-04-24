@@ -203,9 +203,6 @@ const ServiceProviderInvoices = () => {
                 <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', margin: 0 }}>
                   {invoice.seekerId?.name || 'Customer'}
                 </h3>
-                <p style={{ fontSize: '0.875rem', opacity: 0.6, margin: '0.25rem 0 0 0', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <MapPin size={14} /> {invoice.seekerId?.email}
-                </p>
               </div>
 
               <div style={{
@@ -248,16 +245,6 @@ const ServiceProviderInvoices = () => {
                   }}
                 >
                   <Download size={18} /> Download PDF
-                </button>
-                <button style={{
-                  padding: '0.75rem',
-                  backgroundColor: 'transparent',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '0.75rem',
-                  color: 'var(--text-color)',
-                  cursor: 'pointer'
-                }}>
-                  <ExternalLink size={18} />
                 </button>
               </div>
             </motion.div>
